@@ -1,0 +1,129 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Change Configuration Properties Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2401>
+<meta name=layout-width content=723>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+ <META NAME="MS-HKWD" CONTENT="VBA examples,configurations">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Change Configuration Properties Example (VBA)</h1>
+
+<p>This example shows how to change the properties of one or more configurations.</p>
+
+<pre>'-----------------------------------------------------------
+' Preconditions:
+' 1. Open a part that contains one or more configurations.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Changes the source for the part number and displays <b>XXXX</b>
+'    as the part number in each configuration's Bill of Materials.
+' 2. Examine the Immediate window.
+'------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim Part As SldWorks.PartDoc
+Dim Doc As SldWorks.ModelDoc2
+Dim SelMgr As SldWorks.SelectionMgr</pre>
+<pre>Function BOMPartNumber(config As SldWorks.Configuration, document As SldWorks.ModelDoc2) As String
+    Select Case config.<b>BOMPartNoSource</b>
+    Case SwConst.swBOMPartNumberSource_e.swBOMPartNumber_ConfigurationName
+        BOMPartNumber = config.<b>Name</b>
+    Case SwConst.swBOMPartNumberSource_e.swBOMPartNumber_DocumentName
+        BOMPartNumber = document.<b>GetTitle</b>
+    Case SwConst.swBOMPartNumberSource_e.swBOMPartNumber_UserSpecified
+        BOMPartNumber = config.<b>AlternateName</b>
+    Case SwConst.swBOMPartNumberSource_e.swBOMPartNumber_ParentName
+        Dim parentConfig As SldWorks.<b>Configuration</b>
+        Set parentConfig = config.GetParent
+        If parentConfig.<b>BOMPartNoSource</b> = SwConst.swBOMPartNumberSource_e.swBOMPartNumber_ParentName Then
+            BOMPartNumber = BOMPartNumber(parentConfig, document)
+        Else
+            BOMPartNumber = parentConfig.<b>Name</b>
+        End If
+    End Select
+End Function</pre>
+<pre>Function InspectConfigurations(Doc As SldWorks.ModelDoc2)
+    Dim params As Variant
+    params = Doc.<b>GetConfigurationNames</b>
+    Dim vName As Variant
+    Dim Name As String
+    Dim thisConfig As Configuration
+    For Each vName In params
+        Name = vName
+        Set thisConfig = Doc.<b>GetConfigurationByName</b>(Name)
+        Debug.Print &quot;Name                      &quot;, thisConfig.<b>Name</b>
+        ' Work out what the BOM part number is based on any derived configurations
+        Debug.Print &quot;BOMPartNumber             &quot;, BOMPartNumber(thisConfig, Doc)
+        Debug.Print &quot;AlternateName             &quot;, thisConfig.<b>AlternateName</b>
+        Debug.Print &quot;Comment                   &quot;, thisConfig.<b>Comment</b>
+        Debug.Print &quot;Description               &quot;, thisConfig.<b>Description</b>
+        Debug.Print &quot;HideNewComponentModels    &quot;, thisConfig.<b>HideNewComponentModels</b>
+        Debug.Print &quot;Lock                      &quot;, thisConfig.<b>Lock</b>
+        Debug.Print &quot;ShowChildComponentsInBOM  &quot;, thisConfig.<b>ShowChildComponentsInBOM</b>
+        Debug.Print &quot;UseAlternateNameInBOM     &quot;, thisConfig.<b>UseAlternateNameInBOM</b>
+        Debug.Print &quot;SuppressNewComponentModels&quot;, thisConfig.<b>SuppressNewComponentModels</b>
+        Debug.Print &quot;SuppressNewFeatures       &quot;, thisConfig.<b>SuppressNewFeatures</b>
+        Debug.Print &quot;------------------------------------------------------------------&quot;
+    Next vName
+End Function</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set Part = swApp.<b>ActiveDoc</b>
+    Set Doc = Part
+    Set SelMgr = Doc.<b>SelectionManager</b>    </pre>
+<pre>    Call InspectConfigurations(Doc)    </pre>
+<pre>    Dim params As Variant
+    params = Doc.<b>GetConfigurationNames</b>
+    Dim vName As Variant
+    Dim Name As String
+    Dim thisConfig As Configuration
+    Debug.Print &quot;Modifying the configurations...&quot;
+    For Each vName In params
+        Name = vName
+        Set thisConfig = Doc.<b>GetConfigurationByName</b>(Name)
+        Debug.Print &quot;Name                      &quot;, thisConfig.<b>Name</b>
+        thisConfig.<b>BOMPartNoSource</b> = swBOMPartNumber_UserSpecified
+        thisConfig.<b>AlternateName</b> = &quot;XXXX&quot;
+        thisConfig.<b>UseAlternateNameInBOM</b> = True
+        thisConfig.<b>AlternateName</b> = &quot;XXXX&quot;
+    Next vName    </pre>
+<pre>    Debug.Print &quot;------------------------------------------------------------------&quot;    </pre>
+<pre>    Call InspectConfigurations(Doc)    
+</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

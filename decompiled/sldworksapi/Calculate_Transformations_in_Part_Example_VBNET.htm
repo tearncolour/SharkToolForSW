@@ -1,0 +1,126 @@
+<html>
+
+<head>
+<title>Calculate Transformations in Part Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,bodies">
+<meta name=MS-HKWD content="VB.NET examples,transforms">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Calculate Transformations in Part Example (VB.NET)</h1>
+<p>This example shows how to calculate transformations between solid bodies in 
+a part, which would make one solid body coincide with another solid body if the 
+transformation matrix is applied.</p>
+
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><span style="color:green;">'--------------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Ensure&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;file&nbsp;to</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;open&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Run&nbsp;the&nbsp;macro.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;part&nbsp;file.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Gets&nbsp;the&nbsp;solid&nbsp;bodies&nbsp;in&nbsp;the&nbsp;specified&nbsp;part&nbsp;file.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Iterates&nbsp;through&nbsp;the&nbsp;solid&nbsp;bodies&nbsp;in&nbsp;the&nbsp;part</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;calculates&nbsp;transformations&nbsp;between&nbsp;solid</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;bodies.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'----------------------------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;file&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;file&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\routing-pipes\routes\Framework&nbsp;(Done).SLDPRT&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(file,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;status,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;swModel&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span>&nbsp;<span style="color:blue;">Exit&nbsp;Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swPart&nbsp;<span style="color:blue;">As</span>&nbsp;PartDoc
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPart&nbsp;=&nbsp;swModel
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bodies&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swBody_A&nbsp;<span style="color:blue;">As</span>&nbsp;Body2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swBody_B&nbsp;<span style="color:blue;">As</span>&nbsp;Body2
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;solid&nbsp;bodies</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bodyType&nbsp;<span style="color:blue;">As</span>&nbsp;swBodyType_e
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;visibleOnly&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bodyType&nbsp;=&nbsp;swBodyType_e.swSolidBody
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;visibleOnly&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bodies&nbsp;=&nbsp;swPart.<b>GetBodies2</b>(bodyType,&nbsp;visibleOnly)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Iterate&nbsp;through&nbsp;the&nbsp;solid&nbsp;bodies&nbsp;in&nbsp;the&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'and&nbsp;calculate&nbsp;the&nbsp;transformation&nbsp;matrix between</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'swBody_A&nbsp;and&nbsp;swBody_B&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;(IsNothing(bodies))&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;j&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;maxIndex&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;maxIndex&nbsp;=&nbsp;UBound(bodies)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;maxIndex
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBody_A&nbsp;=&nbsp;bodies(i)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;j&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;maxIndex
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;i&nbsp;&lt;&gt;&nbsp;j&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBody_B&nbsp;=&nbsp;bodies(j)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swXfm&nbsp;<span style="color:blue;">As</span>&nbsp;MathTransform
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bResult&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swXfm&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bResult&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bResult&nbsp;=&nbsp;swBody_A.<b>GetCoincidenceTransform2</b>(swBody_B,&nbsp;swXfm)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(i&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;-&gt;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;j,&nbsp;swBody_A.<b>Name</b>&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;-&gt;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swBody_B.<b>Name</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;bResult&nbsp;&lt;&gt;&nbsp;<span style="color:blue;">False</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;Can&nbsp;coincide.&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vXfm&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vXfm&nbsp;=&nbsp;swXfm.ArrayData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;Rotation:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;vXfm(0),&nbsp;vXfm(1),&nbsp;vXfm(2))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;vXfm(3),&nbsp;vXfm(4),&nbsp;vXfm(5))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;vXfm(6),&nbsp;vXfm(7),&nbsp;vXfm(8))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;Translation:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;vXfm(9),&nbsp;vXfm(10),&nbsp;vXfm(11))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;Scaling:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;vXfm(12))
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(vbTab&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;Cannot&nbsp;coincide.&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;j
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;i
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

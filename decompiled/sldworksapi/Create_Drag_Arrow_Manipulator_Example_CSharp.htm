@@ -1,0 +1,467 @@
+<html>
+
+<head>
+<title>Create Drag Arrow Manipulator Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,drag arrow manipulators">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Drag Arrow Manipulator Example (C#)</h1>
+<p>This example shows how to create a drag arrow manipulator, which is 
+ called a handle in the user interface.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	//---------------------------------------------------------------------------<br>
+	// Preconditions:<br>
+	// 1. Open a part or assembly and select a face.<br>
+	// 2. De-select <b>Tools &gt; Options &gt; Stop VSTA debugger on macro exit</b>.<br>
+	// 3. Select <b>Project &gt; Add Reference &gt; .NET &gt; 
+	SolidWorks.Interop.swpublished</b>.<br>
+	// 4. Rename the namespace to match the name of your C# project.<br>
+	// 5. Open an Immediate window.<br>
+	//<br>
+	// Postconditions:<br>
+	</span><font color="#008000">// 1. A unidirectional drag arrow manipulator or handle is created on the 
+selected face.<br>
+	// 2. Drag the handle to another location. The first time you drag the handle,<br>
+	//&nbsp;&nbsp;&nbsp; IDragArrowManipulator::FixedLength is set to true,<br>
+	//&nbsp;&nbsp;&nbsp; and the origin is moved in the direction of the drag. For 
+second and<br>
+	//&nbsp;&nbsp;&nbsp; subsequent drags, IDragArrowManipulator::FixedLength is set 
+to false,<br>
+	//&nbsp;&nbsp;&nbsp; and the origin is not changed.<br>
+	// 3. When you drag the handle a ruler displays. <br>
+	//&nbsp;&nbsp;&nbsp; IDragArrowManipulator::ShowRuler is true.<br>
+	// 4. When you drag the handle past length = 0, the handle flips direction.<br>
+	//&nbsp;&nbsp;&nbsp; IDragArrowManipulator::AllowFlip is true.<br>
+	// 5. Inspect the Immediate window.</font><span style="color:Green"><br>
+	//--------------------------------------------------------------------------<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.swpublished;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Runtime;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Diagnostics;<br>
+	</span><span style="color:Blue">namespace</span><span style="color:Black"> 
+	CreateDragArrow_CSharp.csproj<br>
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">partial</span><span style="color:Black">
+	</span><span style="color:Blue">class</span><span style="color:Black">
+	</span><span style="color:#2b91af">SolidWorksMacro<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Manipulator</span><span style="color:Black"> 
+	swManip;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">DragArrowManipulator</span><span style="color:Black"> 
+	swDrag;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">SwManHandler2</span><span style="color:Black"> 
+	swDragHdlr = </span><span style="color:Blue">new</span><span style="color:Black">
+	</span><span style="color:#2b91af">SwManHandler2</span><span style="color:Black">();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> Main()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Face2</span><span style="color:Black"> 
+	swFace;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathUtility</span><span style="color:Black"> 
+	swMathUtil = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">MathUtility</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black"> 
+	swModel = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelViewManager</span><span style="color:Black"> 
+	swModViewMgr = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">ModelViewManager</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black"> 
+	swSelMgr = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	vPickPt = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathPoint</span><span style="color:Black"> 
+	swPickPt = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">MathPoint</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathUtil = (</span><span style="color:#2b91af">MathUtility</span><span style="color:Black">)swApp.GetMathUtility();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = (</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">)swApp.ActiveDoc;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr = (</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black">)swModel.SelectionManager;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace = (</span><span style="color:#2b91af">Face2</span><span style="color:Black">)swSelMgr.GetSelectedObject6(1, 
+	0);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">double</span><span style="color:Black">[] 
+	nVector = </span><span style="color:Blue">new</span><span style="color:Black">
+	</span><span style="color:Blue">double</span><span style="color:Black">[3];<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	vVector = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nVector[0] = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nVector[1] = 1;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nVector[2] = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vVector = nVector;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathVector</span><span style="color:Black"> 
+	swN = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">MathVector</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swN = (</span><span style="color:#2b91af">MathVector</span><span style="color:Black">)swMathUtil.CreateVector((vVector));<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vPickPt = swSelMgr.GetSelectionPoint2(1, -1);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPickPt = (</span><span style="color:#2b91af">MathPoint</span><span style="color:Black">)swMathUtil.CreatePoint((vPickPt));<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModViewMgr = swModel.ModelViewManager;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swManip = swModViewMgr.CreateManipulator((</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swManipulatorType_e</span><span style="color:Black">.swDragArrowManipulator, 
+	swDragHdlr);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrag = (</span><span style="color:#2b91af">DragArrowManipulator</span><span style="color:Black">)swManip.GetSpecificManipulator();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrag.<b>AllowFlip</b> 
+	= </span>
+	<span style="color:Blue">true</span><span style="color:Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swDrag.<b>ShowRuler</b> 
+	= </span>
+	<span style="color:Blue">true</span><span style="color:Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swDrag.<b>ShowOppositeDirection</b> = </span>
+	<span style="color:Blue">true</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrag.<b>Length</b> = 0.02;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrag.<b>Direction</b> = swN;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrag.<b>LengthOppositeDirection</b> = 0.01;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrag.<b>Origin</b> = swPickPt;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swManip.<b>Show</b>(swModel);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrag.<b>Update</b>();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathPoint</span><span style="color:Black"> 
+	origin = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">MathPoint</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;origin = swDrag.<b>Origin</b>;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pt = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pt = origin.<b>ArrayData</b>;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:#2b91af">SldWorks</span><span style="color:Black"> 
+	swApp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;[System.Runtime.InteropServices.</span><span style="color:#2b91af">ComVisible</span><span style="color:Black">(</span><span style="color:Blue">true</span><span style="color:Black">)]<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:Blue">class</span><span style="color:Black">
+	</span><span style="color:#2b91af">SwManHandler2</span><span style="color:Black"> 
+	: </span><span style="color:#2b91af">SwManipulatorHandler2<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	doneonce;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">const</span><span style="color:Black">
+	</span><span style="color:Blue">int</span><span style="color:Black"> lenFact 
+	= 1;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">bool</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnHandleLmbSelected(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnHandleLmbSelected&quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black">
+	</span><span style="color:Blue">true</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">bool</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnHandleLmbSelected(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnHandleLmbSelected(pManipulator);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">bool</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnDelete(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnDelete&quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black">
+	</span><span style="color:Blue">true</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">bool</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnDelete(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnDelete(pManipulator);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnDirectionFlipped(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnDirectionFlipped&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">void</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnDirectionFlipped(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwManipulatorHandler2_OnDirectionFlipped(pManipulator);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">bool</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnDoubleValueChanged(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	Id, </span><span style="color:Blue">ref</span><span style="color:Black">
+	</span><span style="color:Blue">double</span><span style="color:Black"> 
+	Value)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green"><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;doneonce = doneonce + 1;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnDoubleValueChanged&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	= &quot;</span><span style="color:Black"> + Id);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Value&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + Value);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">DragArrowManipulator</span><span style="color:Black"> 
+	swTmpManipulator = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">DragArrowManipulator</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTmpManipulator = (</span><span style="color:#2b91af">DragArrowManipulator</span><span style="color:Black">)pManipulator;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">//Update origin<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathPoint</span><span style="color:Black"> 
+	swMathPoint = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">MathPoint</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathPoint = swTmpManipulator.<b>Origin</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">double</span><span style="color:Black">[] 
+	varMathPt = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varMathPt = (</span><span style="color:Blue">double</span><span style="color:Black">[])swMathPoint.ArrayData;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varMathPt[1] = varMathPt[1] + lenFact / 1000;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathPoint.ArrayData = varMathPt;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	((doneonce == 1))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTmpManipulator.<b>FixedLength</b> = </span>
+	<span style="color:Blue">true</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTmpManipulator.<b>Origin</b> = swMathPoint;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green"><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTmpManipulator.<b>Update</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black">
+	</span><span style="color:Blue">true</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">bool</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnDoubleValueChanged(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	Id, </span><span style="color:Blue">ref</span><span style="color:Black">
+	</span><span style="color:Blue">double</span><span style="color:Black"> 
+	Value)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnDoubleValueChanged(pManipulator, Id, </span>
+	<span style="color:Blue">ref</span><span style="color:Black"> Value);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnEndDrag(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">DragArrowManipulator</span><span style="color:Black"> 
+	swTmpManipulator = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">DragArrowManipulator</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTmpManipulator = (</span><span style="color:#2b91af">DragArrowManipulator</span><span style="color:Black">)pManipulator;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTmpManipulator.<b>FixedLength</b> = </span><span style="color:Blue">
+	false</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;doneonce = doneonce + 1;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnEndDrag&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;HandleIndex&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + handleIndex);<br>
+	<br>
+	<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	((handleIndex == (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swDragArrowManipulatorOptions_e</span><span style="color:Black">.swDragArrowManipulatorDirection2))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	Direction1&quot;</span><span style="color:Black">);<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">else<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	Direction2&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">void</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnEndDrag(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwManipulatorHandler2_OnEndDrag(pManipulator, handleIndex);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnEndNoDrag(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnEndNoDrag&quot;</span><span style="color:Black">);<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">void</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnEndNoDrag(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwManipulatorHandler2_OnEndNoDrag(pManipulator, handleIndex);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnHandleRmbSelected(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnHandleRmbSelected&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;handleIndex&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + handleIndex);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">void</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnHandleRmbSelected(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwManipulatorHandler2_OnHandleRmbSelected(pManipulator, 
+	handleIndex);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnHandleSelected(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnHandleSelected&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;HandleIndex&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + handleIndex);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">void</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnHandleSelected(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwManipulatorHandler2_OnHandleSelected(pManipulator, handleIndex);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnItemSetFocus(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	Id)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnItemSetFocus&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	= &quot;</span><span style="color:Black"> + Id);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">void</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnItemSetFocus(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	Id)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwManipulatorHandler2_OnItemSetFocus(pManipulator, Id);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">bool</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnStringValueChanged(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	Id, </span><span style="color:Blue">ref</span><span style="color:Black">
+	</span><span style="color:Blue">string</span><span style="color:Black"> 
+	Value)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnStringValueChanged&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	= &quot;</span><span style="color:Black"> + Id);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Value&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + Value);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black">
+	</span><span style="color:Blue">true</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">bool</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnStringValueChanged(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	Id, </span><span style="color:Blue">ref</span><span style="color:Black">
+	</span><span style="color:Blue">string</span><span style="color:Black"> 
+	Value)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnStringValueChanged(pManipulator, Id, </span>
+	<span style="color:Blue">ref</span><span style="color:Black"> Value);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> 
+	SwManipulatorHandler2_OnUpdateDrag(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex, </span><span style="color:Blue">object</span><span style="color:Black"> 
+	newPosMathPt)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;SwManipulatorHandler2_OnUpdateDrag&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;HandleIndex&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + handleIndex);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">void</span><span style="color:Black">
+	</span><span style="color:#2b91af">ISwManipulatorHandler2</span><span style="color:Black">.OnUpdateDrag(</span><span style="color:Blue">object</span><span style="color:Black"> 
+	pManipulator, </span><span style="color:Blue">int</span><span style="color:Black"> 
+	handleIndex, </span><span style="color:Blue">object</span><span style="color:Black"> 
+	newPosMathPt)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwManipulatorHandler2_OnUpdateDrag(pManipulator, handleIndex, 
+	newPosMathPt);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	}<br>
+&nbsp;</span></div>
+
+</body>
+
+</html>

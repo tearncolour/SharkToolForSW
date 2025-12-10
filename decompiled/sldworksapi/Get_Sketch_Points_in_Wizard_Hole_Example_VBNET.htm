@@ -1,0 +1,128 @@
+<html>
+
+<head>
+<title>Get and Add Sketch Points in Hole Wizard Feature Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,points">
+<meta name=MS-HKWD content="VB.NET examples,holes">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get and Add Sketch Points in Hole Wizard Feature Example (VB.NET)</h1>
+
+<p>This example shows how to get and add the sketch points <!--kadov_tag{{<spaces>}}--><!--kadov_tag{{</spaces>}}-->in 
+ a Hole Wizard feature.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'------------------------------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;document&nbsp;template&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Creates&nbsp;a&nbsp;new&nbsp;part&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Creates&nbsp;<b>Boss-Extrude1</b>&nbsp;and&nbsp;<b>#0-80&nbsp;Tapped&nbsp;Hole1</b>&nbsp;features.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Selects&nbsp;<b>#8-80&nbsp;Tapped&nbsp;Hole1</b>;&nbsp;i.e.,&nbsp;the&nbsp;Hole&nbsp;Wizard&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Gets&nbsp;the&nbsp;number&nbsp;of&nbsp;sketch&nbsp;points&nbsp;in&nbsp;the&nbsp;Hole&nbsp;Wizard&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Adds&nbsp;two&nbsp;sketch&nbsp;points&nbsp;to&nbsp;the&nbsp;Hole&nbsp;Wizard&nbsp;feature;&nbsp;thus,&nbsp;adds&nbsp;two&nbsp;more</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;holes&nbsp;to&nbsp;the&nbsp;Hole&nbsp;Wizard&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;6.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;and&nbsp;graphics&nbsp;area.</span>
+<span style="color:green;">'-----------------------------------------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SketchManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeatureMgr&nbsp;<span style="color:blue;">As</span>&nbsp;FeatureManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeature&nbsp;<span style="color:blue;">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelectionMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swWizardHoleFeatureData&nbsp;<span style="color:blue;">As</span>&nbsp;WizardHoleFeatureData2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchPoint&nbsp;<span style="color:blue;">As</span>&nbsp;SketchPoint
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;sketchLines&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;count&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;points()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;point&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#008000">'Create part with Hole Wizard feature
+</font>	swModel&nbsp;=&nbsp;swApp.<b>NewDocument</b>(<span style="color:#a31515;">&quot;C:\ProgramData\SolidWorks\SolidWorks&nbsp;2015\templates\Part.prtdot&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstToRectEntity,&nbsp;swUserPreferenceOption_e.swDetailingNoOptionSpecified,&nbsp;<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstLineDiagonalType,&nbsp;swUserPreferenceOption_e.swDetailingNoOptionSpecified,&nbsp;<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr&nbsp;=&nbsp;swModel.<b>SketchManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sketchLines&nbsp;=&nbsp;swSketchMgr.<b>CreateCornerRectangle</b>(0,&nbsp;0,&nbsp;0,&nbsp;0.0968848174375125,&nbsp;-0.0708129015764598,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Line2&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCHSEGMENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Line1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCHSEGMENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Line4&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCHSEGMENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Line3&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCHSEGMENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatureMgr&nbsp;=&nbsp;swModel.<b>FeatureManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swFeatureMgr.<b>FeatureExtrusion2</b>(<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;0,&nbsp;0.0254,&nbsp;0.00254,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0.0174532925199433,&nbsp;0.0174532925199433,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr.<b>EnableContourSelection</b>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.0471052662929878,&nbsp;-0.0336338467782298,&nbsp;0.0253999999998769,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swFeatureMgr.<b>HoleWizard5</b>(4,&nbsp;0,&nbsp;27,&nbsp;<span style="color:#a31515;">&quot;#0-80&quot;</span>,&nbsp;1,&nbsp;0.00119126,&nbsp;0.0254,&nbsp;0.020066,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;1,&nbsp;0,&nbsp;0,&nbsp;-1,&nbsp;-1,&nbsp;-1,&nbsp;<span style="color:#a31515;">&quot;2B&quot;</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ViewZoomtofit2</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;#0-80&nbsp;Tapped&nbsp;Hole1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swWizardHoleFeatureData&nbsp;=&nbsp;swFeature.<b>GetDefinition</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count&nbsp;=&nbsp;swWizardHoleFeatureData.<b>GetSketchPointCount</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Number&nbsp;of&nbsp;sketch&nbsp;points&nbsp;in&nbsp;original&nbsp;Hole&nbsp;Wizard&nbsp;Feature&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;count)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points&nbsp;=&nbsp;swWizardHoleFeatureData.<b>GetSketchPoints</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;<span style="color:blue;">Each</span>&nbsp;point&nbsp;<span style="color:blue;">In</span>&nbsp;points
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPoint&nbsp;=&nbsp;point
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPoint.<b>Select4</b>(<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">Nothing</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swFeature.<b>ModifyDefinition</b>(swWizardHoleFeatureData,&nbsp;swModel,&nbsp;<span style="color:blue;">Nothing</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Select&nbsp;sketch&nbsp;point&nbsp;of&nbsp;Hole&nbsp;Wizard feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'and&nbsp;add&nbsp;two&nbsp;sketch&nbsp;points&nbsp;to&nbsp;Hole&nbsp;Wizard feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Sketch3&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>AddToDB</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditSketch</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPoint&nbsp;=&nbsp;swSketchMgr.<b>CreatePoint</b>(0.01,&nbsp;-0.04,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPoint&nbsp;=&nbsp;swSketchMgr.<b>CreatePoint</b>(0.01,&nbsp;-0.02,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>InsertSketch</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>AddToDB</b>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ForceRebuild3</b>(<span style="color:blue;">True</span>)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;number&nbsp;of&nbsp;sketch&nbsp;points&nbsp;in&nbsp;modified&nbsp;Hole&nbsp;Wizard&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;#0-80&nbsp;Tapped&nbsp;Hole1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swWizardHoleFeatureData&nbsp;=&nbsp;swFeature.<b>GetDefinition</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count&nbsp;=&nbsp;swWizardHoleFeatureData.<b>GetSketchPointCount</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Number&nbsp;of&nbsp;sketch&nbsp;points&nbsp;in&nbsp;modified&nbsp;Hole&nbsp;Wizard&nbsp;Feature&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;count)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points&nbsp;=&nbsp;swWizardHoleFeatureData.<b>GetSketchPoints</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;<span style="color:blue;">Each</span>&nbsp;point&nbsp;<span style="color:blue;">In</span>&nbsp;points
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPoint&nbsp;=&nbsp;point
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPoint.<b>Select4</b>(<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">Nothing</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swFeature.<b>ModifyDefinition</b>(swWizardHoleFeatureData,&nbsp;swModel,&nbsp;<span style="color:blue;">Nothing</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

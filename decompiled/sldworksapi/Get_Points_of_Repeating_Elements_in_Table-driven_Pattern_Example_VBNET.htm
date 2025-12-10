@@ -1,0 +1,127 @@
+<html>
+
+<head>
+<title>Get Points of Repeating Elements in Table-driven Pattern (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,table-driven patterns">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Points of Repeating Elements in Table-driven Pattern (VB.NET)</h1>
+<p>This example shows that the points that describe the locations of the 
+repeating elements in a table-driven pattern are based on the table-driven pattern's 
+coordinate system.</p>
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<pre><font color="#008000">'---------------------------------------------
+' Preconditions:
+' 1. Verify that the part to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Gets the coordinates of the
+'    points for the two repeating elements in the
+'    table-driven pattern.
+' 2. Examine the Immediate window.
+'
+' NOTE: Because the part is used elsewhere, do
+' not save changes.
+'---------------------------------------------</font><span style="color:Green"><br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> System<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> System.Diagnostics<br><br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black"> </span><span style="color:Blue">Class</span><span style="color:Black"> SolidWorksMacro<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> </span><span style="color:Blue">Sub</span><span style="color:Black"> main()<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swModel </span><span style="color:Blue">As</span><span style="color:Black"> ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swModelDocExt </span><span style="color:Blue">As</span><span style="color:Black"> ModelDocExtension<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swSelMgr </span><span style="color:Blue">As</span><span style="color:Black"> SelectionMgr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swFeat </span><span style="color:Blue">As</span><span style="color:Black"> Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swCoordinateData </span><span style="color:Blue">As</span><span style="color:Black"> CoordinateSystemFeatureData<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swTablePatternFeatData </span><span style="color:Blue">As</span><span style="color:Black"> TablePatternFeatureData<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swMathTransform </span><span style="color:Blue">As</span><span style="color:Black"> MathTransform<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swMathUtility </span><span style="color:Blue">As</span><span style="color:Black"> MathUtility<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> swMathPoint </span><span style="color:Blue">As</span><span style="color:Black"> MathPoint<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> status </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> errors </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> warnings </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> filename </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">String<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> points </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> point </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">String<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> pointsArray(2) </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> i </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">Integer<br><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filename = </span><span style="color:#a31515">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\tablepattern.sldprt&quot;<br><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = swApp.<b>OpenDoc6</b>(filename, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, </span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 
+	errors, warnings)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt = swModel.<b>Extension</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr = swModel.<b>SelectionManager</b><br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Select the table-driven 
+	pattern<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status = swModelDocExt.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;TPattern1&quot;</span><span style="color:Black">, </span><span style="color:#a31515">&quot;BODYFEATURE&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">False</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = swModel.SelectionManager.<b>GetSelectedObject6</b>(1, -1)<br><br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTablePatternFeatData = swFeat.<b>GetDefinition</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTablePatternFeatData.<b>AccessSelections</b>(swModel, </span><span style="color:Blue">Nothing</span><span style="color:Black">)<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Get the points of the repeating 
+	elements in the table-driven pattern<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	and transform them to coordinates <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCoordinateData = swTablePatternFeatData.CoordinateSystem.<b>GetDefinition</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCoordinateData.<b>AccessSelections</b>(swModel, </span><span style="color:Blue">Nothing</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathTransform = swCoordinateData.<b>Transform</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCoordinateData.<b>ReleaseSelectionAccess</b>()<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathUtility = swApp.<b>GetMathUtility</b><br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points = swTablePatternFeatData.<b>PointArray</b></span></pre>
+	<p class="APICODE">
+	<b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </b>Debug.Print(<font color="#A31515">&quot;Number 
+	of points: &quot;</font> &amp; swTablePatternFeatData.<b>GetPointCount)</b><span style="color:Black"><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	i = 0 </span><span style="color:Blue">To</span><span style="color:Black"> 
+	UBound(points) </span><span style="color:Blue">Step</span><span style="color:Black"> 
+	3<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointsArray(0) = points(i) : pointsArray(1) = points(i + 1) : 
+	pointsArray(2) = points(i + 2)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathPoint = swMathUtility.<b>CreatePoint</b>(pointsArray)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathPoint = swMathPoint.<b>MultiplyTransform</b>(swMathTransform.<b>Inverse</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Print the coordinates for the 
+	two repeating elements in the table-driven pattern<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;point = </span>
+	<span style="color:#a31515">&quot;x: &quot;</span><span style="color:Black"> &amp; 
+	swMathPoint.<b>ArrayData</b>(0) &amp; </span><span style="color:#a31515">&quot; y: &quot;</span><span style="color:Black"> 
+	&amp; swMathPoint.<b>ArrayData</b>(1) &amp; </span><span style="color:#a31515">&quot; z: 
+	&quot;</span><span style="color:Black"> &amp; swMathPoint.<b>ArrayData</b>(2)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(point)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTablePatternFeatData.<b>ReleaseSelectionAccess</b>()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'''
+	</span><span style="color:Gray">&lt;summary&gt;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">''' 
+	The SldWorks swApp variable is pre-assigned for you.<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'''
+	</span><span style="color:Gray">&lt;/summary&gt;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	<br>
+	<br>
+	</span><span style="color:Blue">End</span><span style="color:Black"> </span>
+	<span style="color:Blue">Class</span></div>
+
+</body>
+
+</html>

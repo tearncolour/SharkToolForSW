@@ -1,0 +1,101 @@
+<html>
+
+<head>
+<title>Save Configuration Data Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,configurations">
+<meta name=MS-HKWD content="VB.NET examples,previews">
+<meta name=MS-HKWD content="VB.NET examples,rebuild">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Save Configuration Data Example (VB.NET)</h1>
+<p>This example shows how to mark each configuration in a multi-configuration 
+model as needing to be rebuilt and how to save its configuration data, including 
+preview bitmaps, every time you save the model document.</p>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'------------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:&nbsp;</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;file&nbsp;to&nbsp;open&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:&nbsp;</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Activates&nbsp;each&nbsp;configuration&nbsp;in&nbsp;the&nbsp;model.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Sets&nbsp;each&nbsp;configuration's&nbsp;</span><font color="#008000"><b>Rebuild/Save&nbsp;Mark</b>&nbsp;</font><span style="color:green;">to&nbsp;true,&nbsp;if&nbsp;it&nbsp;is&nbsp;false.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Saves&nbsp;each&nbsp;configuration's&nbsp;preview&nbsp;bitmap&nbsp;to&nbsp;disk.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;NOTES:&nbsp;</span>
+<span style="color:green;">'&nbsp;*&nbsp;In&nbsp;SOLIDWORKS&nbsp;2013&nbsp;and&nbsp;later,&nbsp;to&nbsp;mark&nbsp;each&nbsp;configuration</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;as&nbsp;needing&nbsp;to&nbsp;be&nbsp;rebuilt&nbsp;and&nbsp;to&nbsp;save&nbsp;its&nbsp;configuration&nbsp;data</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;every&nbsp;time&nbsp;you&nbsp;save&nbsp;the&nbsp;model:</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;1.&nbsp;Activate&nbsp;each&nbsp;configuration&nbsp;and&nbsp;set</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IConfiguration::AddRebuildSaveMark&nbsp;to&nbsp;true.</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;2.&nbsp;Save&nbsp;the&nbsp;model.</span>
+<span style="color:green;">'&nbsp;*&nbsp;Because&nbsp;this&nbsp;model&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;save&nbsp;changes.</span>
+<span style="color:green;">'------------------------------------------------------------</span>
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color: blue">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color: blue">Imports</span>&nbsp;System
+<span style="color: blue">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color: blue">Partial</span>&nbsp;<span style="color: blue">Class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;<span style="color: blue">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModel&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swConfig&nbsp;<span style="color: blue">As</span>&nbsp;Configuration
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swConfMgr&nbsp;<span style="color: blue">As</span>&nbsp;ConfigurationManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;configNameArr&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;configName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;fileName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;bitmapName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;bitmapPathName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;status&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;errors&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>,&nbsp;warnings&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color: #a31515">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\multiconfig-part-2.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color: #a31515">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfMgr&nbsp;=&nbsp;swModel.<b>ConfigurationManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;configNameArr&nbsp;=&nbsp;swModel.<b>GetConfigurationNames</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Checking&nbsp;each&nbsp;configuration's&nbsp;Add&nbsp;Rebuild/Save&nbsp;Mark&nbsp;setting&nbsp;after&nbsp;opening&nbsp;the&nbsp;model&nbsp;document:&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">For</span>&nbsp;<span style="color: blue">Each</span>&nbsp;configName&nbsp;<span style="color: blue">In</span>&nbsp;configNameArr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfig&nbsp;=&nbsp;swModel.<b>GetConfigurationByName</b>(configName)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModel.<b>ShowConfiguration2</b>(configName)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;configName&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;'s&quot;</span>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;Add&nbsp;Rebuild/Save&nbsp;Mark&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swConfig.<b>AddRebuildSaveMark</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">If</span>&nbsp;swConfig.<b>AddRebuildSaveMark</b>&nbsp;=&nbsp;<span style="color: blue">False</span>&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfig.<b>AddRebuildSaveMark</b>&nbsp;=&nbsp;<span style="color: blue">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bitmapName&nbsp;=&nbsp;configName&nbsp;+&nbsp;<span style="color: #a31515">&quot;.bmp&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Resetting&nbsp;&quot;</span>&nbsp;&amp;&nbsp;configName&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;'s&quot;</span>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;Add&nbsp;Rebuild/Save&nbsp;Mark&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swConfig.<b>AddRebuildSaveMark</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bitmapPathName&nbsp;=&nbsp;<span style="color: #a31515">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\&quot;</span>&nbsp;+&nbsp;bitmapName
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swApp.<b>GetPreviewBitmapFile</b>(fileName,&nbsp;configName,&nbsp;bitmapPathName)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">If</span>&nbsp;status&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;  &amp; </span>configName<span style="color: #a31515"> &amp; &quot;'s &quot; &amp; &quot;preview&nbsp;bitmap&nbsp;written&nbsp;to&nbsp;disk:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;bitmapPathName)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Next</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Save&nbsp;the&nbsp;model&nbsp;to&nbsp;save&nbsp;each&nbsp;configuration's&nbsp;data&nbsp;with&nbsp;the&nbsp;model</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'status&nbsp;=&nbsp;swModel.<b>Save3</b>(swSaveAsOptions_e.swSaveAsOptions_Silent,&nbsp;errors,&nbsp;warnings)</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;swApp&nbsp;<span style="color: blue">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color: blue">End</span>&nbsp;<span style="color: blue">Class</span></pre>
+
+</body>
+
+</html>

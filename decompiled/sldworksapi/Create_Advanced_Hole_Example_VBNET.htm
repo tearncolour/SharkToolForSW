@@ -1,0 +1,281 @@
+<html>
+
+<head>
+<title>Create Advanced Hole Feature Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,Advanced Holes">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Advanced Hole Feature Example (VB.NET)</h1>
+<p>This example shows how to create an Advanced Hole feature.</p>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<font face="Courier New" size="2" color="#008000">
+'----------------------------------------------------------------------------
+<br>
+' Preconditions: <br>
+' 1. Verify that the specified part document exists.<br>
+' 2. Open the Immediate window.<br>
+' <br>
+' Postconditions:<br>
+' 1. Selects near and far side faces of the Advanced Hole. <br>
+' 2. Defines an Advanced Hole at a sketch point on the edge of the block <br>
+'&nbsp;&nbsp;&nbsp; with the following:<br>
+'&nbsp;&nbsp;&nbsp; * Countersink near side element<br>
+'&nbsp;&nbsp;&nbsp; * Straight tap near side element<br>
+'&nbsp;&nbsp;&nbsp; * Counterbore far side element<br>
+'&nbsp;&nbsp;&nbsp; * Straight hole far side element<br>
+' 3. Gets some near and far side element data for the Advanced Hole.<br>
+' 4. Modifies the near side element array to contain a tapered tap element.<br>
+' 5. Deletes the Advanced Hole's defining sketch point on the edge of the block.<br>
+' 6. Adds two sketch points and creates two Advanced Holes at those locations<br>
+'&nbsp;&nbsp;&nbsp; using the previously defined Advanced Hole.<br>
+' 7. Inspect the Immediate window and graphics area.<br>
+'<br>
+' NOTE: Because the model is used elsewhere, do not save changes.<br>
+'----------------------------------------------------------------------------</font><br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;feat&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Feature</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;boolstatus&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAdvHole_Near_1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAdvHole_Near_2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAdvHole_Near_3&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAdvHole_Far_1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAdvHole_Far_2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swCounterSinkNear&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">CountersinkElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swCounterBoreFar&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">CounterboreElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swStraightHoleFar&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">StraightElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swStraightTapNear&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">StraightTapElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swTaperedTapNear&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">TaperedTapElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeatureMgr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">FeatureManager</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ConvFactorLength&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;advHoleNearArr(1)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;advHoleFarArr(1)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;featdata&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleFeatureData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;newNearArr(1)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;newFarArr(1)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">AdvancedHoleElementData</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchFeature&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Feature</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelectionManager&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SelectionMgr</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketch&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Sketch</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchPointArray&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swMaxPointNumber&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;skPoint&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchPoint&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swCurrentPointNumber&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Long</span>,&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ResultArray&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>&nbsp;=&nbsp;<span style="color:blue;">Nothing</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;CalloutString&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;StrDiam&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;strDepth&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;retval&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS&nbsp;2018\samples\tutorial\api\block20.sldprt&quot;</span>,&nbsp;<span style="color:#2b91af;">swDocumentTypes_e</span>.swDocPART,&nbsp;<span style="color:#2b91af;">swOpenDocOptions_e</span>.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatureMgr&nbsp;=&nbsp;swModel.<b>FeatureManager</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Conversion&nbsp;from&nbsp;inches&nbsp;to&nbsp;meters</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ConvFactorLength&nbsp;=&nbsp;25.4&nbsp;/&nbsp;1000<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Select&nbsp;two&nbsp;faces&nbsp;for&nbsp;the&nbsp;near&nbsp;side&nbsp;and&nbsp;far&nbsp;side&nbsp;hole&nbsp;elements</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>SelectByRay</b>(-0.0589202612791269,&nbsp;0.0260626824463657,&nbsp;0.0560000000000969,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.000722831189342222,&nbsp;2,&nbsp;<span style="color:blue;">False</span>,&nbsp;256,&nbsp;0)&nbsp;<span style="color:green;">'Near&nbsp;side</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>SelectByRay</b>(-0.0110716643645077,&nbsp;0.0211784489308116,&nbsp;-0.0639370439421896,&nbsp;0.18261953966356,&nbsp;-0.612697461661826,&nbsp;0.76892907618728,&nbsp;0.000936301020408163,&nbsp;2,&nbsp;<span style="color:blue;">False</span>,&nbsp;512,&nbsp;0)&nbsp;<span style="color:green;">'Far&nbsp;side</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Define&nbsp;near&nbsp;and&nbsp;far&nbsp;side&nbsp;hole&nbsp;elements</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Near&nbsp;side&nbsp;countersink</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_1&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(<span style="color:#2b91af;">swAdvWzdGeneralHoleTypes_e</span>.swAdvWzdCounterSink)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_1.<b>Orientation</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swHoleElementOrientation_e</span>.swHoleElementOrientation_Nearside<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_1.<b>Size</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;#4&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_1.<b>Standard</b>&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_1.<b>FastenerType</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swWzdHoleStandardFastenerTypes_e</span>.swStandardAnsiInchFlatHead100<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_1.<b>Diameter</b>&nbsp;=&nbsp;ConvFactorLength&nbsp;*&nbsp;0.225<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_1.<b>BlindDepth</b>&nbsp;=&nbsp;0.02055794&nbsp;*&nbsp;ConvFactorLength<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_1.<b>EndCondition</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swEndConditions_e</span>.swEndCondBlind<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCounterSinkNear&nbsp;=&nbsp;swAdvHole_Near_1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCounterSinkNear.<b>EndConditionOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCounterSinkNear.<b>AngleOverride</b>&nbsp;=&nbsp;<span style="color:blue;">False</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Near&nbsp;side&nbsp;straight&nbsp;tap</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_2&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(<span style="color:#2b91af;">swAdvWzdGeneralHoleTypes_e</span>.swAdvWzdStraightTap)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_2.<b>Size</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;#4-40&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_2.<b>Standard</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swWzdHoleStandards_e</span>.swStandardAnsiInch<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_2.<b>FastenerType</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swWzdHoleStandardFastenerTypes_e</span>.swStandardAnsiInchBottomingTappedHole<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_2.<b>Diameter</b>&nbsp;=&nbsp;ConvFactorLength&nbsp;*&nbsp;0.089<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_2.<b>EndCondition</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swEndConditions_e</span>.swEndCondUpToNext<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_2.<b>DiameterOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swStraightTapNear&nbsp;=&nbsp;swAdvHole_Near_2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swStraightTapNear.<b>CustomSizing</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swStraightTapHoleCustomSizing_e</span>.swStraightTapHoleCustomSizing_TapDrillDiameter<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swStraightTapNear.<b>ThreadClass</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swStraightTapHoleThreadClass_e</span>.swStraightTapHoleThreadClass_1B<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swStraightTapNear.<b>ThreadClassOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Near&nbsp;side&nbsp;tapered&nbsp;tap</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_3&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(<span style="color:#2b91af;">swAdvWzdGeneralHoleTypes_e</span>.swAdvWzdTaperTap)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_3.<b>Orientation</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swHoleElementOrientation_e</span>.swHoleElementOrientation_Nearside<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_3.<b>Size</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;1/16&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_3.<b>Standard</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swWzdHoleStandards_e</span>.swStandardAnsiInch<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_3.<b>FastenerType</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swWzdHoleStandardFastenerTypes_e</span>.swStandardAnsiInchTaperedPipeTap<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_3.<b>Diameter</b>&nbsp;=&nbsp;ConvFactorLength&nbsp;*&nbsp;0.266<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_2.<b>BlindDepth</b>&nbsp;=&nbsp;0.205&nbsp;*&nbsp;ConvFactorLength<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_3.<b>EndCondition</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swEndConditions_e</span>.swEndCondBlind<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Near_3.<b>DiameterOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTaperedTapNear&nbsp;=&nbsp;swAdvHole_Near_3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTaperedTapNear.<b>CustomSizing</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swTaperedTapCustomSizing_e</span>.swTaperedTapCustomSizing_MinorDiameterWithCosmeticThread<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTaperedTapNear.<b>ThreadClass</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swTaperedTapThreadClass_e</span>.swTaperedTapThreadClass_1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTaperedTapNear.<b>ThreadClassOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTaperedTapNear.<b>EndConditionOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Far&nbsp;side&nbsp;counterbore</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(<span style="color:#2b91af;">swAdvWzdGeneralHoleTypes_e</span>.swAdvWzdCounterBore)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1.<b>Orientation</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swHoleElementOrientation_e</span>.swHoleElementOrientation_Farside<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1.<b>Size</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;#8&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1.<b>Standard</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swWzdHoleStandards_e</span>.swStandardAnsiInch<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1.<b>FastenerType</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swWzdHoleStandardFastenerTypes_e</span>.swStandardAnsiInchBinding<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1.<b>Diameter</b>&nbsp;=&nbsp;ConvFactorLength&nbsp;*&nbsp;0.375<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1.<b>BlindDepth</b>&nbsp;=&nbsp;0.105&nbsp;*&nbsp;ConvFactorLength<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1.<b>EndCondition</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swEndConditions_e</span>.swEndCondBlind<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_1.<b>DiameterOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCounterBoreFar&nbsp;=&nbsp;swAdvHole_Far_1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCounterBoreFar.<b>EndConditionOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Far&nbsp;side&nbsp;straight</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(<span style="color:#2b91af;">swAdvWzdGeneralHoleTypes_e</span>.swAdvWzdStraight)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2.<b>Size</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;1/16&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2.<b>Standard</b>&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2.<b>FastenerType</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swWzdHoleStandardFastenerTypes_e</span>.swStandardAnsiInchAllDrillSizes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2.<b>Diameter</b>&nbsp;=&nbsp;ConvFactorLength&nbsp;*&nbsp;0.0625<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2.<b>BlindDepth</b>&nbsp;=&nbsp;0.2711&nbsp;*&nbsp;ConvFactorLength<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2.<b>EndCondition</b>&nbsp;=&nbsp;<span style="color:#2b91af;">swEndConditions_e</span>.swEndCondBlind<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2.<b>DiameterOverride</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Customize&nbsp;the&nbsp;hole&nbsp;callout&nbsp;for&nbsp;this&nbsp;straight&nbsp;element</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StrDiam&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>GetCalloutVariableString</b>(<span style="color:#2b91af;">swCalloutVariable_e</span>.swCalloutVariable_AH_Straight_Diameter)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strDepth&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>GetCalloutVariableString</b>(<span style="color:#2b91af;">swCalloutVariable_e</span>.swCalloutVariable_AH_Straight_Depth)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CalloutString&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&lt;MOD-DIAM&gt;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;StrDiam&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&lt;HOLE-DEPTH&gt;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;strDepth<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAdvHole_Far_2.<b>CalloutString</b>&nbsp;=&nbsp;CalloutString<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swStraightHoleFar&nbsp;=&nbsp;swAdvHole_Far_2<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;near&nbsp;and&nbsp;far&nbsp;side&nbsp;element&nbsp;arrays</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;advHoleNearArr(0)&nbsp;=&nbsp;swCounterSinkNear<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;advHoleNearArr(1)&nbsp;=&nbsp;swStraightTapNear<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;advHoleFarArr(0)&nbsp;=&nbsp;swCounterBoreFar<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;advHoleFarArr(1)&nbsp;=&nbsp;swStraightHoleFar<br>
+&nbsp;</p>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:blue;">	Dim</span>&nbsp;dispArray&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DispatchWrapper</span>()&nbsp;=&nbsp;ObjectArrayToDispatchWrapperArray(<span style="color:blue;">New</span>&nbsp;<span style="color:blue;">Object</span>()&nbsp;{advHoleNearArr(0),&nbsp;advHoleNearArr(1)})
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;dispArray2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DispatchWrapper</span>()&nbsp;=&nbsp;ObjectArrayToDispatchWrapperArray(<span style="color:blue;">New</span>&nbsp;<span style="color:blue;">Object</span>()&nbsp;{advHoleFarArr(0),&nbsp;advHoleFarArr(1)})</pre>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;the&nbsp;Advanced&nbsp;Hole&nbsp;using&nbsp;the&nbsp;near&nbsp;and&nbsp;far&nbsp;side&nbsp;element&nbsp;arrays;&nbsp;specify&nbsp;to&nbsp;not&nbsp;use&nbsp;baseline&nbsp;dimensions;&nbsp;customize&nbsp;Hole&nbsp;Callouts</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feat&nbsp;=&nbsp;swFeatureMgr.<b>AdvancedHole2</b>(dispArray,&nbsp;dispArray2,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">False</span>, ResultArray)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;some&nbsp;near&nbsp;and&nbsp;far&nbsp;side&nbsp;element&nbsp;data</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featdata&nbsp;=&nbsp;feat.<b>GetDefinition</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featdata.<b>AccessSelections</b>(swModel,&nbsp;<span style="color:blue;">Nothing</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;near&nbsp;side&nbsp;hole&nbsp;elements:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;featdata.<b>NearSideElementsCount</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;far&nbsp;side&nbsp;hole&nbsp;elements:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;featdata.<b>FarSideElementsCount</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCounterSinkNear&nbsp;=&nbsp;featdata.<b>GetNearSideElements</b>(0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCounterBoreFar&nbsp;=&nbsp;featdata.<b>GetFarSideElements</b>(0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swStraightHoleFar&nbsp;=&nbsp;featdata.<b>GetFarSideElements</b>(1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Near&nbsp;side&nbsp;countersink:&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Hole&nbsp;element&nbsp;type&nbsp;as&nbsp;defined&nbsp;in&nbsp;swAdvWzdGeneralHoleTypes_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCounterSinkNear.<b>ElementType</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Size&nbsp;as&nbsp;defined&nbsp;on&nbsp;the&nbsp;Advanced&nbsp;Hole&nbsp;PropertyManager&nbsp;page:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCounterSinkNear.<b>Size</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Standard&nbsp;as&nbsp;defined&nbsp;in&nbsp;swWzdHoleStandards_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCounterSinkNear.<b>Standard</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Fastener&nbsp;type&nbsp;as&nbsp;defined&nbsp;in&nbsp;swWzdHoleStandardFastenerTypes_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCounterSinkNear.<b>FastenerType</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Diameter&nbsp;in&nbsp;m:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCounterSinkNear.<b>Diameter</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Blind&nbsp;depth&nbsp;in&nbsp;m:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCounterSinkNear.<b>BlindDepth</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Orientation&nbsp;as&nbsp;defined&nbsp;in&nbsp;swHoleElementOrientation_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCounterSinkNear.<b>Orientation</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;End&nbsp;condition&nbsp;as&nbsp;defined&nbsp;in&nbsp;swEndConditions_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCounterSinkNear.<b>EndCondition</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Far&nbsp;side&nbsp;straight:&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Hole&nbsp;element&nbsp;type&nbsp;as&nbsp;defined&nbsp;in&nbsp;swAdvWzdGeneralHoleTypes_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>ElementType</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Size&nbsp;as&nbsp;defined&nbsp;on&nbsp;the&nbsp;Advanced&nbsp;Hole&nbsp;PropertyManager&nbsp;page:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>Size</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Standard&nbsp;as&nbsp;defined&nbsp;in&nbsp;swWzdHoleStandards_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>Standard</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Fastener&nbsp;type&nbsp;as&nbsp;defined&nbsp;in&nbsp;swWzdHoleStandardFastenerTypes_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>FastenerType</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Diameter&nbsp;in&nbsp;m:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>Diameter</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Diameter&nbsp;override?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>DiameterOverride</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Blind&nbsp;depth&nbsp;in&nbsp;m:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>BlindDepth</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;End&nbsp;condition&nbsp;as&nbsp;defined&nbsp;in&nbsp;swEndConditions_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>EndCondition</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Customized&nbsp;hole&nbsp;callout:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swStraightHoleFar.<b>CalloutString</b>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Modify&nbsp;the&nbsp;near&nbsp;and&nbsp;far&nbsp;side&nbsp;element&nbsp;arrays</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newNearArr(0)&nbsp;=&nbsp;swTaperedTapNear<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newNearArr(1)&nbsp;=&nbsp;swStraightTapNear<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#008000">'newFarArr(0)&nbsp;=&nbsp;swCounterBoreFar<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'newFarArr(1)&nbsp;=&nbsp;swStraightHoleFar</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featdata.<b>SetNearSideElements</b>(newNearArr)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#008000">'featdata.<b>SetFarSideElements</b>(newFarArr)</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feat.<b>ModifyDefinition</b>(featdata,&nbsp;swModel,&nbsp;<span style="color:blue;">Nothing</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Delete&nbsp;the&nbsp;first&nbsp;point&nbsp;used&nbsp;to&nbsp;define&nbsp;the&nbsp;Advanced&nbsp;Hole</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchFeature&nbsp;=&nbsp;feat.<b>GetFirstSubFeature</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchFeature.<b>Select2</b>(<span style="color:blue;">False</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditSketch</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionManager&nbsp;=&nbsp;swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketch&nbsp;=&nbsp;swSketchFeature.<b>GetSpecificFeature2</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPointArray&nbsp;=&nbsp;swSketch.<b>GetSketchPoints2</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMaxPointNumber&nbsp;=&nbsp;UBound(swSketchPointArray)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;swCurrentPointNumber&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;swMaxPointNumber&nbsp;<span style="color:blue;">Step</span>&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPoint&nbsp;=&nbsp;swSketchPointArray(swCurrentPointNumber)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retval&nbsp;=&nbsp;swSelectionManager.<b>AddSelectionListObject</b>(swSketchPoint,&nbsp;<span style="color:blue;">Nothing</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditDelete</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;swCurrentPointNumber<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;points&nbsp;for&nbsp;multiple&nbsp;Advanced&nbsp;Hole&nbsp;locations</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;skPoint&nbsp;=&nbsp;swModel.<b>SketchManager</b>.<b>CreatePoint</b>(-0.0319158789518497,&nbsp;0.0344489966898323,&nbsp;0.05600000000004)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;skPoint&nbsp;=&nbsp;swModel.<b>SketchManager</b>.<b>CreatePoint</b>(-0.0494104502066557,&nbsp;0.0080156770060853,&nbsp;0.0560000000000969)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SketchManager</b>.<b>InsertSketch</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub<br>
+<br>
+&nbsp;</span></p>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;ObjectArrayToDispatchWrapperArray(<span style="color:blue;">ByVal</span>&nbsp;Objects&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>())&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DispatchWrapper</span>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ArraySize&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ArraySize&nbsp;=&nbsp;Objects.GetUpperBound(0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;d&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DispatchWrapper</span>()&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">DispatchWrapper</span>(ArraySize&nbsp;+&nbsp;1&nbsp;-&nbsp;1)&nbsp;{}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ArrayIndex&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;ArrayIndex&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;ArraySize
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d(ArrayIndex)&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">DispatchWrapper</span>(Objects(ArrayIndex))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;d
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span></pre>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SldWorks</span><br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

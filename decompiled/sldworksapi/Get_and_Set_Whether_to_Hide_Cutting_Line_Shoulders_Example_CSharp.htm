@@ -1,0 +1,122 @@
+<html>
+
+<head>
+<title>Get and Set Whether to Hide Cutting Line Shoulders Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,section views">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get and Set Whether to Hide Cutting Line Shoulders Example (C#)</h1>
+<p>This example shows how to get and set whether to hide cutting line shoulders 
+in a section view.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">//--------------------------------------------------------------------------</span>
+<span style="color:green;">//&nbsp;Preconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;part&nbsp;and&nbsp;templates&nbsp;exist.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;Postconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;part.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Creates&nbsp;a&nbsp;drawing&nbsp;of&nbsp;the&nbsp;part.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Creates&nbsp;a&nbsp;section&nbsp;view.</span>
+<span style="color:green;">//&nbsp;4.&nbsp;Gets&nbsp;and&nbsp;sets&nbsp;whether&nbsp;to&nbsp;hide&nbsp;cutting&nbsp;line&nbsp;shoulders&nbsp;in&nbsp;the&nbsp;section</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;view.</span>
+<span style="color:green;">//&nbsp;5.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;part&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;it&nbsp;or&nbsp;the&nbsp;drawing.</span>
+<span style="color:green;">//--------------------------------------------------------------------------</span>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;
+<span style="color:blue;">using</span>&nbsp;System;
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;
+ 
+<span style="color:blue;">namespace</span>&nbsp;Macro1CSharp.csproj
+{
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DrawingDoc&nbsp;swDrawing&nbsp;=&nbsp;<span style="color:blue;">default</span>(DrawingDoc);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sheet&nbsp;swSheet&nbsp;=&nbsp;<span style="color:blue;">default</span>(Sheet);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;View&nbsp;swView&nbsp;=&nbsp;<span style="color:blue;">default</span>(View);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension&nbsp;swModelDocExt&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDocExtension);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SketchSegment&nbsp;swSketchSegment&nbsp;=&nbsp;<span style="color:blue;">default</span>(SketchSegment);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SketchManager&nbsp;swSketchMgr&nbsp;=&nbsp;<span style="color:blue;">default</span>(SketchManager);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DrSection&nbsp;swSectionView&nbsp;=&nbsp;<span style="color:blue;">default</span>(DrSection);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;status&nbsp;=&nbsp;<span style="color:blue;">false</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;errors&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;warnings&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;fileName&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;swSheetWidth&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;swSheetHeight&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;drawingTemplate&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;sheetTemplate&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Open&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\cam&nbsp;roller.sldprt&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>OpenDoc6</b>(fileName,&nbsp;(<span style="color:blue;">int</span>)swDocumentTypes_e.swDocPART,&nbsp;(<span style="color:blue;">int</span>)swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;errors,&nbsp;<span style="color:blue;">ref</span>&nbsp;warnings);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Create&nbsp;drawing&nbsp;of&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheetWidth&nbsp;=&nbsp;1.189;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheetHeight&nbsp;=&nbsp;0.841;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;drawingTemplate&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\ProgramData\\SolidWorks\\SOLIDWORKS&nbsp;2017\\templates\\Drawing.drwdot&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawing&nbsp;=&nbsp;(DrawingDoc)swApp.<b>NewDocument</b>(drawingTemplate,&nbsp;(<span style="color:blue;">int</span>)swDwgPaperSizes_e.swDwgPapersUserDefined,&nbsp;swSheetWidth,&nbsp;swSheetHeight);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheet&nbsp;=&nbsp;(Sheet)swDrawing.<b>GetCurrentSheet</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheet.<b>SetProperties2</b>((<span style="color:blue;">int</span>)swDwgPaperSizes_e.swDwgPapersUserDefined,&nbsp;(<span style="color:blue;">int</span>)swDwgTemplates_e.swDwgTemplateCustom,&nbsp;1,&nbsp;2,&nbsp;<span style="color:blue;">false</span>,&nbsp;swSheetWidth,&nbsp;swSheetHeight,&nbsp;<span style="color:blue;">true</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sheetTemplate&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\ProgramData\\SolidWorks\\SOLIDWORKS&nbsp;2017\\lang\\english\\sheetformat\\a0&nbsp;-&nbsp;iso.slddrt&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheet.<b>SetTemplateName</b>(sheetTemplate);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheet.<b>ReloadTemplate</b>(<span style="color:blue;">true</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swDrawing.<b>GenerateViewPaletteViews</b>(fileName);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;(View)swDrawing.<b>DropDrawingViewFromPalette2</b>(<span style="color:#a31515;">&quot;*Left&quot;</span>,&nbsp;0.580930433566434,&nbsp;0.431525272727273,&nbsp;0);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Create&nbsp;section&nbsp;view</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawing&nbsp;=&nbsp;(DrawingDoc)swApp.<b>ActiveDoc</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swDrawing.<b>ActivateView</b>(<span style="color:#a31515;">&quot;Drawing&nbsp;View1&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swDrawing;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr&nbsp;=&nbsp;(SketchManager)swModel.<b>SketchManager</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;(SketchSegment)swSketchMgr.<b>CreateLine</b>(0.0,&nbsp;0.0,&nbsp;0.0,&nbsp;0.012168,&nbsp;0.021283,&nbsp;0.0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;(SketchSegment)swSketchMgr.<b>CreateLine</b>(0.0,&nbsp;0.0,&nbsp;0.0,&nbsp;0.024347,&nbsp;-0.010966,&nbsp;0.0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;(ModelDocExtension)swModel.<b>Extension</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Line1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCHSEGMENT&quot;</span>,&nbsp;0.690604633175108,&nbsp;0.625483883858213,&nbsp;0,&nbsp;<span style="color:blue;">false</span>,&nbsp;0,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Line2&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCHSEGMENT&quot;</span>,&nbsp;0.747211061353527,&nbsp;0.357889859742052,&nbsp;0,&nbsp;<span style="color:blue;">true</span>,&nbsp;0,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;(View)swDrawing.<b>CreateSectionViewAt5</b>(0.676815388637685,&nbsp;0.116110180826413,&nbsp;0,&nbsp;<span style="color:#a31515;">&quot;A&quot;</span>,&nbsp;(<span style="color:blue;">int</span>)swCreateSectionViewAtOptions_e.swCreateSectionView_OffsetSection,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swDrawing.<b>ActivateView</b>(<span style="color:#a31515;">&quot;Drawing&nbsp;View2&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Get&nbsp;section&nbsp;view&nbsp;and&nbsp;get&nbsp;and&nbsp;set&nbsp;whether&nbsp;to&nbsp;hide&nbsp;cutting&nbsp;line&nbsp;shoulders</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionView&nbsp;=&nbsp;(DrSection)swView.<b>GetSection</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">if</span>&nbsp;(swSectionView.<b>CuttingLineShoulders</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Hide&nbsp;cutting&nbsp;line&nbsp;shoulders&nbsp;=&nbsp;True&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Setting&nbsp;hide&nbsp;cutting&nbsp;line&nbsp;shoulders&nbsp;to&nbsp;False&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionView.<b>CuttingLineShoulders</b>&nbsp;=&nbsp;<span style="color:blue;">false</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Hide&nbsp;cutting&nbsp;line&nbsp;shoulders&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swSectionView.<b>CuttingLineShoulders</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Hide&nbsp;cutting&nbsp;line&nbsp;shoulders&nbsp;=&nbsp;False&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Setting&nbsp;hide&nbsp;cutting&nbsp;line&nbsp;shoulders&nbsp;to&nbsp;True&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionView.<b>CuttingLineShoulders</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Hide&nbsp;cutting&nbsp;line&nbsp;shoulders&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swSectionView.<b>CuttingLineShoulders</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}</pre>
+
+</body>
+
+</html>

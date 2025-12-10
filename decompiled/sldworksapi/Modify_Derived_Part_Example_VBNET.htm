@@ -1,0 +1,137 @@
+<html>
+
+<head>
+<title>Modify Derived Part Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,derived parts">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Modify Derived Part Example (VB.NET)</h1>
+<p>This example shows how to insert and modify a derived part.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'-----------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;part&nbsp;documents&nbsp;to&nbsp;open&nbsp;and&nbsp;insert&nbsp;exist.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;part&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Inserts&nbsp;a&nbsp;derived&nbsp;part&nbsp;in&nbsp;the&nbsp;part&nbsp;document</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;opened&nbsp;in&nbsp;step&nbsp;1.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Changes&nbsp;some&nbsp;parameters&nbsp;of&nbsp;the&nbsp;derived&nbsp;part&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;NOTE:&nbsp;Because&nbsp;both&nbsp;part&nbsp;documents&nbsp;are&nbsp;used&nbsp;elsewhere,</span>
+<span style="color:green;">'&nbsp;do&nbsp;not&nbsp;save&nbsp;any&nbsp;changes.</span>
+<span style="color:green;">'-----------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swPart&nbsp;<span style="color:blue;">As</span>&nbsp;PartDoc
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swComp&nbsp;<span style="color:blue;">As</span>&nbsp;Component2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDerivedFeat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDerivedData&nbsp;<span style="color:blue;">As</span>&nbsp;DerivedPartFeatureData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bRet&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;derivedFileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Open&nbsp;part,&nbsp;insert&nbsp;another&nbsp;part,&nbsp;and&nbsp;select&nbsp;the&nbsp;derived&nbsp;part&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\holecube.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;derivedFileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\box.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPart&nbsp;=&nbsp;swModel
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat&nbsp;=&nbsp;swPart.<b>InsertPart3</b>(derivedFileName,&nbsp;swInsertPartOptions_e.swInsertPartImportSolids, &quot;Default&quot;)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;box&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;the&nbsp;selected&nbsp;derived&nbsp;part&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDerivedFeat&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObjectsComponent3</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Name&nbsp;of&nbsp;derived&nbsp;part&nbsp;feature&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDerivedFeat.<b>Name</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;and&nbsp;modify&nbsp;import&nbsp;planes&nbsp;with&nbsp;derived&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;TestImportPlane(swDerivedFeat,&nbsp;swModel,&nbsp;swComp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;and&nbsp;modify&nbsp;import&nbsp;absorbed&nbsp;sketches&nbsp;with&nbsp;derived&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;TestImportAbsorbedSketches(swDerivedFeat,&nbsp;swModel,&nbsp;swComp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;and&nbsp;modify&nbsp;import&nbsp;unabsorbed&nbsp;sketches&nbsp;with&nbsp;derived&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;TestImportUnAbsorbedSketches(swDerivedFeat,&nbsp;swModel,&nbsp;swComp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDerivedData&nbsp;=&nbsp;swDerivedFeat.<b>GetDefinition</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Derived&nbsp;file's&nbsp;path&nbsp;and&nbsp;name&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDerivedData.<b>PathName</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;TestImportPlane(<span style="color:blue;">ByVal</span>&nbsp;feat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;doc&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;comp&nbsp;<span style="color:blue;">As</span>&nbsp;Component2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;featData&nbsp;<span style="color:blue;">As</span>&nbsp;DerivedPartFeatureData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;startVal&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;boolstatus&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean
+</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData&nbsp;=&nbsp;feat.<b>GetDefinition</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startVal&nbsp;=&nbsp;featData.<b>ImportPlane</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Import&nbsp;planes&nbsp;with&nbsp;derived&nbsp;part?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;startVal)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData.<b>ImportPlane</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Modified&nbsp;import&nbsp;planes&nbsp;with&nbsp;derived&nbsp;part?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;featData.<b>ImportPlane</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;feat.<b>ModifyDefinition</b>(featData,&nbsp;doc,&nbsp;comp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;TestImportAbsorbedSketches(<span style="color:blue;">ByVal</span>&nbsp;feat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;doc&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;comp&nbsp;<span style="color:blue;">As</span>&nbsp;Component2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;featData&nbsp;<span style="color:blue;">As</span>&nbsp;DerivedPartFeatureData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;startVal&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;boolstatus&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean
+</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData&nbsp;=&nbsp;feat.<b>GetDefinition</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startVal&nbsp;=&nbsp;featData.<b>ImportAbsorbedSketches</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Import&nbsp;absorbed&nbsp;sketches&nbsp;with&nbsp;derived&nbsp;part?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;startVal)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData.<b>ImportAbsorbedSketches</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Modified&nbsp;import&nbsp;absorbed&nbsp;sketches&nbsp;with&nbsp;derived&nbsp;part?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;featData.<b>ImportAbsorbedSketches</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;feat.<b>ModifyDefinition</b>(featData,&nbsp;doc,&nbsp;comp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;TestImportUnAbsorbedSketches(<span style="color:blue;">ByVal</span>&nbsp;feat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;doc&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;comp&nbsp;<span style="color:blue;">As</span>&nbsp;Component2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;featData&nbsp;<span style="color:blue;">As</span>&nbsp;DerivedPartFeatureData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;startVal&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;boolstatus&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData&nbsp;=&nbsp;feat.<b>GetDefinition</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startVal&nbsp;=&nbsp;featData.<b>ImportUnAbsorbedSketches</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Import&nbsp;unabsorbed&nbsp;sketches&nbsp;with&nbsp;derived&nbsp;part?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;startVal)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData.<b>ImportUnAbsorbedSketches</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Modified&nbsp;import&nbsp;unabsorbed&nbsp;sketches&nbsp;with&nbsp;derived&nbsp;part?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;featData.<b>ImportUnAbsorbedSketches</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;feat.<b>ModifyDefinition</b>(featData,&nbsp;doc,&nbsp;comp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featData&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

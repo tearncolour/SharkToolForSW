@@ -1,0 +1,113 @@
+<html>
+
+<head>
+<title>Get Data for Surface-flatten Feature Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,surface-flatten features">
+<meta name=MS-HKWD content="C# examples,feature">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Data for Surface-flatten Feature Example (C#)</h1>
+<p>This example shows how to insert a surface-flatten feature and get its data.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">//-------------------------------------------------------</span>
+<span style="color:green;">//&nbsp;Preconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;part&nbsp;to&nbsp;open&nbsp;exists.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;Postconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;part.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Inserts&nbsp;a&nbsp;surface-flatten&nbsp;feature.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Gets&nbsp;surface-flatten&nbsp;feature&nbsp;data.</span>
+<span style="color:green;">//&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;graphics&nbsp;area&nbsp;and&nbsp;FeatureManager&nbsp;design</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;tree.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;NOTE:&nbsp;Because&nbsp;this&nbsp;part&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save</span>
+<span style="color:green;">//&nbsp;changes.</span>
+<span style="color:green;">//--------------------------------------------------------</span>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;
+<span style="color:blue;">using</span>&nbsp;System;
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;
+ 
+<span style="color:blue;">namespace</span>&nbsp;Macro1CSharp.csproj
+{
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+&nbsp;&nbsp;&nbsp;&nbsp;{
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension&nbsp;swModelDocExt&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDocExtension);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FeatureManager&nbsp;swFeatureManager&nbsp;=&nbsp;<span style="color:blue;">default</span>(FeatureManager);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Feature&nbsp;swFeature&nbsp;=&nbsp;<span style="color:blue;">default</span>(Feature);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SurfaceFlattenFeatureData&nbsp;swSurfaceFlattenFeatureData&nbsp;=&nbsp;<span style="color:blue;">default</span>(SurfaceFlattenFeatureData);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Edge&nbsp;swEdge&nbsp;=&nbsp;<span style="color:blue;">default</span>(Edge);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;status&nbsp;=&nbsp;<span style="color:blue;">false</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;warnings&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;errors&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;fileName&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>[]&nbsp;edges&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;nbrTearEdges&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;i&nbsp;=&nbsp;0;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\api\\hemisphere.sldprt&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>OpenDoc6</b>(fileName,&nbsp;(<span style="color:blue;">int</span>)swDocumentTypes_e.swDocPART,&nbsp;(<span style="color:blue;">int</span>)swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;errors,&nbsp;<span style="color:blue;">ref</span>&nbsp;warnings);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;(ModelDocExtension)swModel.<b>Extension</b>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Select&nbsp;face,&nbsp;vertex,&nbsp;and&nbsp;curves&nbsp;for&nbsp;surface-flatten&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.00546207138008786,&nbsp;-0.0373996629648742,&nbsp;0.0130049636270216,&nbsp;<span style="color:blue;">false</span>,&nbsp;1,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;VERTEX&quot;</span>,&nbsp;0,&nbsp;-0.0400014251170795,&nbsp;-0.00054185036618795,&nbsp;<span style="color:blue;">true</span>,&nbsp;16,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.011047389592717,&nbsp;-6.23453597697887E-06,&nbsp;0.0382739927527045,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.0108290857690036,&nbsp;-0.0262767618508641,&nbsp;0.0280128973987478,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.00907918330954303,&nbsp;0.0286363967873063,&nbsp;0.0262553195430037,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.0157595492108076,&nbsp;0.0240950142317162,&nbsp;-0.0272880335909787,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.0143808110794609,&nbsp;-0.0281074423709366,&nbsp;-0.0240578702886196,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.01886657492451,&nbsp;2.48139106812095E-05,&nbsp;-0.035004838468241,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.0140143161426676,&nbsp;-0.0374399859522778,&nbsp;0.000123652313243445,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.0164192327552536,&nbsp;0.0363245554251959,&nbsp;-9.58561062339106E-05,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Create&nbsp;surface-flatten&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatureManager&nbsp;=&nbsp;(FeatureManager)swModel.<b>FeatureManager</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;(Feature)swFeatureManager.<b>InsertFlattenSurface2</b>(8,&nbsp;<span style="color:blue;">true</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Get&nbsp;some&nbsp;surface-flatten&nbsp;feature&nbsp;data</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSurfaceFlattenFeatureData&nbsp;=&nbsp;(SurfaceFlattenFeatureData)swFeature.<b>GetDefinition</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSurfaceFlattenFeatureData.<b>AccessSelections</b>(swModel,&nbsp;<span style="color:blue;">null</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Feature&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swFeature.<b>Name</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Accuracy&nbsp;of&nbsp;flattened&nbsp;triangle&nbsp;mesh&nbsp;=&nbsp;&nbsp;&quot;</span>&nbsp;+&nbsp;swSurfaceFlattenFeatureData.<b>AccuracyFactor</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Keep&nbsp;internal&nbsp;control&nbsp;curves?&nbsp;&quot;</span>&nbsp;+&nbsp;swSurfaceFlattenFeatureData.<b>KeepInternalControlCurves</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">if</span>&nbsp;(swSurfaceFlattenFeatureData.<b>ShouldMakeTears</b>&nbsp;==&nbsp;<span style="color:blue;">true</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Tear&nbsp;edges:&nbsp;&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;edges&nbsp;=&nbsp;(<span style="color:blue;">object</span>[])swSurfaceFlattenFeatureData.<b>TearEdges</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrTearEdges&nbsp;=&nbsp;edges.Length;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Number&nbsp;of&nbsp;tear&nbsp;edges:&nbsp;&quot;</span>&nbsp;+&nbsp;nbrTearEdges);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">for</span>&nbsp;(i&nbsp;=&nbsp;0;&nbsp;i&nbsp;&lt;=&nbsp;nbrTearEdges&nbsp;-&nbsp;1;&nbsp;i++)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEdge&nbsp;=&nbsp;(Edge)edges[i];
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr&nbsp;swSelMgr&nbsp;=&nbsp;<span style="color:blue;">default</span>(SelectionMgr);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;(SelectionMgr)swModel.<b>SelectionManager</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swSelMgr.<b>AddSelectionListObject</b>(swEdge,&nbsp;<span style="color:blue;">null</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Type&nbsp;of&nbsp;object&nbsp;(51&nbsp;=&nbsp;swSelREFEDGES):&nbsp;&quot;</span>&nbsp;+&nbsp;swSelMgr.<b>GetSelectedObjectType3</b>(1,&nbsp;-1));
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSurfaceFlattenFeatureData.<b>ReleaseSelectionAccess</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}</pre>
+<p class=APICODE>&nbsp;</p>
+
+</body>
+
+</html>

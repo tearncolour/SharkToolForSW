@@ -1,0 +1,90 @@
+<html>
+
+<head>
+<title>Insert Mate Load Reference Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,mates">
+<meta name=MS-HKWD content="C# examples,mate load reference">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Mate Load Reference Example (C#)</h1>
+<p>This example shows how to insert a mate load reference.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">//--------------------------------------------------------------</span>
+<span style="color:green;">//&nbsp;Preconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;assembly&nbsp;document&nbsp;to&nbsp;open&nbsp;exists.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;Postconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;assembly&nbsp;document.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Gets&nbsp;the&nbsp;mate&nbsp;where&nbsp;to&nbsp;add&nbsp;a&nbsp;load&nbsp;reference.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Selects&nbsp;a&nbsp;supplemental&nbsp;face&nbsp;for&nbsp;the&nbsp;load&nbsp;reference.</span>
+<span style="color:green;">//&nbsp;4.&nbsp;Inserts&nbsp;a&nbsp;mate&nbsp;load&nbsp;reference.</span>
+<span style="color:green;">//&nbsp;5.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;assembly&nbsp;document&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do</span>
+<span style="color:green;">//&nbsp;not&nbsp;save&nbsp;changes.</span>
+<span style="color:green;">//-------------------------------------------------------------</span>
+ 
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;
+<span style="color:blue;">using</span>&nbsp;System;
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;
+ 
+<span style="color:blue;">namespace</span>&nbsp;MateLoadReferenceCSharp.csproj
+{
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+&nbsp;&nbsp;&nbsp;&nbsp;{
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AssemblyDoc&nbsp;swAssemblyDoc&nbsp;=&nbsp;<span style="color:blue;">default</span>(AssemblyDoc);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension&nbsp;swModelDocExt&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDocExtension);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr&nbsp;swSelMgr&nbsp;=&nbsp;<span style="color:blue;">default</span>(SelectionMgr);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mate2&nbsp;swMate&nbsp;=&nbsp;<span style="color:blue;">default</span>(Mate2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MateLoadReference&nbsp;swMateLoadRef&nbsp;=&nbsp;<span style="color:blue;">default</span>(MateLoadReference);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Feature&nbsp;swFeat&nbsp;=&nbsp;<span style="color:blue;">default</span>(Feature);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Component2&nbsp;swComponent&nbsp;=&nbsp;<span style="color:blue;">default</span>(Component2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;fileName&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;errors&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;warnings&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;status&nbsp;=&nbsp;<span style="color:blue;">false</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Open&nbsp;the&nbsp;assembly&nbsp;document</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\api\\wrench.sldasm&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>OpenDoc6</b>(fileName,&nbsp;(<span style="color:blue;">int</span>)swDocumentTypes_e.swDocASSEMBLY,&nbsp;(<span style="color:blue;">int</span>)swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;errors,&nbsp;<span style="color:blue;">ref</span>&nbsp;warnings);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssemblyDoc&nbsp;=&nbsp;(AssemblyDoc)swModel;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;(SelectionMgr)swModel.<b>SelectionManager</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;(ModelDocExtension)swModel.<b>Extension</b>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Get&nbsp;the&nbsp;mate&nbsp;where&nbsp;to&nbsp;add&nbsp;the&nbsp;load&nbsp;reference</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Concentric4&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;MATE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">false</span>,&nbsp;0,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat&nbsp;=&nbsp;(Feature)swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMate&nbsp;=&nbsp;(Mate2)swFeat.<b>GetSpecificFeature2</b>();
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Insert&nbsp;the&nbsp;load&nbsp;reference&nbsp;using&nbsp;the&nbsp;selected&nbsp;mate&nbsp;and&nbsp;supplemental&nbsp;face</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.087090587167495,&nbsp;-0.00524931403344908,&nbsp;0.00483048001655106,&nbsp;<span style="color:blue;">true</span>,&nbsp;0,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMateLoadRef&nbsp;=&nbsp;(MateLoadReference)swAssemblyDoc.<b>InsertLoadReference</b>(swMate);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Name&nbsp;of&nbsp;load&nbsp;reference&nbsp;added&nbsp;to&nbsp;&quot;</span>&nbsp;+&nbsp;swFeat.<b>Name</b>&nbsp;+&nbsp;<span style="color:#a31515;">&quot;&nbsp;mate&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swMateLoadRef.<b>Name</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;supplemental&nbsp;faces&nbsp;of&nbsp;the&nbsp;mate&nbsp;load&nbsp;reference&nbsp;for&nbsp;Component1&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swMateLoadRef.<b>GetFacesCount</b>(0));
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponent&nbsp;=&nbsp;(Component2)swMateLoadRef.<b>get_Component</b>(0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Name&nbsp;of&nbsp;Component1&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swComponent.<b>Name2</b>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}</pre>
+
+</body>
+
+</html>

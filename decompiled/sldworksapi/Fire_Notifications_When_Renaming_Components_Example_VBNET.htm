@@ -1,0 +1,126 @@
+<html>
+
+<head>
+<title>Fire Notifications When Renaming Components Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,assemblies">
+<meta name=MS-HKWD content="VB.NET examples,components">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Fire Notifications When Renaming Components Example (VB.NET)</h1>
+<p><a name="Top"></a>This example shows how to fire notifications when you:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">are about to rename a 
+	component.</font></li>
+	<li><font face="Verdana" style="font-size: 8pt">rename a component.</font></li>
+</ul>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'---------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;these&nbsp;documents&nbsp;exist&nbsp;in&nbsp;<i>public_documents</i><b>\samples\tutorial\api</b>:</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<b>beam_boltconnection.sldasm</b></span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<b>beam&nbsp;with&nbsp;holes.sldprt</b></span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Open&nbsp;<i>public_documents</i><b>\samples\tutorial\api\beam_boltconnection.sldasm</b>.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Fires&nbsp;pre-notification&nbsp;before&nbsp;appending</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;<b>123</b>&nbsp;to&nbsp;each&nbsp;assembly&nbsp;component's&nbsp;name.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Fires&nbsp;notification&nbsp;when&nbsp;appending&nbsp;<b>123</b>&nbsp;to</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;each&nbsp;assembly&nbsp;component's&nbsp;name.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;FeatureManager&nbsp;design&nbsp;tree&nbsp;and&nbsp;the</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;assembly&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do</span>
+<span style="color:green;">'&nbsp;not&nbsp;save&nbsp;changes.</span>
+<span style="color:green;">'---------------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+<span style="color:blue;">Imports</span>&nbsp;System.Collections
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">WithEvents</span>&nbsp;swAssy&nbsp;<span style="color:blue;">As</span>&nbsp;AssemblyDoc
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swConfigMgr&nbsp;<span style="color:blue;">As</span>&nbsp;ConfigurationManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swConfig&nbsp;<span style="color:blue;">As</span>&nbsp;Configuration
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swRootComp&nbsp;<span style="color:blue;">As</span>&nbsp;Component2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;Children&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swChild&nbsp;<span style="color:blue;">As</span>&nbsp;Component2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelData&nbsp;<span style="color:blue;">As</span>&nbsp;SelectData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ChildCount&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;oldName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;newName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bOldSetting&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bRet&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;openAssem&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Hashtable</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>ActiveDoc</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssy&nbsp;=&nbsp;swModel
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Set&nbsp;up&nbsp;event</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssy&nbsp;=&nbsp;swModel
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openAssem&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">Hashtable</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventHandlers()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfigMgr&nbsp;=&nbsp;swModel.<b>ConfigurationManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfig&nbsp;=&nbsp;swConfigMgr.<b>ActiveConfiguration</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRootComp&nbsp;=&nbsp;swConfig.<b>GetRootComponent3</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bOldSetting&nbsp;=&nbsp;swApp.<b>GetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swExtRefUpdateCompNames)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swExtRefUpdateCompNames,&nbsp;<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Children&nbsp;=&nbsp;swRootComp.<b>GetChildren</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ChildCount&nbsp;=&nbsp;UBound(Children)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelData&nbsp;=&nbsp;swSelMgr.<b>CreateSelectData</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;ChildCount
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swChild&nbsp;=&nbsp;Children(i)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Changing&nbsp;component&nbsp;name&nbsp;requires&nbsp;component&nbsp;to&nbsp;be&nbsp;selected</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swChild.<b>Select4</b>(<span style="color:blue;">False</span>,&nbsp;swSelData,&nbsp;<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;oldName&nbsp;=&nbsp;swChild.<b>Name2</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newName&nbsp;=&nbsp;oldName&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;123&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swChild.<b>Name2</b>&nbsp;=&nbsp;newName
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;i
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swExtRefUpdateCompNames,&nbsp;bOldSetting)
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachEventHandlers()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachSWEvents()
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachSWEvents()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;swAssy.PreRenameItemNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.swAssy_PreRenameItemNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;swAssy.RenameItemNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.swAssy_RenameItemNotify
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;swAssy_<b>PreRenameItemNotify</b>(<span style="color:blue;">ByVal</span>&nbsp;EntityType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;oldName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;newName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;PRE-NOTIFICATION&nbsp;-&nbsp;about&nbsp;to&nbsp;rename&nbsp;component:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;oldName)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;swAssy_<b>RenameItemNotify</b>(<span style="color:blue;">ByVal</span>&nbsp;EntityType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;oldName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;newName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;NOTIFICATION&nbsp;-&nbsp;rename&nbsp;component:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;newName)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

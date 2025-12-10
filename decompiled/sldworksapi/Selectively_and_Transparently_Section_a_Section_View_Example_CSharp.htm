@@ -1,0 +1,138 @@
+<html>
+
+<head>
+<title>Selectively and Transparently Section a Section View Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,section views">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Selectively and Transparently Section a Section View Example (C#)</h1>
+<p>This example shows how to selectively and transparently section a section 
+view.</p>
+
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><font face="Courier New"><span style="color:green;">//-------------------------------------------------------------------------</span>
+<span style="color:green;">//&nbsp;Preconditions:&nbsp;Verify&nbsp;that&nbsp;the&nbsp;assembly&nbsp;to&nbsp;open&nbsp;exists.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;Postconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;assembly.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Selects&nbsp;the&nbsp;component&nbsp;for&nbsp;selective&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Selects&nbsp;the&nbsp;components&nbsp;for&nbsp;transparent&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;4.&nbsp;Selects&nbsp;the&nbsp;planes&nbsp;for&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;5.&nbsp;Creates&nbsp;the&nbsp;SectionViewData&nbsp;object.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;a.&nbsp;Sets&nbsp;the&nbsp;section&nbsp;method&nbsp;to&nbsp;zonal.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;b.&nbsp;Sets&nbsp;to&nbsp;cap&nbsp;the&nbsp;sections.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;c.&nbsp;Sets&nbsp;to&nbsp;generate&nbsp;a&nbsp;graphics-only&nbsp;section&nbsp;view.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;d.&nbsp;Enables&nbsp;selective&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1.&nbsp;Sets&nbsp;the&nbsp;component&nbsp;selected&nbsp;in&nbsp;step&nbsp;2&nbsp;for&nbsp;selective</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.&nbsp;Sets&nbsp;the&nbsp;intersection&nbsp;zone.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.&nbsp;Sets&nbsp;to&nbsp;exclude&nbsp;the&nbsp;component&nbsp;set&nbsp;in&nbsp;step&nbsp;5.d.1&nbsp;from</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selective&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;e.&nbsp;Enables&nbsp;transparent&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1.&nbsp;Sets&nbsp;the&nbsp;components&nbsp;selected&nbsp;in&nbsp;step&nbsp;3</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for&nbsp;transparent&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.&nbsp;Sets&nbsp;to&nbsp;include&nbsp;the&nbsp;sectioned&nbsp;components&nbsp;set&nbsp;in&nbsp;step&nbsp;5.e.1</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;in&nbsp;transparent&nbsp;sectioning.</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.&nbsp;Sets&nbsp;the&nbsp;level&nbsp;of&nbsp;transparency.</span>
+<span style="color:green;">//&nbsp;6.&nbsp;Creates&nbsp;the&nbsp;section&nbsp;view.</span>
+<span style="color:green;">//&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;graphics&nbsp;area.</span>
+<span style="color:green;">//&nbsp;8.&nbsp;Click&nbsp;Section&nbsp;View&nbsp;twice&nbsp;in&nbsp;the&nbsp;Heads-Up&nbsp;View&nbsp;toolbar&nbsp;and</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;examine&nbsp;the&nbsp;Section&nbsp;View&nbsp;PropertyManager&nbsp;page.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;assembly&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span>
+<span style="color:green;">//------------------------------------------------------------------------</span>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;
+<span style="color:blue;">using</span>&nbsp;System;
+ 
+<span style="color:blue;">namespace</span>&nbsp;Macro1CSharp.csproj
+{
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+&nbsp;&nbsp;&nbsp;&nbsp;{
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension&nbsp;swModelDocExt&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDocExtension);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Component2[]&nbsp;selectiveArray&nbsp;=&nbsp;<span style="color:blue;">new</span>&nbsp;Component2[1];
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Component2&nbsp;selComponent&nbsp;=&nbsp;<span style="color:blue;">default</span>(Component2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr&nbsp;swSelMgr&nbsp;=&nbsp;<span style="color:blue;">default</span>(SelectionMgr);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Component2[]&nbsp;transparentArray&nbsp;=&nbsp;<span style="color:blue;">new</span>&nbsp;Component2[2];
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Component2&nbsp;transComponent&nbsp;=&nbsp;<span style="color:blue;">default</span>(Component2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Component2&nbsp;transComponent2&nbsp;=&nbsp;<span style="color:blue;">default</span>(Component2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SectionViewData&nbsp;swSectionViewData&nbsp;=&nbsp;<span style="color:blue;">default</span>(SectionViewData);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelViewManager&nbsp;swModelViewManager&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelViewManager);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>&nbsp;transArray&nbsp;=&nbsp;<span style="color:blue;">new</span>&nbsp;<span style="color:blue;">object</span>[2];
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;status&nbsp;=&nbsp;<span style="color:blue;">false</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;errors&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;warnings&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;fileName&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>[]&nbsp;selArray&nbsp;=&nbsp;<span style="color:blue;">new</span>&nbsp;<span style="color:blue;">object</span>[1];
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\floxpress\\ball&nbsp;valve\\ball_valve.sldasm&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>OpenDoc6</b>(fileName,&nbsp;(<span style="color:blue;">int</span>)swDocumentTypes_e.swDocASSEMBLY,&nbsp;(<span style="color:blue;">int</span>)swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;errors,&nbsp;<span style="color:blue;">ref</span>&nbsp;warnings);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;(ModelDocExtension)swModel.<b>Extension</b>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Ball-1@ball_valve&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">true</span>,&nbsp;8,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;(SelectionMgr)swModel.<b>SelectionManager</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selComponent&nbsp;=&nbsp;(Component2)swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selectiveArray[0]&nbsp;=&nbsp;selComponent;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selArray&nbsp;=&nbsp;(<span style="color:blue;">object</span>[])selectiveArray;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Side-1@ball_valve&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">true</span>,&nbsp;32,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Side-2@ball_valve&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">true</span>,&nbsp;32,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transComponent&nbsp;=&nbsp;(Component2)swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transComponent2&nbsp;=&nbsp;(Component2)swSelMgr.<b>GetSelectedObject6</b>(2,&nbsp;-1);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transparentArray[0]&nbsp;=&nbsp;transComponent;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transparentArray[1]&nbsp;=&nbsp;transComponent2;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transArray&nbsp;=&nbsp;(<span style="color:blue;">object</span>[])transparentArray;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Plane1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">true</span>,&nbsp;1,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Plane2&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">true</span>,&nbsp;2,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Plane3&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">true</span>,&nbsp;4,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelViewManager&nbsp;=&nbsp;(ModelViewManager)swModel.<b>ModelViewManager</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData&nbsp;=&nbsp;swModelViewManager.<b>CreateSectionViewData</b>();
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>FirstColor</b>&nbsp;=&nbsp;16711680;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>SecondColor</b>&nbsp;=&nbsp;65280;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>ThirdColor</b>&nbsp;=&nbsp;255;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>ShowSectionCap</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>KeepCapColor</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>GraphicsOnlySection</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>ZonalSection</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>SelectiveSection</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>SelectiveSectioningList</b>&nbsp;=&nbsp;selArray;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>SectionedZones</b>&nbsp;=&nbsp;16;&nbsp;<span style="color:green;">//swZonalSectionViewZones_e.swZonalSectionViewZones_swZonalSectionViewZone_5</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>ExcludeSelectedItems</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>TransparentSection</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>TransparencyList</b>&nbsp;=&nbsp;transArray;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>SectionTransparentItemsTransparent</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSectionViewData.<b>TransparencyValue</b>&nbsp;=&nbsp;0.9;
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelViewManager.<b>CreateSectionView</b>(swSectionViewData);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}</font></pre>
+
+</body>
+
+</html>

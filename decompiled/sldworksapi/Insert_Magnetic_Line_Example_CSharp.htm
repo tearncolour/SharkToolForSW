@@ -1,0 +1,222 @@
+<html>
+
+<head>
+<title>Insert Magnetic Line Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,magnetic lines">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Magnetic Line Example (C#)</h1>
+<p>This example shows how to insert a magnetic line in a drawing sheet.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	//----------------------------------------------------------------------------<br>
+	// Preconditions:<br>
+	// 1. Open <i>public_documents</i><b>\samples\tutorial\api\Assem20.slddrw</b>.<br>
+	// 2. Open the Immediate window.<br>
+	//<br>
+	</span><font color="#008000">// Postconditions: At each </font>
+	<span style="color:#008000"> System.Diagnostics.Debugger</span><font color="#008000">.Break</font><font color="#008000">() 
+	statement, <br>
+	// observe the Immediate window and drawing, then press F5:<br>
+	// 1. Inserts a magnetic line.<br>
+	// 2. Attaches two notes to the magnetic line.<br>
+	// 3. Detaches one note from the magnetic line.</font><span style="color:Green"><br>
+	//<br>
+	// NOTE: Because the drawing is used elsewhere, do not save changes.<br>
+	// 
+	---------------------------------------------------------------------------<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	Microsoft.VisualBasic;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Collections;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Collections.Generic;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Data;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Diagnostics;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Runtime.InteropServices;<br>
+	</span><span style="color:Blue">namespace</span><span style="color:Black"> 
+	InsertMagneticLine_CSharp.csproj<br>
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">partial</span><span style="color:Black">
+	</span><span style="color:Blue">class</span><span style="color:Black">
+	</span><span style="color:#2b91af">SolidWorksMacro<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black"> 
+	Part;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">DrawingDoc</span><span style="color:Black"> 
+	swDraw;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Note</span><span style="color:Black"> 
+	swNote;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Annotation</span><span style="color:Black"> 
+	anno;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathUtility</span><span style="color:Black"> 
+	MathUtil;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathPoint</span><span style="color:Black"> 
+	StartPoint;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathPoint</span><span style="color:Black"> 
+	EndPoint;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MathPoint</span><span style="color:Black"> 
+	NewLocation;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">MagneticLine</span><span style="color:Black"> 
+	MagLine;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	startPointArray;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">double</span><span style="color:Black">[] 
+	startPointCoords = </span><span style="color:Blue">new</span><span style="color:Black">
+	</span><span style="color:Blue">double</span><span style="color:Black">[3];<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	endPointArray;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">double</span><span style="color:Black">[] 
+	endPointCoords = </span><span style="color:Blue">new</span><span style="color:Black">
+	</span><span style="color:Blue">double</span><span style="color:Black">[3];<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	vAnnPos;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Sheet</span><span style="color:Black"> 
+	myDrawingSheet;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">bool</span><span style="color:Black"> 
+	boolstatus;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black"> 
+	swSelMgr;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> Main()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part = (</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">)swApp.ActiveDoc;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDraw = (</span><span style="color:#2b91af">DrawingDoc</span><span style="color:Black">)Part;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr = (</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black">)Part.SelectionManager;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.Extension.SelectByID2(</span><span style="color:#a31515">&quot;DetailItem350@Drawing 
+	View1&quot;</span><span style="color:Black">, </span><span style="color:#a31515">
+	&quot;NOTE&quot;</span><span style="color:Black">, 0.1999417828571, 0.1868875085714, 
+	0, </span><span style="color:Blue">false</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">null</span><span style="color:Black">, 
+	0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swNote = (</span><span style="color:#2b91af">Note</span><span style="color:Black">)swSelMgr.GetSelectedObject6(1, 
+	0);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MathUtil = (</span><span style="color:#2b91af">MathUtility</span><span style="color:Black">)swApp.GetMathUtility();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startPointCoords[0] = 0.00792759673091;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startPointCoords[1] = 0.01114535920683;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startPointCoords[2] = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startPointArray = startPointCoords;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StartPoint = (</span><span style="color:#2b91af">MathPoint</span><span style="color:Black">)MathUtil.CreatePoint((startPointArray));<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endPointCoords[0] = 0.2681801120698;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endPointCoords[1] = 0.2077950154354;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endPointCoords[2] = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endPointArray = endPointCoords;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EndPoint = (</span><span style="color:#2b91af">MathPoint</span><span style="color:Black">)MathUtil.CreatePoint((endPointArray));<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;myDrawingSheet = (</span><span style="color:#2b91af">Sheet</span><span style="color:Black">)swDraw.GetCurrentSheet();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Diagnostics.</span><span style="color:#2b91af">Debugger</span><span style="color:Black">.Break();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MagLine = myDrawingSheet.<b>InsertMagneticLine</b>(StartPoint, 
+	EndPoint);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MagLine.<b>EqualSpacing</b> = </span><span style="color:Blue">
+	true</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Number 
+	of magnetic lines on this sheet: &quot;</span><span style="color:Black"> + 
+	myDrawingSheet.<b>GetMagneticLinesCount</b>());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Diagnostics.</span><span style="color:#2b91af">Debugger</span><span style="color:Black">.Break();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;First 
+	note attached to magnetic line? &quot;</span><span style="color:Black"> + 
+	MagLine.<b>AddNote</b>(swNote, 1E-06));<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// If EqualSpacing is True then 
+	Position is ignored<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Number 
+	of notes attached to the magnetic line: &quot;</span><span style="color:Black"> + 
+	MagLine.<b>GetNotesCount</b>());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Diagnostics.</span><span style="color:#2b91af">Debugger</span><span style="color:Black">.Break();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Angle 
+	in radians of the magnetic line: &quot;</span><span style="color:Black"> + 
+	MagLine.<b>Angle</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Length 
+	in meters of the magnetic line: &quot;</span><span style="color:Black"> + 
+	MagLine.<b>Length</b>);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.Extension.SelectByID2(</span><span style="color:#a31515">&quot;DetailItem352@Drawing 
+	View3&quot;</span><span style="color:Black">, </span><span style="color:#a31515">
+	&quot;NOTE&quot;</span><span style="color:Black">, 0.1944023085714, 0.1194905714286, 
+	0, </span><span style="color:Blue">false</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">null</span><span style="color:Black">, 
+	0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swNote = (</span><span style="color:#2b91af">Note</span><span style="color:Black">)swSelMgr.GetSelectedObject6(1, 
+	0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Second 
+	note attached to magnetic line? &quot;</span><span style="color:Black"> + 
+	MagLine.<b>AddNote</b>(swNote, 1E-06));<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// This fails because note 
+	belongs to a different view<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;anno = (</span><span style="color:#2b91af">Annotation</span><span style="color:Black">)swNote.GetAnnotation();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Number 
+	of notes attached to the magnetic line: &quot;</span><span style="color:Black"> + 
+	MagLine.<b>GetNotesCount</b>());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Diagnostics.</span><span style="color:#2b91af">Debugger</span><span style="color:Black">.Break();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.Extension.SelectByID2(</span><span style="color:#a31515">&quot;DetailItem351@Drawing 
+	View1&quot;</span><span style="color:Black">, </span><span style="color:#a31515">
+	&quot;NOTE&quot;</span><span style="color:Black">, 0.1944023085714, 0.1194905714286, 
+	0, </span><span style="color:Blue">false</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">null</span><span style="color:Black">, 
+	0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swNote = (</span><span style="color:#2b91af">Note</span><span style="color:Black">)swSelMgr.GetSelectedObject6(1, 
+	0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;anno = (</span><span style="color:#2b91af">Annotation</span><span style="color:Black">)swNote.GetAnnotation();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vAnnPos = anno.GetPosition();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Second 
+	note attached to magnetic line? &quot;</span><span style="color:Black"> + 
+	MagLine.<b>AddNote</b>(swNote, 1E-06));<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// This succeeds because note 
+	belongs to same view as previously added note<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Number 
+	of notes attached to the magnetic line: &quot;</span><span style="color:Black"> + 
+	MagLine.<b>GetNotesCount</b>());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Diagnostics.</span><span style="color:#2b91af">Debugger</span><span style="color:Black">.Break();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Detach a note from the 
+	magnetic line<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NewLocation = (</span><span style="color:#2b91af">MathPoint</span><span style="color:Black">)MathUtil.CreatePoint((vAnnPos));<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Note 
+	detached from magnetic line? &quot;</span><span style="color:Black"> + MagLine.<b>RemoveNote</b>(swNote, 
+	NewLocation));<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Move the note to its 
+	original position<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Number 
+	of notes attached to the magnetic line: &quot;</span><span style="color:Black"> + 
+	MagLine.<b>GetNotesCount</b>());<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:#2b91af">SldWorks</span><span style="color:Black"> 
+	swApp;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	}</span>
+</div>
+
+</body>
+
+</html>

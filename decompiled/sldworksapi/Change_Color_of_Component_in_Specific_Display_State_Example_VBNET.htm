@@ -1,0 +1,280 @@
+<html>
+
+<head>
+<title>Change Color of Component in Specific Display State Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,display states">
+<meta name=MS-HKWD content="VB.NET examples,appearances">
+<meta name=MS-HKWD content="VB.NET examples,components">
+<meta name=MS-HKWD content="VB.NET examples,assemblies">
+<meta name=MS-HKWD content="VB.NET examples,parts">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Change Color of Component in Specific Display State Example (VB.NET)</h1>
+<p>This example shows how to change the color of a:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">selected component in a 
+specific display state at the assembly and part levels. </font></li>
+	<li><font face="Verdana" style="font-size: 8pt">component in its part document.</font></li>
+</ul>
+
+<pre><font color="#008000">'------------------------------------------------------------------
+' Postconditions:&nbsp;Verify that the specified&nbsp;assembly&nbsp;and part exist.
+'
+' Postconditions: 
+'  1. Opens the specified assembly document.
+'  2. Examine the graphics areas, then press F5.
+'  3. Changes the selected component's, <b>USB_cover1</b>, 
+'     assembly-level color from the default red
+'     to gray in the specified display state. This
+'     is the overriding color level.
+'  4. Examine the component in the graphics area, then press F5.
+'  5. Changes the selected component's, <b>USB_cover1</b>, part-level
+'     color from red to green in the specified display state of
+'     the component part. This is not the overriding color level.
+'  6. Closes, but does not save, the assembly document.
+'  7. Opens the component's part document, <b>USB_cover1.sldprt</b>.
+'  8. Examine the graphics area, then press F5.
+'  9. Changes the part's color from red to green in the specified
+'     display state of the part. This is the overriding color
+'     level.
+' 10. Examine the graphics area, then press F5.
+' 11. Closes, but does not save, the part document.
+'------------------------------------------------------------------</font>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDoc&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDisplayStateSetting&nbsp;<span style="color:blue;">As</span>&nbsp;DisplayStateSetting&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swComponent&nbsp;<span style="color:blue;">As</span>&nbsp;Component2&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swComponents(0)&nbsp;<span style="color:blue;">As</span>&nbsp;Component2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;displayStateNames(0)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;appearances&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAppearanceSetting&nbsp;<span style="color:blue;">As</span>&nbsp;AppearanceSetting
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;newAppearanceSetting(0)&nbsp;<span style="color:blue;">As</span>&nbsp;AppearanceSetting
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swConfigMgr&nbsp;<span style="color:blue;">As</span>&nbsp;ConfigurationManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swConfig&nbsp;<span style="color:blue;">As</span>&nbsp;Configuration
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;red_rgb&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;green_rgb&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;blue_rgb&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;newColor&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Open&nbsp;assembly&nbsp;document</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2024\samples\tutorial\appearances\usb_flash_drive1.sldasm&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDoc&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocASSEMBLY,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">
+	</span><font color="#0000B9">Stop</font><span style="color:green;">
+	'Examine the graphics area
+	'Press F5 to continue
+
+	'Select&nbsp;component,&nbsp;USB_cover1</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModelDoc.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModelDoc.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;USB_cover1-1@usb_flash_drive1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponent&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponents(0)&nbsp;=&nbsp;swComponent
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDoc.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;display&nbsp;state&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting&nbsp;=&nbsp;swModelDocExt.<b>GetDisplayStateSetting</b>(swDisplayStateOpts_e.swAllDisplayState)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Entities</b>&nbsp;=&nbsp;swComponents
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Option</b>&nbsp;=&nbsp;swDisplayStateOpts_e.swSpecifyDisplayState
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;displayStateNames(0)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;Display&nbsp;State-1&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Names</b>&nbsp;=&nbsp;displayStateNames
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Assembly&nbsp;level&nbsp;is&nbsp;default</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>PartLevel</b>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Change&nbsp;the&nbsp;selected&nbsp;component's,&nbsp;USB_cover1,&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'assembly-level&nbsp;color&nbsp;from&nbsp;the&nbsp;default&nbsp;red</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'to&nbsp;gray&nbsp;in&nbsp;the&nbsp;specified&nbsp;display&nbsp;state;&nbsp;this</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'is&nbsp;the&nbsp;overriding&nbsp;color&nbsp;level</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;appearances&nbsp;=&nbsp;swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppearanceSetting&nbsp;=&nbsp;appearances(0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;red_rgb&nbsp;=&nbsp;50
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;green_rgb&nbsp;=&nbsp;50
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;blue_rgb&nbsp;=&nbsp;50
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newColor&nbsp;=&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(red_rgb,&nbsp;255),&nbsp;0)&nbsp;+&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(green_rgb,&nbsp;255),&nbsp;0)&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;+&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(blue_rgb,&nbsp;255),&nbsp;0)&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;*&nbsp;16
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppearanceSetting.<b>Color</b>&nbsp;=&nbsp;newColor</pre>
+<p class="MsoNormal">
+<span style="font-size: 10.0pt; line-height: 107%; font-family: &quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Diffuse</strong> = 0.8 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Specular</strong> = 0.5 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>SpecularColor</strong> = newColor <o:p></o:p></span>
+</p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Luminous</strong> = 0.1 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Transparent</strong> = 0.0</span></p>
+<pre>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newAppearanceSetting(0)&nbsp;=&nbsp;swAppearanceSetting
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)&nbsp;=&nbsp;newAppearanceSetting
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Stop</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Examine&nbsp;the&nbsp;component&nbsp;in&nbsp;the&nbsp;graphics&nbsp;area</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Press&nbsp;F5&nbsp;to&nbsp;continue</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDoc.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;USB_cover1-1@usb_flash_drive1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponent&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponents(0)&nbsp;=&nbsp;swComponent
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDoc.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;display&nbsp;state</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting&nbsp;=&nbsp;swModelDocExt.<b>GetDisplayStateSetting</b>(swDisplayStateOpts_e.swAllDisplayState)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Entities</b>&nbsp;=&nbsp;swComponents
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Option</b>&nbsp;=&nbsp;swDisplayStateOpts_e.swSpecifyDisplayState
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;displayStateNames(0)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&lt;Default&gt;_Display&nbsp;State&nbsp;1&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Names</b>&nbsp;=&nbsp;displayStateNames
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;to&nbsp;part&nbsp;level</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>PartLevel</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Change&nbsp;the&nbsp;selected&nbsp;component's,&nbsp;USB_cover1,&nbsp;part-level</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'color&nbsp;from&nbsp;red&nbsp;to&nbsp;green&nbsp;in&nbsp;the&nbsp;specified&nbsp;display&nbsp;state&nbsp;of</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'the&nbsp;component&nbsp;part;&nbsp;this&nbsp;is&nbsp;not&nbsp;the&nbsp;overriding&nbsp;color&nbsp;level</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;appearances&nbsp;=&nbsp;swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppearanceSetting&nbsp;=&nbsp;appearances(0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;red_rgb&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;green_rgb&nbsp;=&nbsp;255
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;blue_rgb&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newColor&nbsp;=&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(red_rgb,&nbsp;255),&nbsp;0)&nbsp;+&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(green_rgb,&nbsp;255),&nbsp;0)&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;+&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(blue_rgb,&nbsp;255),&nbsp;0)&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;*&nbsp;16
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppearanceSetting.<b>Color</b>&nbsp;=&nbsp;newColor</pre>
+<p class="MsoNormal">
+<span style="font-size: 10.0pt; line-height: 107%; font-family: &quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Diffuse</strong> = 0.8 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Specular</strong> = 0.5 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>SpecularColor</strong> = newColor <o:p></o:p></span>
+</p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Luminous</strong> = 0.1 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Transparent</strong> = 0.0</span></p>
+<pre>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newAppearanceSetting(0)&nbsp;=&nbsp;swAppearanceSetting
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)&nbsp;=&nbsp;newAppearanceSetting 
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Close&nbsp;the&nbsp;assembly&nbsp;document&nbsp;without&nbsp;saving</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'changes</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>CloseDoc</b>(<span style="color:#a31515;">&quot;usb_flash_drive1&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Open&nbsp;the&nbsp;assembly&nbsp;component&nbsp;USB_cover1&nbsp;as&nbsp;a&nbsp;part&nbsp;document</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2024\samples\tutorial\appearances\usb_cover1.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDoc&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModelDoc.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModelDoc.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfigMgr&nbsp;=&nbsp;swModelDoc.<b>ConfigurationManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfig&nbsp;=&nbsp;swConfigMgr.<b>ActiveConfiguration</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponents(0)&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponents(0)&nbsp;=&nbsp;swConfig.<b>GetRootComponent3</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDoc.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;display&nbsp;state</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting&nbsp;=&nbsp;swModelDocExt.<b>GetDisplayStateSetting</b>(swDisplayStateOpts_e.swAllDisplayState)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Entities</b>&nbsp;=&nbsp;swComponents
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Option</b>&nbsp;=&nbsp;swDisplayStateOpts_e.swSpecifyDisplayState
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;displayStateNames(0)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&lt;Default&gt;_Display&nbsp;State&nbsp;1&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayStateSetting.<b>Names</b>&nbsp;=&nbsp;displayStateNames
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Stop
+</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Examine&nbsp;the&nbsp;graphics&nbsp;area</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Press&nbsp;F5&nbsp;to&nbsp;continue</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Change&nbsp;color&nbsp;of&nbsp;selected&nbsp;component&nbsp;in&nbsp;specified&nbsp;display&nbsp;state</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'from&nbsp;default&nbsp;red&nbsp;to&nbsp;green;&nbsp;this&nbsp;is&nbsp;the&nbsp;overriding&nbsp;color</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;appearances&nbsp;=&nbsp;swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppearanceSetting&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppearanceSetting&nbsp;=&nbsp;appearances(0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;red_rgb&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;green_rgb&nbsp;=&nbsp;255
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;blue_rgb&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newColor&nbsp;=&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(red_rgb,&nbsp;255),&nbsp;0)&nbsp;+&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(green_rgb,&nbsp;255),&nbsp;0)&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;+&nbsp;<span style="color:#2b91af;">Math</span>.Max(<span style="color:#2b91af;">Math</span>.Min(blue_rgb,&nbsp;255),&nbsp;0)&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;*&nbsp;16&nbsp;*&nbsp;16
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppearanceSetting.<b>Color</b>&nbsp;=&nbsp;newColor</pre>
+<p class="MsoNormal">
+<span style="font-size: 10.0pt; line-height: 107%; font-family: &quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Diffuse</strong> = 0.8 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Specular</strong> = 0.5 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>SpecularColor</strong> = newColor <o:p></o:p></span>
+</p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Luminous</strong> = 0.1 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Transparent</strong> = 0.0</span></p>
+<pre>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newAppearanceSetting(0)&nbsp;=&nbsp;swAppearanceSetting
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)&nbsp;=&nbsp;newAppearanceSetting
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Stop</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Examine&nbsp;the&nbsp;graphics&nbsp;area</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Press&nbsp;F5&nbsp;to&nbsp;continue</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Close&nbsp;the&nbsp;part&nbsp;document&nbsp;without&nbsp;saving</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'changes</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>CloseDoc</b>(<span style="color:#a31515;">&quot;usb_cover1&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

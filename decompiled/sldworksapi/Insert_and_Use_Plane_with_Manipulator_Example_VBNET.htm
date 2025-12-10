@@ -1,0 +1,484 @@
+<html>
+
+<head>
+<title>Insert and Use Plane with Manipulator Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,planes">
+<meta name=MS-HKWD content="VB.NET examples,manipulators">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert and Use Plane with Manipulator Example (VB.NET)</h1>
+<p><a name="top"></a>This example shows how to insert a plane with a manipulator. </p>
+<p class="APICODE"><span style="font-weight: 400">
+<font color="Green" size="-1" face="Courier New">
+'--------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. In the IDE:<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;a. Click <b>Project &gt; Add Reference &gt; SolidWorks.Interop.swpublished</b>
+<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; on the .NET tab.<br>
+'&nbsp;&nbsp;&nbsp; b. Copy the code in
+</font></span><font face="Courier New"><a href="#solidworksmacro">
+SolidWorksMacro.vb</a></font><font color="Green" size="-1" face="Courier New"><span style="font-weight: 400"> 
+to your project</span></font><font face="Courier New" size="-1" color="#008000"><br>
+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; and create a class and copy the code in</font><font color="Green" size="-1" face="Courier New"><span style="font-weight: 400">
+</span>
+</font><font face="Courier New"><a href="#class1.vb">Class1.vb</a></font><font face="Courier New" size="-1" color="#008000">
+<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; to that class.</font><font color="Green"><span style="font-weight: 400"><font size="-1" face="Courier New"><br>
+'&nbsp;&nbsp;&nbsp;&nbsp;c. Open the Immediate window.<br>
+' 2. Verify that the specified part exists.<br>
+'<br>
+' Postconditions:<br>
+' 1. Opens the part.<br>
+' 2. Displays a plane with manipulator.<br>
+' 3. Gets the distance, angles, height, and width of the plane.<br>
+' 4. Examine the Immediate window.<br>
+' 5. Hold down the left-mouse button and drag the<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;plane up and down using the manipulator, which calls 
+the <br>
+'&nbsp;&nbsp;&nbsp;&nbsp;handler. Gets the handle index at each drag.<br>
+' 6. Click an edge of the plane and hold down the left-mouse button <br>
+'&nbsp;&nbsp;&nbsp; and rotate the plane,&nbsp;which calls the handler. Gets the handle 
+<br>
+'&nbsp;&nbsp;&nbsp; index at each rotation.<br>
+' 7. Examine the Immediate window.<br>
+'<br>
+' NOTE: Because the part document is used elsewhere, do not<br>
+' save changes.<br>
+'---------------------------------------------------------------<br>
+&nbsp;</font></span></font></p>
+<p class="APICODE">' <a name="solidworksmacro"></a>
+<font face="Courier New" color="#008000">SolidWorksMacro.vb</font></p>
+<p class="APICODE"><font size="-1" face="Courier New">
+<span style="font-weight: 400"><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.sldworks<br>
+</font><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.swconst<br>
+</font><font color="Blue">Imports</font><font color="Black"> System<br>
+</font><font color="Blue">Imports</font><font color="Black"> System.Diagnostics<br>
+</font><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.swpublished<br>
+<br>
+</font><font color="Blue">Partial</font><font color="Black"> </font>
+<font color="Blue">Class</font><font color="Black"> SolidWorksMacro<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> </font>
+<font color="Blue">WithEvents</font><font color="Black"> swHdlr </font>
+<font color="Blue">As</font><font color="Black"> Class1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> swManipulator
+</font><font color="Blue">As</font><font color="Black"> Manipulator<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> 
+swPlaneManipulator </font><font color="Blue">As</font><font color="Black"> 
+PlaneManipulator<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> </font>
+<font color="Blue">Sub</font><font color="Black"> Main()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> swModelDoc
+</font><font color="Blue">As</font><font color="Black"> ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> swModelViewMgr
+</font><font color="Blue">As</font><font color="Black"> ModelViewManager<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> fileName </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+String<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+errors </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+warnings </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Integer<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swHdlr = </font><font color="Blue">New</font><font color="Black"> 
+Class1<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName = </font><font color="#a31515">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\fillets\knob.sldprt&quot;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDoc = swApp.<b>OpenDoc6</b>(fileName, 
+swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, </font>
+<font color="#a31515">&quot;&quot;</font><font color="Black">, errors, warnings)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Create the plane with a manipulator<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelViewMgr = swModelDoc.<b>ModelViewManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swManipulator = swModelViewMgr.<b>CreateManipulator</b>(swManipulatorType_e.swPlaneManipulator, 
+swHdlr)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator = swManipulator.<b>GetSpecificManipulator</b><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set the distance of plane<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Distance</b> = 0.04<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</font><font color="#a31515">&quot;Distance = &quot;</font><font color="Black"> 
+&amp; swPlaneManipulator.<b>Distance</b>)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">'Set the angles of plane<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>XAngle</b> = 2 * PiVal() 
+/ 180<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</font><font color="#a31515">&quot;X = &quot;</font><font color="Black"> 
+&amp; swPlaneManipulator.<b>XAngle</b>)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>YAngle</b> = 10 * PiVal() / 180<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</font><font color="#a31515">&quot;Y = &quot;</font><font color="Black"> 
+&amp; swPlaneManipulator.<b>YAngle</b>)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set the height and width of plane<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Height</b> = 0.1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</font><font color="#a31515">&quot;Height = &quot;</font><font color="Black"> 
+&amp; swPlaneManipulator.<b>Height</b>)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Width</b> = 0.075<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</font><font color="#a31515">&quot;Width = &quot;</font><font color="Black"> 
+&amp; swPlaneManipulator.<b>Width</b>)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set the color of plane manipulator<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Color</b> = RGB(255, 0, 
+0)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Update the plane's properties<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Update</b>()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Show the plane with the manipulator<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swManipulator.<b>Show</b>(swModelDoc)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Function</font><font color="Black"> 
+PiVal() </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set PI<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PiVal = 4 * System.Math.Atan(1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' </font>
+<font color="Gray">&lt;summary&gt;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' The SldWorks swApp 
+variable is pre-assigned for you.<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' </font>
+<font color="Gray">&lt;/summary&gt;<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> 
+swApp </font><font color="Blue">As</font><font color="Black"> SldWorks<br>
+<br>
+</font><font color="Blue">End</font><font color="Black"> </font></span></font>
+<font color="Blue"><font size="-1" face="Courier New">
+<span style="font-weight: 400">Class</span></font></font></p>
+<p align="center"><a href="#top">Back to top</a></p>
+<p class="APICODE"><font color="Blue"><font size="-1" face="Courier New"><br>
+</font><font face="Monospace" size="-1"><br>
+</font></font><font face="Monospace" size="-1">'</font><b><font face="Courier" size="-1"><a name="class1.vb"></a></font></b><font color="#008000" face="Courier New" size="-1">Class1.vb</font></p>
+<p><font size="-1" face="Courier New"><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.sldworks<br>
+</font><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.swpublished<br>
+</font><font color="Blue">Imports</font><font color="Black"> System<br>
+</font><font color="Blue">Imports</font><font color="Black"> System.Diagnostics<br>
+</font><font color="Blue">Imports</font><font color="Black"> System.Runtime<br>
+<br>
+&lt;System.Runtime.InteropServices.ComVisibleAttribute(</font><font color="Blue">True</font><font color="Black">)&gt; 
+_<br>
+</font><font color="Blue">Public</font><font color="Black"> </font>
+<font color="Blue">Class</font><font color="Black"> Class1<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Implements</font><font color="Black"> 
+SwManipulatorHandler2<br>
+<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> </font>
+<font color="Blue">Sub</font><font color="Black"> SwManipulatorHandler2_<b>OnUpdateDrag</b>(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Long</font><font color="Black">, </font>
+<font color="Blue">ByVal</font><font color="Black"> newPosMathPt </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Object</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">'Public Sub 
+SwManipulatorHandler2_OnUpdateDrag(ByVal pManipulator As Object, ByVal 
+handleIndex As Long, ByVal newPosMathPt As Object) Implements 
+SolidWorks.Interop.swpublished.SwManipulatorHandler.OnUpdateDrag<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</font><font color="#a31515">&quot;SwManipulatorHandler2_OnUpdateDrag&quot;</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</font><font color="#a31515">&quot;&nbsp;&nbsp;HandleIndex&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= &quot;</font><font color="Black"> 
+&amp; handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> swRetManip
+</font><font color="Blue">As</font><font color="Black"> PlaneManipulator<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRetManip = pManipulator<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">If</font><font color="Black"> (handleIndex = 
+8) </font><font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+retDist </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retDist = swRetManip.<b>Distance</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Else<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+angleX </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+angleY </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;angleX = swRetManip.<b>XAngle</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;angleY = swRetManip.<b>YAngle</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">If<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black">
+</font><font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> 
+SwManipulatorHandler2_OnDelete(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Boolean<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black">
+</font><font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> 
+SwManipulatorHandler2_OnDirectionFlipped(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> 
+SwManipulatorHandler2_OnDoubleValueChanged(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> Id </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Long</font><font color="Black">, </font>
+<font color="Blue">ByVal</font><font color="Black"> Value </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Double</font><font color="Black">) </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Boolean<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black">
+</font><font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> 
+SwManipulatorHandler2_OnEndNoDrag(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Long</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> 
+SwManipulatorHandler2_OnHandleRmbSelected(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Long</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> 
+SwManipulatorHandler2_OnHandleLmbSelected(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Boolean<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black">
+</font><font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> 
+SwManipulatorHandler2_OnHandleSelected(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Long</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> 
+SwManipulatorHandler2_OnItemSetFocus(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> Id </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Long</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> 
+SwManipulatorHandler2_OnLmbSelected(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Boolean<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black">
+</font><font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> 
+SwManipulatorHandler2_OnStringValueChanged(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> Id </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Long</font><font color="Black">, </font>
+<font color="Blue">ByVal</font><font color="Black"> Value </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+String</font><font color="Black">) </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Boolean<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black">
+</font><font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> 
+SwManipulatorHandler2_OnEndDrag(</font><font color="Blue">ByVal</font><font color="Black"> 
+pMani </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> index </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Long</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> OnDelete(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Boolean</font><font color="Black">
+</font><font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnDelete<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> OnDirectionFlipped(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">) </font><font color="Blue">
+Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnDirectionFlipped<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> 
+OnDoubleValueChanged(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Integer</font><font color="Black">, </font>
+<font color="Blue">ByRef</font><font color="Black"> Value </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Double</font><font color="Black">) </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Boolean</font><font color="Black"> </font>
+<font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnDoubleValueChanged<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> OnEndDrag(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Integer</font><font color="Black">) </font>
+<font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnEndDrag<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> OnEndNoDrag(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Integer</font><font color="Black">) </font>
+<font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnEndNoDrag<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> 
+OnHandleLmbSelected(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Boolean</font><font color="Black">
+</font><font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnHandleLmbSelected<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> OnHandleRmbSelected(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Integer</font><font color="Black">) </font>
+<font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnHandleRmbSelected<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> OnHandleSelected(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Integer</font><font color="Black">) </font>
+<font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnHandleSelected<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> OnItemSetFocus(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Integer</font><font color="Black">) </font>
+<font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnItemSetFocus<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> 
+OnStringValueChanged(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Integer</font><font color="Black">, </font>
+<font color="Blue">ByRef</font><font color="Black"> Value </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+String</font><font color="Black">) </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Boolean</font><font color="Black"> </font>
+<font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnStringValueChanged<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> OnUpdateDrag(</font><font color="Blue">ByVal</font><font color="Black"> 
+pManipulator </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> handleIndex </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Integer</font><font color="Black">, </font>
+<font color="Blue">ByVal</font><font color="Black"> newPosMathPt </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Object</font><font color="Black">) </font><font color="Blue">Implements</font><font color="Black"> 
+SolidWorks.Interop.swpublished.ISwManipulatorHandler2.OnUpdateDrag<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+End</font><font color="Black"> </font></font><font color="Blue">
+<font size="-1" face="Courier New">Class</font><font face="Monospace" size="-1"><br>
+&nbsp;</font></font></p>
+<p align="center"><a href="#top">Back to top</a></p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

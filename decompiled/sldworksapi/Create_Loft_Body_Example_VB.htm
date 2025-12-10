@@ -1,0 +1,160 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Create Loft Body Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,bodies">
+<meta name=MS-HKWD content="VBA examples,lofts">
+<meta name=MS-HKWD content="VBA examples,temporary body">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=1924>
+<meta name=layout-width content=931>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Create Loft Body Example (VBA)</h1>
+
+<p>This example shows how to create a temporary loft body using <a href="SolidWorks.Interop.sldworks~SolidWorks.Interop.sldworks.IModeler~CreateLoftBody2.html">IModeler::CreateLoftBody2</a>.</p>
+
+<pre>'-----------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified part document template
+'    exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens a new part document.
+' 2. Creates and selects sketches of two profiles and
+'    a guide curve.
+' 3. Creates a temporary loft body.
+' 4. Examine the Immediate window and graphics area.
+'-----------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSketchMgr As SldWorks.SketchManager
+Dim sketchSegment As SldWorks.sketchSegment
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim sketchPoint As SldWorks.sketchPoint
+Dim swFeatureMgr As SldWorks.FeatureManager
+Dim refPlane As SldWorks.refPlane
+Dim swFeat As SldWorks.Feature
+Dim status As Boolean
+Dim profiles As Variant
+Dim guides As Variant
+Dim profile(1) As SldWorks.Feature
+Dim guideCurve(0) As SldWorks.Feature
+Dim swModeler As SldWorks.Modeler
+Dim swBody As SldWorks.Body2
+Dim count As Long
+Dim featArr As Variant
+Dim i As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+
+    'Open new part document
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SolidWorks 2015\templates\Part.prtdot&quot;, 0, 0, 0)
+    Set swModelDocExt = swModel.<b>Extension</b>    </pre>
+<pre>    'Create closed profile
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swSketchMgr = swModel.<b>SketchManager</b>
+    Set sketchSegment = swSketchMgr.<b>CreateCircle</b>(0#, 0#, 0#, 0.021796, -0.030937, 0#)
+    Set sketchPoint = swSketchMgr.<b>CreatePoint</b>(0.023454, 0.029699, 0#)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True    </pre>
+<pre>    'Create another closed profile
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    Set swFeatureMgr = swModel.<b>FeatureManager</b>
+    Set refPlane = swFeatureMgr.<b>InsertRefPlane</b>(8, 0.254, 0, 0, 0, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Plane1&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set sketchSegment = swSketchMgr.<b>CreateCircle</b>(-0.035118, -0.014102, 0#, -0.025452, -0.02953, 0#)
+    Set sketchPoint = swSketchMgr.<b>CreatePoint</b>(-0.018033, -0.020392, 0#)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True    </pre>
+<pre>    'Create guide curve
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Point4@Sketch1&quot;, &quot;EXTSKETCHPOINT&quot;, 2.34541440502721E-02, 2.96993303358475E-02, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Point5@Sketch2&quot;, &quot;EXTSKETCHPOINT&quot;, -1.80330744027628E-02, -2.03923494843098E-02, 0, True, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Point4@Sketch1&quot;, &quot;EXTSKETCHPOINT&quot;, 2.34541440502721E-02, 2.96993303358475E-02, 0, False, 1, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Point5@Sketch2&quot;, &quot;EXTSKETCHPOINT&quot;, -1.80330744027628E-02, -2.03923494843098E-02, 0, True, 1, Nothing, 0)
+    swModel.<b>Insert3DSplineCurve</b> False
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Select guide curve and profiles for loft feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Curve1&quot;, &quot;REFERENCECURVES&quot;, 0, 0, 0, False, 2, Nothing, 0)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swFeat = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Debug.Print &quot;Guide curve name: &quot; &amp; swFeat.<b>Name</b>
+    Set guideCurve(0) = swFeat
+    guides = guideCurve
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 9.84860021145358E-03, 3.65397341178567E-02, 0, True, 1, Nothing, 0)
+    Set swFeat = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Debug.Print &quot;Profile name: &quot; &amp; swFeat<b>.Name</b>
+    Set profile(0) = swFeat
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, -4.01969362026636E-02, 3.38231877308527E-03, 0, True, 1, Nothing, 0)
+    Set swFeat = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Debug.Print &quot;Profile name: &quot; &amp; swFeat.<b>Name</b>
+    Set profile(1) = swFeat
+    profiles = profile
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Create temporary loft body
+    Set swModeler = swApp.<b>GetModeler</b>
+    Set swBody = swModeler.<b>CreateLoftBody2</b>(swModel, profiles, guides, Nothing, False, 0, 0, 0, True, False, True, False, True, 1, 1, 1, True, True, 1, 1, False)    </pre>
+<pre>    ' Test whether the loft body is a temporary body
+    status = swBody.<b>IsTemporaryBody</b>
+    Debug.Print &quot;Is the loft body a temporary body?  &quot; &amp; status
+    If status Then
+        ' Display the temporary loft body
+        swBody.<b>Display3</b> swModel, 256, swTempBodySelectOptions_e.swTempBodySelectOptionNone
+        Debug.Print &quot;Temporary loft body displayed; examine the graphics area.&quot;
+    Else
+        Debug.Print &quot;Temporary loft body was not created.&quot;
+    End If</pre>
+<pre>    Debug.Print &quot;&quot;    </pre>
+<pre>    'Verify that the temporary loft body is not a loft feature
+    'by examining the list of features printed to the
+    'Immediate window
+    count = swFeatureMgr.<b>GetFeatureCount</b>(False)
+    featArr = swFeatureMgr.<b>GetFeatures</b>(False)
+    For i = 0 To count - 1
+        Set swFeat = featArr(i)
+        Debug.Print swFeat.<b>Name</b>
+    Next i    </pre>
+<pre>    swModel.<b>ViewZoomtofit2</b></pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

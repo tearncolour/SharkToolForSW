@@ -1,0 +1,133 @@
+<html>
+
+<head>
+<title>Create and Access Curve-driven Pattern Feature Example (VB.NET()</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,feature">
+<meta name=MS-HKWD content="VB.NET examples,curve-driven patterns">
+<meta name=MS-HKWD content="VB.NET examples,patterns">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create and Access Curve-driven Pattern Feature Example (VB.NET)</h1>
+<p>This example shows how to create a curve-driven pattern feature and access 
+its data.</p>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'--------------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;to&nbsp;open&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;part&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Creates&nbsp;a&nbsp;cut&nbsp;extrude&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Creates&nbsp;a&nbsp;curve-driven&nbsp;pattern&nbsp;feature&nbsp;using&nbsp;the</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;the&nbsp;cut&nbsp;extrude&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Gets&nbsp;curve-driven&nbsp;pattern&nbsp;feature&nbsp;data.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Examine&nbsp;the&nbsp;FeatureManager design tree, graphics area,
+'    and Immediate&nbsp;window.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.</span>
+<span style="color:green;">'--------------------------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SketchManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchSegment&nbsp;<span style="color:blue;">As</span>&nbsp;SketchSegment
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeatureMgr&nbsp;<span style="color:blue;">As</span>&nbsp;FeatureManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeature&nbsp;<span style="color:blue;">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelectionMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swCurveDrivenPatternFeatureData&nbsp;<span style="color:blue;">As</span>&nbsp;CurveDrivenPatternFeatureData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swEntity&nbsp;<span style="color:blue;">As</span>&nbsp;Entity
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;patternDirection&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2019\samples\tutorial\api\bagel.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Sketch&nbsp;a&nbsp;circle&nbsp;and&nbsp;create&nbsp;a&nbsp;cut&nbsp;extrude</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.0118560192339032,&nbsp;0,&nbsp;0.0566664535234693,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr&nbsp;=&nbsp;swModel.<b>SketchManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>InsertSketch</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;swSketchMgr.<b>CreateCircle</b>(-0.059172,&nbsp;-0.048012,&nbsp;0.0#,&nbsp;-0.044189,&nbsp;-0.040533,&nbsp;0.0#)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>InsertSketch</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Sketch6&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatureMgr&nbsp;=&nbsp;swModel.<b>FeatureManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swFeatureMgr.<b>FeatureCut3</b>(<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;1,&nbsp;0,&nbsp;0.00254,&nbsp;0.00254,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0.0174532925199433,&nbsp;0.0174532925199433,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr.<b>EnableContourSelection</b>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ActivateSelectedFeature</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.0115207253109588,&nbsp;-0.00000889643058599177,&nbsp;0.0754182969300832,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;curve-driven&nbsp;pattern&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Cut-Extrude2&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;4,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.0115207253109588,&nbsp;-0.00000889643058599177,&nbsp;0.0754182969300832,&nbsp;<span style="color:blue;">True</span>,&nbsp;1,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swCurveDrivenPatternFeatureData = swFeatureMgr.<b>CreateDefinition</b>(<font face="Courier New">swFeatureNameID_e.</font>swFmCurvePattern)<br>
+&nbsp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swCurveDrivenPatternFeatureData.<b>D1AlignmentMethod</b> = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swCurveDrivenPatternFeatureData.<b>D1CurveMethod</b> 
+= 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swCurveDrivenPatternFeatureData.<b>D1InstanceCount</b> 
+= 3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swCurveDrivenPatternFeatureData.<b>D1IsEqualSpaced</b> 
+= True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swCurveDrivenPatternFeatureData.<b>D1ReverseDirection</b> 
+= False<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swCurveDrivenPatternFeatureData.<b>D1Spacing</b> 
+= 0.0254<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swFeature = 
+swFeatureMgr.<b>CreateFeature</b>(swCurveDrivenPatternFeatureData)</p>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white">
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Access&nbsp;the&nbsp;curve-driven&nbsp;pattern&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;CrvPattern1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCurveDrivenPatternFeatureData&nbsp;=&nbsp;swFeature.<b>GetDefinition</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swCurveDrivenPatternFeatureData.<b>AccessSelections</b>(swModel,&nbsp;<span style="color:blue;">Nothing</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;pattern&nbsp;instances&nbsp;in&nbsp;Direction&nbsp;1:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCurveDrivenPatternFeatureData.<b>D1InstanceCount</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Alignment&nbsp;method&nbsp;of&nbsp;Direction&nbsp;1:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCurveDrivenPatternFeatureData.<b>D1AlignmentMethod</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Curve&nbsp;method&nbsp;of&nbsp;Direction&nbsp;1:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCurveDrivenPatternFeatureData.<b>D1CurveMethod</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;patternDirection&nbsp;=&nbsp;swCurveDrivenPatternFeatureData.<b>D1Direction</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEntity&nbsp;=&nbsp;patternDirection
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Pattern&nbsp;direction&nbsp;object&nbsp;type&nbsp;of&nbsp;Direction&nbsp;1:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swEntity.<b>GetType</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Pattern&nbsp;instances&nbsp;spaced&nbsp;equally&nbsp;in&nbsp;Direction&nbsp;1?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCurveDrivenPatternFeatureData.<b>D1IsEqualSpaced</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Pattern&nbsp;direction&nbsp;reversed&nbsp;in&nbsp;Direction&nbsp;1?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCurveDrivenPatternFeatureData.<b>D1ReverseDirection</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;seed&nbsp;bodies&nbsp;in&nbsp;pattern:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCurveDrivenPatternFeatureData.<b>GetPatternBodyCount</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;seed&nbsp;features&nbsp;in&nbsp;pattern:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swCurveDrivenPatternFeatureData.<b>GetPatternFeatureCount</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCurveDrivenPatternFeatureData.<b>ReleaseSelectionAccess</b>()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

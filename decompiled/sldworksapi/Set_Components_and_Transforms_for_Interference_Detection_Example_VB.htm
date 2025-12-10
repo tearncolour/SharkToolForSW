@@ -1,0 +1,333 @@
+<html>
+
+<head>
+<title>Set Components and Transforms for Interference Detection Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,components">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=MS-HKWD content="VBA examples,interference detection">
+<meta name=MS-HKWD content="VBA examples,transforms">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Set Components and Transforms for Interference Detection Example (VBA)</h1>
+<p><a name="Top"></a>This example shows how to:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">move an assembly component 
+	to an interfering position by replacing its transform.</font></li>
+	<li><font face="Verdana" style="font-size: 8pt">detect interference.</font></li>
+</ul>
+<p>This example also shows how to apply absolute transforms to all components in 
+order to multiply by identity transforms, which results in the components 
+remaining in their current positions during interference detection.</p>
+<pre>'------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified assembly exists.
+' 2. Copy and paste <a href="#Main">Main</a> into the main module of your macro.
+' 3. Click <b>Insert &gt; Class Module</b> and copy and paste <a href="#Class1">Class1</a> into that
+'    class module.
+' 4. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the specified assembly.
+' 2. Gets the components of the assembly and their transforms.
+' 3. Creates a new transform for <b>Part1^AssemInterferenceDetection-2</b>.
+' 4. Sets the components and their transforms, using the existing
+'    rotation and the translation from the assembly origin.
+'    a. Gets the number of interferences.
+'    b. Examine the graphics area at the Stop statement to visually 
+'       verify the interferences, then press F5.
+'    c. Programmatically verifies that the number of interferences
+'       is as expected.
+'    d. Gets whether:
+'       * each returned interference is correct.
+'       * the components remained in their starting positions during
+'         interference detection.
+'       * the components are at their starting positions.
+' 5. Examine the Immediate window and graphics area.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'-------------------------------------------------------------------------
+<a name="Main"></a>' Main</pre>
+<pre>Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim colStartingPositions As Collection</pre>
+<pre>Sub main()    </pre>
+<pre>    Dim expectedNumberofInterferences As Long
+    expectedNumberofInterferences = 2    </pre>
+<pre>    Dim expectedInterferenceVolumes As Collection
+    Set expectedInterferenceVolumes = New Collection
+    expectedInterferenceVolumes.Add 0.09
+    expectedInterferenceVolumes.Add 0.01    </pre>
+<pre>    Dim expectedNumberOfInterferenceComps As Collection
+    Set expectedNumberOfInterferenceComps = New Collection
+    expectedNumberOfInterferenceComps.Add 2
+    expectedNumberOfInterferenceComps.Add 2    </pre>
+<pre>    Dim bResult As Boolean
+    bResult = True    </pre>
+<pre>    Dim swAssem As SldWorks.AssemblyDoc
+    Set swAssem = OpenAssembly    </pre>
+<pre>    RecordStartingPositions swAssem    </pre>
+<pre>    SelectAllComponents swAssem    </pre>
+<pre>    Dim swInfrMgr As SldWorks.InterferenceDetectionMgr
+    Set swInfrMgr = swAssem.<b>InterferenceDetectionManager</b>    </pre>
+<pre>    swInfrMgr.<b>UseTransform</b> = True
+    </pre>
+<pre>    Dim swComps(0 To 2) As SldWorks.Component2
+    Set swComps(0) = swAssem.<b>GetComponentByName</b>(&quot;Part1^AssemInterferenceDetection-1&quot;)
+    Set swComps(1) = swAssem.<b>GetComponentByName</b>(&quot;Part1^AssemInterferenceDetection-2&quot;)
+    Set swComps(2) = swAssem.<b>GetComponentByName</b>(&quot;Part1^AssemInterferenceDetection-3&quot;)    </pre>
+<pre>    Dim swXfms(0 To 2) As SldWorks.MathTransform
+    Set swXfms(0) = swComps(0).<b>Transform2</b>
+    Set swXfms(1) = swComps(1).<b>Transform2</b>
+    Set swXfms(2) = swComps(2).<b>Transform2</b>    </pre>
+<pre>    ' Replacement transform for Part1^AssemInterferenceDetection-2
+    Dim dXfm(0 To 15) As Double
+    ' Use existing rotation
+    Dim vXfmCurrent As Variant
+    vXfmCurrent = swXfms(1).<b>ArrayData</b></pre>
+<pre>    dXfm(0) = vXfmCurrent(0): dXfm(1) = vXfmCurrent(1): dXfm(2) = vXfmCurrent(2)
+    dXfm(3) = vXfmCurrent(3): dXfm(4) = vXfmCurrent(4): dXfm(5) = vXfmCurrent(5)
+    dXfm(6) = vXfmCurrent(6): dXfm(7) = vXfmCurrent(7): dXfm(8) = vXfmCurrent(8)
+    ' Translation from assembly origin
+    dXfm(9) = 0.9: dXfm(10) = 0.1: dXfm(11) = 0
+    dXfm(12) = 1
+    dXfm(13) = 0: dXfm(14) = 0: dXfm(15) = 0: dXfm(1) = 0: dXfm(2) = 0    </pre>
+<pre>    Dim swMath As SldWorks.MathUtility
+    Set swMath = swApp.<b>GetMathUtility</b>    </pre>
+<pre>    Set swXfms(1) = swMath.<b>CreateTransform</b>(dXfm)    </pre>
+<pre>    Dim lResult As Long
+    lResult = swInfrMgr.<b>SetComponentsAndTransforms</b>(swComps, swXfms)
+    Debug.Print &quot;Transforms applied:&quot;
+    If lResult = swSetComponentsAndTransformsStatus_e.swSetComponentsAndTransforms_Succeeded Then
+        Debug.Print &quot;  True&quot;
+    Else
+        Debug.Print &quot;  False: &quot; &amp; lResult &amp; &quot; vs. &quot; &amp; swSetComponentsAndTransformsStatus_e.swSetComponentsAndTransforms_Succeeded
+        bResult = False
+    End If    </pre>
+<pre>    Dim actualNumberOfInterferences As Long
+    actualNumberOfInterferences = swInfrMgr.<b>GetInterferenceCount</b>
+    Debug.Print &quot;Number of interferences: &quot;
+    Debug.Print &quot;  &quot; &amp; actualNumberOfInterferences    </pre>
+<pre>    Stop
+    ' Examine the graphics area to verify
+    ' the interferences, then press F5    </pre>
+<pre>    Dim bCorrectNumberofInterferences As Boolean
+    bCorrectNumberofInterferences = expectedNumberofInterferences = actualNumberOfInterferences
+    Debug.Print &quot;Correct number of interferences:&quot;
+    If bCorrectNumberofInterferences Then
+        Debug.Print &quot;  True&quot;
+    Else
+        Debug.Print &quot;  False: &quot; &amp; actualNumberOfInterferences &amp; &quot; vs. &quot; &amp; expectedNumberofInterferences
+        bResult = False
+    End If    </pre>
+<pre>    Dim bCorrectInterferences As Boolean
+    bCorrectInterferences = VerifyInterferencesAgainstExpectation(swInfrMgr.<b>GetInterferences</b>, expectedInterferenceVolumes, expectedNumberOfInterferenceComps)
+    Debug.Print &quot;Correct interferences:&quot;
+    If bCorrectInterferences Then
+        Debug.Print &quot;  True&quot;
+    Else
+        Debug.Print &quot;  False&quot;
+        bResult = False
+    End If    </pre>
+<pre>    swInfrMgr.<b>Done</b></pre>
+<pre>    Dim bBackToStartingPositions As Boolean
+    bBackToStartingPositions = VerifyFinishingPositions
+    Debug.Print &quot;Components back at starting positions:&quot;
+    If bBackToStartingPositions Then
+        Debug.Print &quot;  True&quot;
+    Else
+        Debug.Print &quot;  False&quot;
+        bResult = False
+    End If    </pre>
+<pre>End Sub</pre>
+<pre>Public Function OpenAssembly() As SldWorks.AssemblyDoc
+    If swApp Is Nothing Then
+        Set swApp = Application.SldWorks
+    End If    </pre>
+<pre>    swApp.<b>CloseAllDocuments</b> True    </pre>
+<pre>    Dim docspec As SldWorks.DocumentSpecification
+    Dim assemblyFile As String
+    assemblyFile = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\AssemInterferenceDetection.sldasm&quot;
+    Set docspec = swApp.<b>GetOpenDocSpec</b>(assemblyFile)    </pre>
+<pre>    Dim swModel As SldWorks.ModelDoc2
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swModel = swApp.<b>OpenDoc7</b>(docspec)    </pre>
+<pre>    Set OpenAssembly = swModel
+End Function</pre>
+<pre>Public Function EqualWithinTolerance(ByVal A As Double, ByVal B As Double) As Boolean
+    Const tolerance As Double = 0.00001
+    Dim difference As Double
+    difference = Abs(A - B)
+    EqualWithinTolerance = difference &lt; tolerance
+End Function</pre>
+<pre>Public Sub RecordStartingPositions(swAssem As AssemblyDoc)
+    Set colStartingPositions = New Collection    </pre>
+<pre>    Dim vComponents As Variant
+    vComponents = swAssem.<b>GetComponents</b>(True)    </pre>
+<pre>    If Not IsEmpty(vComponents) Then
+        Dim vComp As Variant
+        For Each vComp In vComponents
+            Dim swComp As Component2
+            Set swComp = vComp
+            Dim position As Class1
+            Set position = New Class1
+            position.RecordReferencePosition swComp            </pre>
+<pre>            colStartingPositions.Add position
+        Next
+    End If
+End Sub</pre>
+<pre>Public Function VerifyFinishingPositions() As Boolean
+    Dim bResult As Boolean
+    bResult = True    </pre>
+<pre>    Dim position As Class1
+    Debug.Print &quot;Position of: &quot;
+    For Each position In colStartingPositions
+        If position.IsAtReferencePosition() Then
+            Debug.Print &quot;  &quot; &amp; position.Name &amp; &quot; has not moved&quot;
+        Else
+            Debug.Print &quot;  &quot; &amp; position.Name &amp; &quot; has moved&quot;
+            bResult = False
+        End If
+    Next    </pre>
+<pre>    VerifyFinishingPositions = bResult
+End Function</pre>
+<pre>Public Function VerifyInterferencesAgainstExpectation(vInterferences As Variant, expectedVolumes As Collection, expectedCompCounts As Collection) As Boolean
+    Dim bResult As Boolean
+    bResult = True
+    If IsEmpty(vInterferences) Then
+        Debug.Print &quot;IInterferenceDetectionMgr::GetInterferences returned:&quot;
+        If expectedVolumes.Count = 0 Then
+            Debug.Print &quot;  Nothing as expected&quot;
+        Else
+            Debug.Print &quot;  Nothing unexpectedly&quot;
+            bResult = False
+        End If
+    Else
+        Dim numInterferences As Long
+        numInterferences = UBound(vInterferences) - LBound(vInterferences) + 1
+        If numInterferences &lt;&gt; expectedVolumes.Count Then
+            Debug.Print &quot;IInterferenceDetectionMgr::GetInterferences returned unexpected number of interferences: &quot; &amp; numInterferences &amp; &quot; vs. &quot; &amp; expectedVolumes.Count
+            bResult = False
+        End If            </pre>
+<pre>        ' Cannot assume the same order
+        ' Try to find matches for each returned interference
+        Dim i As Long
+
+        Debug.Print &quot;Match found for calculated interference:&quot;
+        For i = LBound(vInterferences) To UBound(vInterferences)
+            Dim swInterference As Interference
+            Set swInterference = vInterferences(i)            </pre>
+<pre>            Dim volume As Double
+            volume = swInterference.<b>volume</b></pre>
+<pre>            Dim compCount As Long
+            compCount = swInterference.<b>GetComponentCount</b>            </pre>
+<pre>            Dim bFoundMatch As Boolean
+            bFoundMatch = False            </pre>
+<pre>            Dim j As Long
+            For j = 1 To expectedVolumes.Count
+                If EqualWithinTolerance(expectedVolumes(j), volume) And (expectedCompCounts(j) = compCount) Then
+                    bFoundMatch = True
+                    expectedVolumes.Remove j
+                    expectedCompCounts.Remove j
+                    Exit For
+                End If
+            Next            </pre>
+<pre>            If bFoundMatch Then
+                Debug.Print &quot;  &quot; &amp; i &amp; &quot;: Volume = &quot; &amp; Format(volume, &quot;0.000000&quot;) &amp; &quot; &amp; Component count = &quot; &amp; compCount
+            Else
+                Debug.Print &quot;  &quot; &amp; i &amp; &quot;: Volume = &quot; &amp; Format(volume, &quot;0.000000&quot;) &amp; &quot; &amp; Component count = &quot; &amp; compCount
+                bResult = False
+            End If
+        Next        </pre>
+<pre>        Dim k as Long
+	If expectedVolumes.Count &gt; 0 Then
+            For k = 1 To expectedVolumes.Count
+                Debug.Print &quot;No match found for expected interference: Volume = &quot; &amp; Format(expectedVolumes(k), &quot;0.000000&quot;) &amp; &quot; &amp; Component count = &quot; &amp; expectedCompCounts(k)
+            Next
+        End If
+    End If    </pre>
+<pre>    VerifyInterferencesAgainstExpectation = bResult
+End Function</pre>
+<pre>Public Sub SelectAllComponents(swAssem As AssemblyDoc)
+    Dim swModel As ModelDoc2
+    Set swModel = swAssem
+    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    Dim vComponents As Variant
+    vComponents = swAssem.<b>GetComponents</b>(True)    </pre>
+<pre>    If Not IsEmpty(vComponents) Then
+        Dim vComp As Variant
+        For Each vComp In vComponents
+            Dim swComp As Component2
+            Set swComp = vComp
+            swComp.<b>Select4</b> True, Nothing, False
+        Next
+    End If
+End Sub</pre>
+<div align="center">
+	<pre><font face="Verdana" style="font-size: 8pt"><a href="#Top">Back to top</a></font>
+</pre>
+
+</div>
+
+<p><font face="Courier New" size="2"><a name="Class1"></a>'Class1</font></p>
+<pre>Option Explicit</pre>
+<pre>Private swComp As Component2
+Private swReferenceTransform As MathTransform</pre>
+<pre>Public Sub RecordReferencePosition(swComponent As Component2)
+    Set swComp = swComponent
+    Set swReferenceTransform = swComp.<b>Transform2</b>
+End Sub</pre>
+<pre>Public Function IsAtReferencePosition() As Boolean
+    Dim swCurrentTransform As MathTransform
+    Set swCurrentTransform = swComp.<b>Transform2</b>    </pre>
+<pre>    Dim swProduct As MathTransform
+    Set swProduct = swReferenceTransform.<b>Multiply</b>(swCurrentTransform.<b>Inverse</b>)    </pre>
+<pre>    Dim vProduct As Variant
+    vProduct = swProduct.<b>ArrayData</b></pre>
+<pre>    ' Require identity transform
+    Dim bResult As Boolean
+    bResult = EqualWithinTolerance(vProduct(0), 1)
+    bResult = EqualWithinTolerance(vProduct(1), 0) And bResult
+    bResult = EqualWithinTolerance(vProduct(2), 0) And bResult
+    </pre>
+<pre>    bResult = EqualWithinTolerance(vProduct(3), 0) And bResult
+    bResult = EqualWithinTolerance(vProduct(4), 1) And bResult
+    bResult = EqualWithinTolerance(vProduct(5), 0) And bResult
+    </pre>
+<pre>    bResult = EqualWithinTolerance(vProduct(6), 0) And bResult
+    bResult = EqualWithinTolerance(vProduct(7), 0) And bResult
+    bResult = EqualWithinTolerance(vProduct(8), 1) And bResult
+    </pre>
+<pre>    bResult = EqualWithinTolerance(vProduct(9), 0) And bResult
+    bResult = EqualWithinTolerance(vProduct(10), 0) And bResult
+    bResult = EqualWithinTolerance(vProduct(11), 0) And bResult
+    </pre>
+<pre>    bResult = EqualWithinTolerance(vProduct(12), 1) And bResult
+    </pre>
+<pre>    If Not bResult Then
+        Debug.Print Name &amp; &quot;:&quot;
+        Debug.Print Format(vProduct(0), &quot;0.000000&quot;) &amp; vbTab &amp; Format(vProduct(1), &quot;0.000000&quot;) &amp; vbTab &amp; Format(vProduct(2), &quot;0.000000&quot;)
+        Debug.Print Format(vProduct(3), &quot;0.000000&quot;) &amp; vbTab &amp; Format(vProduct(4), &quot;0.000000&quot;) &amp; vbTab &amp; Format(vProduct(5), &quot;0.000000&quot;)
+        Debug.Print Format(vProduct(6), &quot;0.000000&quot;) &amp; vbTab &amp; Format(vProduct(7), &quot;0.000000&quot;) &amp; vbTab &amp; Format(vProduct(8), &quot;0.000000&quot;)
+        Debug.Print Format(vProduct(9), &quot;0.000000&quot;) &amp; vbTab &amp; Format(vProduct(10), &quot;0.000000&quot;) &amp; vbTab &amp; Format(vProduct(11), &quot;0.000000&quot;)
+        Debug.Print Format(vProduct(12), &quot;0.000000&quot;)
+    End If
+    </pre>
+<pre>    
+    IsAtReferencePosition = bResult
+End Function</pre>
+<pre>Public Property Get Name() As String
+    Name = swComp.<b>Name2</b>
+End Property</pre>
+<div align="center">
+	<pre><font face="Verdana" style="font-size: 8pt"><a href="#Top">Back to top</a></font></pre>
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,92 @@
+<html>
+
+<head>
+<title>Transform Point from Component Space to Assembly Space Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+ <META NAME="MS-HKWD" CONTENT="VB.NET examples,transforms">
+ <META NAME="MS-HKWD" CONTENT="VB.NET examples,component space">
+ <META NAME="MS-HKWD" CONTENT="VB.NET examples,assembly space">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Transform Point from Component Space to Assembly Space Example (VB.NET)</h1>
+<p>This example shows how to transform a point from component space to 
+ assembly space.</p>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color: green">'--------------------------------------------------------------</span>
+<span style="color: green">'&nbsp;Preconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;assembly&nbsp;document&nbsp;to&nbsp;open</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;exists.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'</span>
+<span style="color: green">'&nbsp;Postconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;assembly&nbsp;document.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Selects&nbsp;a&nbsp;component.</span>
+<span style="color: green">'&nbsp;3.&nbsp;Transforms&nbsp;the&nbsp;component's&nbsp;origin&nbsp;to&nbsp;a&nbsp;point&nbsp;in</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;assembly&nbsp;space.</span>
+<span style="color: green">'&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'--------------------------------------------------------------</span>
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color: blue">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color: blue">Imports</span>&nbsp;System
+<span style="color: blue">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color: blue">Partial</span>&nbsp;<span style="color: blue">Class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;<span style="color: blue">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swMathUtil&nbsp;<span style="color: blue">As</span>&nbsp;MathUtility
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModel&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color: blue">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color: blue">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swComp&nbsp;<span style="color: blue">As</span>&nbsp;Component2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swXform&nbsp;<span style="color: blue">As</span>&nbsp;MathTransform
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;nPt(2)&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;vPt&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swPt&nbsp;<span style="color: blue">As</span>&nbsp;MathPoint
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;bRet&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;errors&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;warnings&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;fileName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Open&nbsp;assembly</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color: #a31515">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\smartcomponents\stepped_shaft.sldasm&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocASSEMBLY,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color: #a31515">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;stepped_shaft-1@stepped_shaft&quot;</span>,&nbsp;<span style="color: #a31515">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathUtil&nbsp;=&nbsp;swApp.<b>GetMathUtility</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObjectsComponent</b>(1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swXform&nbsp;=&nbsp;swComp.<b>Transform2</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Point&nbsp;at&nbsp;component&nbsp;origin</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nPt(0)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nPt(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nPt(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vPt&nbsp;=&nbsp;nPt
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPt&nbsp;=&nbsp;swMathUtil.<b>CreatePoint</b>(vPt)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPt&nbsp;=&nbsp;swPt.<b>MultiplyTransform</b>(swXform)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;File&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swModel.<b>GetPathName</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Component&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swComp.<b>Name2</b>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;[&quot;</span>&nbsp;&amp;&nbsp;swComp.<b>GetPathName</b>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;]&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Point&nbsp;in&nbsp;component&nbsp;=&nbsp;(&quot;</span>&nbsp;&amp;&nbsp;nPt(0)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nPt(1)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nPt(2)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;)&nbsp;mm&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Point&nbsp;in&nbsp;assembly&nbsp;=&nbsp;(&quot;</span>&nbsp;&amp;&nbsp;swPt.<b>ArrayData</b>(0)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swPt.<b>ArrayData</b>(1)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swPt.<b>ArrayData</b>(2)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;)&nbsp;mm&quot;</span>)
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;swApp&nbsp;<span style="color: blue">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color: blue">End</span>&nbsp;<span style="color: blue">Class</span></pre>
+
+</body>
+
+</html>

@@ -1,0 +1,137 @@
+<html>
+
+<head>
+<title>Rename Component and Update References Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,components">
+<meta name=MS-HKWD content="VB.NET examples,assemblies">
+<meta name=MS-HKWD content="VB.NET examples,references">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Rename Component and Update References Example (VB.NET)</h1>
+<p>This example shows how to rename a component and update its references.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'----------------------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Copy&nbsp;<i>public_documents</i><b>\samples\tutorial\EDraw\claw</b>&nbsp;to <b>c:\test\claw</b>.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;<b>c:\test\claw\claw-mechanism.sldasm </b>and&nbsp;save&nbsp;the&nbsp;file&nbsp;as&nbsp;<b>
+'    claw-mechanism-copy.sldasm</b>.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Close&nbsp;<b>claw-mechanism-copy.sldasm</b> and reopen&nbsp;<b>claw-mechanism.sldasm</b>.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Renames&nbsp;the&nbsp;<b>center</b>&nbsp;component&nbsp;to&nbsp;<b>centerXXX</b>.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Fires&nbsp;the&nbsp;<b>RenameItemNotify</b>&nbsp;event.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Saves&nbsp;the&nbsp;assembly.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Fires&nbsp;the&nbsp;<b>RenamedDocumentNotify</b>&nbsp;event.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Updates&nbsp;references.</span>
+<span style="color:green;">'&nbsp;6.&nbsp;Examine&nbsp;the&nbsp;FeatureManager&nbsp;design&nbsp;tree&nbsp;and&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;7.&nbsp;Close&nbsp;<b>claw-mechanism.sldasm</b>&nbsp;and&nbsp;open</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;<b>c:\test\claw\claw-mechanism-copy.sldasm</b>&nbsp;to&nbsp;verify&nbsp;that&nbsp;the</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;<b>center</b>&nbsp;component&nbsp;was&nbsp;renamed&nbsp;to&nbsp;<b>centerXXX</b>.</span>
+<span style="color:green;">'---------------------------------------------------------------------</span><span style="color: #008000">
+</span><span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+<span style="color:blue;">Imports</span>&nbsp;System.Collections
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">WithEvents</span>&nbsp;assy&nbsp;<span style="color:blue;">As</span>&nbsp;AssemblyDoc
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAssy&nbsp;<span style="color:blue;">As</span>&nbsp;AssemblyDoc
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;openAssembly&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Hashtable</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssy&nbsp;=&nbsp;swApp.<b>ActiveDoc</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;up&nbsp;event</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assy&nbsp;=&nbsp;swAssy
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openAssembly&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">Hashtable</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventHandlers()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swAssy
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;center-1@claw-mechanism&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;errors&nbsp;=&nbsp;swModelDocExt.<b>RenameDocument</b>(<span style="color:#a31515;">&quot;centerXXX&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>Rebuild</b>(swRebuildOptions_e.swRebuildAll)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModel.<b>Save3</b>(swSaveAsOptions_e.swSaveAsOptions_Silent&nbsp;+&nbsp;swSaveAsOptions_e.swSaveAsOptions_SaveReferenced,&nbsp;errors,&nbsp;warnings)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachEventHandlers()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachSWEvents()
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachSWEvents()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;assy&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;assy.RenameItemNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.assy_RenameItemNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;assy.RenamedDocumentNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.assy_RenamedDocumentNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Fire&nbsp;notification&nbsp;when&nbsp;item&nbsp;is&nbsp;renamed</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;assy_<b>RenameItemNotify</b>(<span style="color:blue;">ByVal</span>&nbsp;entType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;oldName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;newName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;RenameItemNotify&nbsp;fired&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Fire&nbsp;notification&nbsp;for&nbsp;Rename&nbsp;Documents&nbsp;dialog</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;assy_<b>RenamedDocumentNotify</b>(<span style="color:blue;">ByRef</span>&nbsp;swObj&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swRenamedDocumentReferences&nbsp;<span style="color:blue;">As</span>&nbsp;RenamedDocumentReferences
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;searchPaths&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;pathNames&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;nbr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRenamedDocumentReferences&nbsp;=&nbsp;swObj
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRenamedDocumentReferences.<b>UpdateWhereUsedReferences</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRenamedDocumentReferences.<b>IncludeFileLocations</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;searchPaths&nbsp;=&nbsp;swRenamedDocumentReferences.<b>GetSearchPath</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbr&nbsp;=&nbsp;UBound(searchPaths)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Search&nbsp;paths:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;nbr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;searchPaths(i))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;i
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRenamedDocumentReferences.<b>Search</b>()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pathNames&nbsp;=&nbsp;swRenamedDocumentReferences.<b>ReferencesArray</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbr&nbsp;=&nbsp;UBound(pathNames)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;References:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;nbr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;pathNames(i))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;i
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRenamedDocumentReferences.<b>CompletionAction</b>&nbsp;=&nbsp;swRenamedDocumentFinalAction_e.swRenamedDocumentFinalAction_Ok
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;RenamedDocumentNotify&nbsp;fired&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

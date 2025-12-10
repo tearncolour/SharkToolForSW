@@ -1,0 +1,255 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Solid Bodies from Cut-list Folders and Get Custom Properties Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=5170>
+<meta name=layout-width content=786>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+ <META NAME="MS-HKWD" CONTENT="VBA examples,custom properties">
+ <META NAME="MS-HKWD" CONTENT="VBA examples,cut lists">
+ <META NAME="MS-HKWD" CONTENT="VBA examples,bodies">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Get Solid Bodies from Cut-list Folders and Get Custom Properties Example 
+ (VBA)</h1>
+
+<p>This example shows how to get the solid bodies from cut-list folders 
+ and how to get the custom properties for the solid bodies.</p>
+
+<pre>'---------------------------------------------------------------
+' Preconditions:
+' 1. Verify that <b>c:\temp\outputFile.txt</b> does not exist; this macro
+'    creates and writes to this file.
+' 2. Add a reference to <b>Microsoft Scripting Runtime</b> (click
+'    <b>Tools &gt; References &gt; Browse &gt; C:\windows\system32\scrrun.dll</b>).
+' 3. Open <i>public_documents</i><b>\samples\tutorial\api\weldment_box3.sldprt</b>.
+' 4. Click <b>Tools &gt; Options &gt; Document Properties &gt; Weldments &gt;</b>
+'    <b>Rename cut list folders with Description property value &gt; OK</b>.
+' 5. Right-click <b>Cut list(31)</b> in the FeatureManager design tree
+'    and click <b>Update</b>.
+' 6. Open the Immediate window.
+'
+' Postconditions:
+' 1. Traverses the FeatureManager design tree.
+' 2. Writes <b>Done!</b> to the Immediate window when
+'    the macro finishes executing.
+' 3. Open and examine <b>c:\temp\outputFile.txt</b>.
+'
+' NOTE: Because this part is used elsewhere, do not save changes.
+'----------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swPart As SldWorks.ModelDoc2
+Dim swFeat As SldWorks.Feature
+Dim fs As Scripting.FileSystemObject
+Dim a As Scripting.TextStream</pre>
+<pre>Sub GetFeatureCustomProps(thisFeat As SldWorks.Feature)</pre>
+<pre>    Dim CustomPropMgr As SldWorks.CustomPropertyManager
+    Set CustomPropMgr = thisFeat.<b>CustomPropertyManager</b>
+    Dim vCustomPropNames As Variant</pre>
+<pre>    vCustomPropNames = CustomPropMgr.<b>GetNames</b>
+    If Not IsEmpty(vCustomPropNames) Then
+        a.WriteLine &quot;               Cut-list custom properties:&quot;
+        Dim i As Long
+        For i = LBound(vCustomPropNames) To UBound(vCustomPropNames)
+            Dim CustomPropName As String
+            CustomPropName = vCustomPropNames(i)
+            Dim CustomPropType As Long
+            CustomPropType = CustomPropMgr.<b>GetType2</b>(CustomPropName)
+            Dim CustomPropVal As String
+            Dim CustomPropResolvedVal As String
+            CustomPropMgr.<b>Get2</b> CustomPropName, CustomPropVal, CustomPropResolvedVal
+            a.WriteLine &quot;                     Name: &quot; &amp; CustomPropName
+            a.WriteLine &quot;                         Value: &quot; &amp; CustomPropVal
+            a.WriteLine &quot;                         Resolved value: &quot; &amp; CustomPropResolvedVal
+        Next i
+    End If
+End Sub</pre>
+<pre>Sub DoTheWork(thisFeat As SldWorks.Feature, ParentName As String)</pre>
+<pre>    Static InBodyFolder As Boolean
+    Static BodyFolderType(5) As String
+    Static BeenHere As Boolean
+    Dim bAllFeatures As Boolean
+    Dim bCutListCustomProps As Boolean
+    Dim vSuppressed As Variant</pre>
+<pre>    If Not BeenHere Then
+        BodyFolderType(0) = &quot;dummy&quot;
+        BodyFolderType(1) = &quot;swSolidBodyFolder&quot;
+        BodyFolderType(2) = &quot;swSurfaceBodyFolder&quot;
+        BodyFolderType(3) = &quot;swBodySubFolder&quot;
+        BodyFolderType(4) = &quot;swWeldmentSubFolder&quot;
+        BodyFolderType(5) = &quot;swWeldmentCutListFolder&quot;
+        InBodyFolder = False
+        BeenHere = True
+        bAllFeatures = False
+        bCutListCustomProps = False
+    End If</pre>
+<pre>    'Comment out next line to print information for just BodyFolders
+    bAllFeatures = True 'True to print information about all features    </pre>
+<pre>    'Comment out next line if you do not want cut list's custom properties
+    bCutListCustomProps = True
+    Dim FeatType As String
+    FeatType = thisFeat.<b>GetTypeName</b>
+    If (FeatType = &quot;SolidBodyFolder&quot;) And (ParentName = &quot;Root Feature&quot;) Then
+        InBodyFolder = True
+    End If
+    If (FeatType &lt;&gt; &quot;SolidBodyFolder&quot;) And (ParentName = &quot;Root Feature&quot;) Then
+        InBodyFolder = False
+    End If    </pre>
+<pre>    'Only consider the CutListFolders that are under SolidBodyFolder
+    If (InBodyFolder = False) And (FeatType = &quot;CutListFolder&quot;) Then
+        'Skip the second occurrence of the CutListFolders during the feature traversal
+        Exit Sub
+    End If
+    </pre>
+<pre>    'Only consider the SubWeldFolder that are under the SolidBodyFolder
+    If (InBodyFolder = False) And (FeatType = &quot;SubWeldFolder&quot;) Then
+        'Skip the second occurrence of the SubWeldFolders during the feature traversal
+        Exit Sub
+    End If</pre>
+<pre>    Dim IsBodyFolder As Boolean
+    If FeatType = &quot;SolidBodyFolder&quot; Or FeatType = &quot;SurfaceBodyFolder&quot; Or FeatType = &quot;CutListFolder&quot; Or FeatType = &quot;SubWeldFolder&quot; Or FeatType = &quot;SubAtomFolder&quot; Then
+        IsBodyFolder = True
+    Else
+        IsBodyFolder = False
+    End If</pre>
+<pre>    If bAllFeatures And (Not IsBodyFolder) Then
+        a.WriteLine &quot;Feature&nbsp;name:&nbsp;&quot; &amp; thisFeat.<b>Name</b>
+        a.WriteLine &quot;&nbsp;&nbsp;&nbsp;Feature&nbsp;type:&nbsp;&quot; &amp; FeatType
+        vSuppressed = thisFeat.<b>IsSuppressed2</b>(swInConfigurationOpts_e.swThisConfiguration, Nothing)
+        If IsEmpty(vSuppressed) Then
+            a.WriteLine &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Suppression&nbsp;failed&quot;
+        Else
+            a.WriteLine &quot;        Suppressed&quot;
+        End If
+    End If</pre>
+<pre>    If IsBodyFolder Then
+        Dim BodyFolder As SldWorks.BodyFolder
+        Set BodyFolder = thisFeat.<b>GetSpecificFeature2</b>
+        Dim BodyCount As Long
+        BodyCount = BodyFolder.<b>GetBodyCount</b></pre>
+<pre>        If (FeatType = &quot;CutListFolder&quot;) And (BodyCount &lt; 1) Then
+            'When BodyCount = 0, this cut list folder is not displayed in the
+            'FeatureManager design tree, so skip it
+            Exit Sub
+        Else
+            a.WriteLine &quot;Feature name: &quot; &amp; thisFeat.<b>Name</b>
+            vSuppressed = thisFeat.<b>IsSuppressed2</b>(swInConfigurationOpts_e.swThisConfiguration, Empty)
+            If IsEmpty(vSuppressed) Then
+                a.WriteLine &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Suppression&nbsp;failed&quot;
+            Else
+                a.WriteLine &quot;       Suppressed&quot;
+            End If
+        End If</pre>
+<pre>        If Not bAllFeatures Then
+            a.WriteLine &quot;Feature name: &quot; &amp; thisFeat.<b>Name</b>
+            vSuppressed = thisFeat.<b>IsSuppressed2</b>(swInConfigurationOpts_e.swThisConfiguration, Empty)
+            If IsEmpty(vSuppressed) Then
+                a.WriteLine &quot;       Suppression failed&quot;
+            Else
+                a.WriteLine &quot;       Suppressed&quot;
+            End If
+        End If</pre>
+<pre>        Dim BodyFolderTypeE As Long
+        BodyFolderTypeE = BodyFolder.<b>Type</b>
+        a.WriteLine &quot;        Body folder: &quot; &amp; BodyFolderType(BodyFolderTypeE)
+        a.WriteLine &quot;        Body folder type: BodyFolderTypeE&quot;
+        a.WriteLine &quot;        Body count: &quot; &amp; BodyCount</pre>
+<pre>        Dim vBodies As Variant
+        vBodies = BodyFolder.<b>GetBodies</b>
+        Dim i As Long
+        If Not IsEmpty(vBodies) Then
+            For i = LBound(vBodies) To UBound(vBodies)
+                Dim Body As SldWorks.Body2
+                Set Body = vBodies(i)
+                a.WriteLine &quot;           Body name: &quot; &amp; Body.Name
+            Next i
+        End If
+    Else
+        If bAllFeatures Then
+            a.WriteLine &quot;&quot;
+        End If
+    End If</pre>
+<pre>    If (FeatType = &quot;CutListFolder&quot;) Then
+        'When BodyCount = 0, this cut list folder is not displayed
+        'in the FeatureManager design tree, so skip it
+        If BodyCount &gt; 0 Then
+            If bCutListCustomProps Then
+                'Comment out this line if you do not want to
+                'print the cut list folder's custom properties
+                GetFeatureCustomProps thisFeat
+            End If
+        End If
+    End If</pre>
+<pre>End Sub</pre>
+<pre>Sub TraverseFeatures(thisFeat As SldWorks.Feature, isTopLevel As Boolean, ParentName As String)</pre>
+<pre>    Dim curFeat As SldWorks.Feature
+    Set curFeat = thisFeat</pre>
+<pre>    While Not curFeat Is Nothing
+        DoTheWork curFeat, ParentName
+        Dim subfeat As SldWorks.Feature
+        Set subfeat = curFeat.<b>GetFirstSubFeature</b>
+        While Not subfeat Is Nothing
+            TraverseFeatures subfeat, False, curFeat.<b>Name</b>
+            Dim nextSubFeat As SldWorks.Feature
+            Set nextSubFeat = subfeat.<b>GetNextSubFeature</b>
+            Set subfeat = nextSubFeat
+            Set nextSubFeat = Nothing
+        Wend
+        Set subfeat = Nothing
+        Dim nextFeat As SldWorks.Feature
+        If isTopLevel Then
+            Set nextFeat = curFeat.<b>GetNextFeature</b>
+        Else
+            Set nextFeat = Nothing
+        End If
+        Set curFeat = nextFeat
+        Set nextFeat = Nothing
+    Wend</pre>
+<pre>End Sub</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swPart = swApp.<b>ActiveDoc</b>
+    Set fs = CreateObject(&quot;Scripting.FileSystemObject&quot;)
+    Set a = fs.CreateTextFile(&quot;c:\temp\outputFile.txt&quot;, True)
+    a.WriteLine &quot;File: &quot; &amp; swPart.<b>GetPathName</b>
+    Dim ConfigName As String
+    ConfigName = swPart.<b>ConfigurationManager</b>.<b>ActiveConfiguration</b>.<b>Name</b>
+    a.WriteLine &quot;Active configuration name: &quot; &amp; ConfigName
+    Set swFeat = swPart.<b>FirstFeature</b>
+    TraverseFeatures swFeat, True, &quot;Root Feature&quot;
+    a.Close
+    Debug.Print &quot;Done!&quot;</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

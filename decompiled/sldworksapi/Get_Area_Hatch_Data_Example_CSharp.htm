@@ -1,0 +1,130 @@
+<html>
+
+<head>
+<title>Get Area Hatch Data Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,hatches">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Area Hatch Data Example (C#)</h1>
+<p>This example shows how to get the data for an area hatch in a drawing.</p>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color:green;">
+//----------------------------------------------------------------------------</span><br>
+<span style="color:green;">//&nbsp;Preconditions:</span><br>
+<span style="color:green;">
+//&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;drawing&nbsp;exists.</span><br>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">//</span><br>
+<span style="color:green;">//&nbsp;Postconditions:</span><br>
+<span style="color:green;">//&nbsp;1.&nbsp;Opens the drawing.<br>
+// 2. Hatches&nbsp;a&nbsp;face&nbsp;in&nbsp;the&nbsp;drawing.</span><br>
+<span style="color:green;">//&nbsp;3.&nbsp;Inspect&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">//</span><br>
+<span style="color:green;">
+//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;model&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span><br>
+<span style="color:green;">
+//---------------------------------------------------------------------------</span><br>
+<span style="color:blue;">using</span>&nbsp;Microsoft.VisualBasic;<br>
+<span style="color:blue;">using</span>&nbsp;System;<br>
+<span style="color:blue;">using</span>&nbsp;System.Collections;<br>
+<span style="color:blue;">using</span>&nbsp;System.Collections.Generic;<br>
+<span style="color:blue;">using</span>&nbsp;System.Data;<br>
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;<br>
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;<br>
+<span style="color:blue;">namespace</span>&nbsp;Macro1CSharp.csproj<br>
+{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DrawingDoc&nbsp;swDraw;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr&nbsp;swSelMgr;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;View&nbsp;swView;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sketch&nbsp;swSketch;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>[]&nbsp;vSketchHatch;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SketchHatch&nbsp;swSketchHatch;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Face2&nbsp;swFace;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>[]&nbsp;vID;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;i;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;bRet;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;longstatus;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;longwarnings;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\api\\box.slddrw&quot;</span>,&nbsp;(<span style="color:blue;">int</span>)swDocumentTypes_e.swDocDRAWING,&nbsp;0,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;longstatus,&nbsp;<span style="color:blue;">ref</span>&nbsp;longwarnings);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>ActivateDoc2</b>(<span style="color:#a31515;">&quot;box&nbsp;-&nbsp;Sheet1&quot;</span>,&nbsp;<span style="color:blue;">false</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;longstatus);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>ActiveDoc</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDraw&nbsp;=&nbsp;(DrawingDoc)swModel;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swDraw.<b>ActivateView</b>(<span style="color:#a31515;">&quot;Drawing&nbsp;View1&quot;</span>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.246685509728212,&nbsp;0.236217308689246,&nbsp;0.0149999999999864,&nbsp;<span style="color:blue;">true</span>,&nbsp;0,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>InsertHatchedFace</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Drawing&nbsp;View1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;DRAWINGVIEW&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">false</span>,&nbsp;0,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;(SelectionMgr)swModel.<b>SelectionManager</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;(View)swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swView.<b>ScaleHatchPattern</b> 
+= <font color="#0000FF">true</font>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketch&nbsp;=&nbsp;(Sketch)swView.<b>GetSketch</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditSketch</b>();<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;File&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swModel.<b>GetPathName</b>());<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&quot;</span>&nbsp;+&nbsp;swView.<b>Name</b>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vSketchHatch&nbsp;=&nbsp;(<span style="color:blue;">object</span>[])swSketch.<b>GetSketchHatches</b>();<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">if</span>&nbsp;((vSketchHatch&nbsp;!=&nbsp;<span style="color:blue;">null</span>))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">for</span>&nbsp;(i&nbsp;=&nbsp;0;&nbsp;i&nbsp;&lt;=&nbsp;vSketchHatch.GetUpperBound(0);&nbsp;i++)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchHatch&nbsp;=&nbsp;(SketchHatch)vSketchHatch[i];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace&nbsp;=&nbsp;(Face2)swSketchHatch.<b>GetFace</b>();<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swSketchHatch.<b>Select4</b>(<span style="color:blue;">true</span>,&nbsp;<span style="color:blue;">null</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vID&nbsp;=&nbsp;(<span style="color:blue;">int</span>[])swSketchHatch.<b>GetID</b>();<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;HatchID(&quot;</span>&nbsp;+&nbsp;i&nbsp;+&nbsp;<span style="color:#a31515;">&quot;):&nbsp;[&quot;</span>&nbsp;+&nbsp;vID[0]&nbsp;+&nbsp;<span style="color:#a31515;">&quot;,&quot;</span>&nbsp;+&nbsp;vID[1]&nbsp;+&nbsp;<span style="color:#a31515;">&quot;]&quot;</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Angle:&nbsp;&quot;</span>&nbsp;+&nbsp;swSketchHatch.<b>Angle</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Color:&nbsp;&quot;</span>&nbsp;+&nbsp;swSketchHatch.<b>Color</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Layer:&nbsp;&quot;</span>&nbsp;+&nbsp;swSketchHatch.<b>Layer</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Layer&nbsp;override?&nbsp;&quot;</span>&nbsp;+&nbsp;swSketchHatch.<b>LayerOverride</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pattern:&nbsp;&quot;</span>&nbsp;+&nbsp;swSketchHatch.<b>Pattern</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scale:&nbsp;&quot;</span>&nbsp;+&nbsp;swSketchHatch.<b>Scale2</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Solid&nbsp;fill?&nbsp;&quot;</span>&nbsp;+&nbsp;swSketchHatch.<b>SolidFill</b>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+}</p>
+
+</body>
+
+</html>

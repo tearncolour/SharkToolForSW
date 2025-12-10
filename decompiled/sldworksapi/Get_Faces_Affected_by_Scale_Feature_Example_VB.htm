@@ -1,0 +1,120 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Faces Affected by Scale Feature Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+
+<meta name=MS-HKWD content="VBA examples,scale features">
+<meta name=MS-HKWD content="VBA examples,faces">
+
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2325>
+<meta name=layout-width content=750>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Get Faces Affected by Scale Feature Example (VBA)</h1>
+
+<p>This example shows how to get the faces affected by a scale feature in a 
+multibody part.</p>
+
+<p><b>NOTE: </b>In SOLIDWORKS, a feature is a collection of faces. You can get 
+these faces using IFeature::GetFaces. However, some features only affect 
+existing faces and do not create any new faces. Examples of these types of 
+features are draft and scale features. For these features, IFeature::GetFaces 
+returns an empty array (i.e., no faces). To get the faces affected by a scale 
+feature, first get the solid bodies to which the scale feature is applied. Each 
+body is composed of a number of faces, which you can use to determine where 
+these faces are located after the scale feature is applied to the body. An 
+interesting issue is how to locate a face after a rebuild becausea face might 
+not exist after a rebuild. To address this issue, SOLIDWORKS has safe entities, 
+which are entities that survive a rebuild (i.e., are valid across a rebuild). </p>
+
+<pre>'--------------------------------------------------
+' Preconditions:
+' 1. Open a multibody part that has a scale feature.
+' 2. Select the scale feature.
+'
+' Postconditions:
+' 1. Deselects the scale feature.
+' 2. Selects the faces affected by the scale feature.
+' 3. Examine the graphics area.
+'--------------------------------------------------
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swSelData As SldWorks.SelectData
+    Dim swFeat As SldWorks.Feature
+    Dim swScaleFeat As SldWorks.ScaleFeatureData
+    Dim vBody As Variant
+    Dim vBodyArr As Variant
+    Dim swBody As SldWorks.Body2
+    Dim swFace As SldWorks.Face2
+    Dim swEnt As SldWorks.Entity
+    Dim swSafeEnt As SldWorks.Entity
+    Dim vSafeEnt As Variant
+    Dim swSafeEntColl As New Collection
+    Dim i As Long
+    Dim bRet As Boolean</pre>
+<pre>    Set swApp = CreateObject(&quot;SldWorks.Application&quot;)
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swFeat = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swScaleFeat = swFeat.<b>GetDefinition</b>
+    </pre>
+<pre>    bRet = swScaleFeat.<b>AccessSelections</b>(swModel, Nothing)
+    vBodyArr = swScaleFeat.<b>Bodies</b>
+    For Each vBody In vBodyArr
+        Set swBody = vBody
+        Set swFace = swBody.<b>GetFirstFace</b>
+        Do While Not swFace Is Nothing
+            ' Face reference is only valid in rolled-back
+            ' state, so get a more persistent face reference
+            Set swEnt = swFace
+            Set swSafeEnt = swEnt.<b>GetSafeEntity</b>
+            swSafeEntColl.Add swSafeEnt
+            Set swFace = swFace.<b>GetNextFace</b>
+        Loop
+    Next</pre>
+<pre>     swScaleFeat.<b>ReleaseSelectionAccess</b></pre>
+<pre>     For Each vSafeEnt In swSafeEntColl
+        Set swSafeEnt = vSafeEnt
+        bRet = swSafeEnt.<b>Select4</b>(True, swSelData)
+    Next</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

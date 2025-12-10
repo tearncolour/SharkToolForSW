@@ -1,0 +1,127 @@
+<html>
+
+<head>
+<title>Insert Sketch Text and Hole Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,holes">
+<meta name=MS-HKWD content="VB.NET examples,text">
+<meta name=MS-HKWD content="VB.NET examples,sketch text">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Sketch Text and Hole Example (VB.NET)</h1>
+<p>This example shows how to insert sketch text and a hole at the selected 
+ point on a face.</p>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color:green;">
+'----------------------------------------------------------------------------</span><br>
+<span style="color:green;">
+'&nbsp;Preconditions:&nbsp;Open&nbsp;a&nbsp;model&nbsp;document&nbsp;and&nbsp;select&nbsp;a&nbsp;face.</span><br>
+<span style="color:green;">'</span><br>
+<span style="color:green;">'&nbsp;Postconditions:&nbsp;<br>
+' 1. Creates&nbsp;a&nbsp;hole&nbsp;and&nbsp;inserts&nbsp;the&nbsp;specified&nbsp;text&nbsp;on&nbsp;the</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;face&nbsp;at&nbsp;its&nbsp;point&nbsp;of&nbsp;selection.<br>
+' 2. Examine the graphics area and FeatureManager design tree.</span><br>
+<span style="color:green;">
+'----------------------------------------------------------------------------</span><br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+<span style="color:blue;">Imports</span>&nbsp;System<br>
+&nbsp;<br>
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swMathPt&nbsp;<span style="color:blue;">As</span>&nbsp;MathPoint<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;selFace&nbsp;<span style="color:blue;">As</span>&nbsp;Face2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;selEnt&nbsp;<span style="color:blue;">As</span>&nbsp;Entity<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;selPt&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;NewPt&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swMathUtil&nbsp;<span style="color:blue;">As</span>&nbsp;MathUtility<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swMathTrans&nbsp;<span style="color:blue;">As</span>&nbsp;MathTransform<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;selData&nbsp;<span style="color:blue;">As</span>&nbsp;SelectData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SketchManager<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;skText&nbsp;<span style="color:blue;">As</span>&nbsp;SketchText<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ptArr(2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;params&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;holeFeat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeatMgr&nbsp;<span style="color:blue;">As</span>&nbsp;FeatureManager<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;boolstatus&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;TransformPoint(<span style="color:blue;">ByVal</span>&nbsp;Sketch1&nbsp;<span style="color:blue;">As</span>&nbsp;Sketch,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;X&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Y&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Z&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(0)&nbsp;=&nbsp;X<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(1)&nbsp;=&nbsp;Y<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(2)&nbsp;=&nbsp;Z<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathUtil&nbsp;=&nbsp;swApp.<b>GetMathUtility</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathPt&nbsp;=&nbsp;swMathUtil.<b>CreatePoint</b>((ptArr))<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;params&nbsp;=&nbsp;swMathPt.<b>ArrayData</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathTrans&nbsp;=&nbsp;Sketch1.<b>ModelToSketchTransform</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathPt&nbsp;=&nbsp;swMathPt.<b>MultiplyTransform</b>(swMathTrans)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NewPt&nbsp;=&nbsp;swMathPt.<b>ArrayData</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformPoint&nbsp;=&nbsp;NewPt<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selFace&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selEnt&nbsp;=&nbsp;selFace<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selPt&nbsp;=&nbsp;swSelMgr.<b>GetSelectionPoint2</b>(1,&nbsp;-1)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selData&nbsp;=&nbsp;swSelMgr.<b>CreateSelectData</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selData.<b>X</b>&nbsp;=&nbsp;selPt(0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selData.<b>Y</b>&nbsp;=&nbsp;selPt(1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selData.<b>Z</b>&nbsp;=&nbsp;selPt(2)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr&nbsp;=&nbsp;swModel.<b>SketchManager</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>InsertSketch</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selPt&nbsp;=&nbsp;TransformPoint(swModel.<b>IGetActiveSketch2</b>,&nbsp;selPt(0),&nbsp;selPt(1),&nbsp;selPt(2))<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;skText&nbsp;=&nbsp;swModel.<b>InsertSketchText</b>(selPt(0),&nbsp;selPt(1),&nbsp;selPt(2),&nbsp;<span style="color:#a31515;">&quot;Hole&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;100,&nbsp;100)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;params&nbsp;=&nbsp;skText.<b>GetCoordinates</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>InsertSketch</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;selEnt.<b>Select4</b>(<span style="color:blue;">False</span>,&nbsp;selData)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatMgr&nbsp;=&nbsp;swModel.<b>FeatureManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;holeFeat&nbsp;=&nbsp;swFeatMgr.<b>SimpleHole2</b>(0.001,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;0,&nbsp;0.001,&nbsp;0.001,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>)<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks<br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span><br>
+&nbsp;</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

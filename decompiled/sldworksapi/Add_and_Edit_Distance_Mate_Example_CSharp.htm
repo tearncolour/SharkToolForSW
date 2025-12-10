@@ -1,0 +1,144 @@
+<html>
+
+<head>
+<title>Add and Edit Distance Mate Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,mates">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add and Edit Distance Mate Example (C#)</h1>
+<p>This example shows how to add and edit a cylindrical distance mate.</p>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color:green;">
+//----------------------------------------------------------------------------</span><br>
+<span style="color:green;">//&nbsp;Preconditions:</span><br>
+<span style="color:green;">//&nbsp;1.&nbsp;Ensure&nbsp;the&nbsp;specified&nbsp;template&nbsp;exists.</span><br>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;<i>public_documents</i><b>\samples\tutorial\api\cylinder20.sldprt</b>.</span><br>
+<span style="color:green;">//&nbsp;3.&nbsp;Open&nbsp;an&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">//</span><br>
+<span style="color:green;">//&nbsp;Postconditions:</span><br>
+<span style="color:green;">//&nbsp;1.&nbsp;Creates&nbsp;and&nbsp;saves&nbsp;a&nbsp;new&nbsp;cylindrical&nbsp;part.</span><br>
+<span style="color:green;">
+//&nbsp;2.&nbsp;Adds&nbsp;two&nbsp;cylindrical&nbsp;entities&nbsp;to&nbsp;a&nbsp;new&nbsp;assembly.</span><br>
+<span style="color:green;">
+//&nbsp;3.&nbsp;Creates&nbsp;a&nbsp;distance&nbsp;mate&nbsp;between&nbsp;the&nbsp;cylindrical&nbsp;entities.</span><br>
+<span style="color:green;">
+//&nbsp;4.&nbsp;Edits&nbsp;the&nbsp;distance&nbsp;mate&nbsp;to&nbsp;change&nbsp;the&nbsp;distance&nbsp;from&nbsp;0.2&nbsp;to&nbsp;0.3.</span><br>
+<span style="color:green;">
+//&nbsp;5.&nbsp;Inspect&nbsp;the&nbsp;Immediate&nbsp;window,&nbsp;the&nbsp;graphics&nbsp;area,&nbsp;and&nbsp;the&nbsp;Mates&nbsp;folder</span><br>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;of&nbsp;the&nbsp;FeatureManager&nbsp;design&nbsp;tree.</span><br>
+<span style="color:green;">//</span><br>
+<span style="color:green;">
+//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;model&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span><br>
+<span style="color:green;">
+//----------------------------------------------------------------------------</span><br>
+&nbsp;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;<br>
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">namespace</span>&nbsp;AddDistanceMate_CSharp<br>
+{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">AssemblyDoc</span>&nbsp;swAssembly&nbsp;=&nbsp;<span style="color:blue;">default</span>(<span style="color:#2b91af;">AssemblyDoc</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">ModelDoc2</span>&nbsp;Part&nbsp;=&nbsp;<span style="color:blue;">default</span>(<span style="color:#2b91af;">ModelDoc2</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;AssemblyTitle&nbsp;=&nbsp;<span style="color:blue;">null</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Component2</span>&nbsp;swInsertedComponent&nbsp;=&nbsp;<span style="color:blue;">default</span>(<span style="color:#2b91af;">Component2</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Feature</span>&nbsp;swFeat&nbsp;=&nbsp;<span style="color:blue;">default</span>(<span style="color:#2b91af;">Feature</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;boolstatus&nbsp;=&nbsp;<span style="color:blue;">false</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;longstatus&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;longwarnings&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;swSheetWidth&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;swSheetHeight&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Mate2</span>&nbsp;swMate&nbsp;=&nbsp;<span style="color:blue;">default</span>(<span style="color:#2b91af;">Mate2</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">ModelDoc2</span>&nbsp;tmpObj&nbsp;=&nbsp;<span style="color:blue;">default</span>(<span style="color:#2b91af;">ModelDoc2</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;errors&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Entity</span>&nbsp;swEnt1&nbsp;=&nbsp;<span style="color:blue;">default</span>(<span style="color:#2b91af;">Entity</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Entity</span>&nbsp;swEnt2&nbsp;=&nbsp;<span style="color:blue;">default</span>(<span style="color:#2b91af;">Entity</span>);<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part&nbsp;=&nbsp;(<span style="color:#2b91af;">ModelDoc2</span>)swApp.<b>ActiveDoc</b>;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Shell&nbsp;the&nbsp;active&nbsp;part</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;Part.<b>Extension</b>.<b>SelectByRay</b>(-0.0108900020093756,&nbsp;0.0655319999998483,&nbsp;-0.00515652172191494,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.00167637314537445,&nbsp;2,&nbsp;<span style="color:blue;">false</span>,&nbsp;1,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part.<b>InsertFeatureShell</b>(0.00254,&nbsp;<span style="color:blue;">false</span>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Save&nbsp;the&nbsp;shelled&nbsp;part</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;longstatus&nbsp;=&nbsp;Part.<b>SaveAs3</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\cylinder20_shell.sldprt&quot;</span>,&nbsp;0,&nbsp;2);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Create&nbsp;a&nbsp;new&nbsp;assembly</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheetWidth&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheetHeight&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part&nbsp;=&nbsp;(<span style="color:#2b91af;">ModelDoc2</span>)swApp.<b>NewDocument</b>(<span style="color:#a31515;">&quot;C:\\ProgramData\\SolidWorks\\SOLIDWORKS&nbsp;2018\\templates\\Assembly.asmdot&quot;</span>,&nbsp;0,&nbsp;swSheetWidth,&nbsp;swSheetHeight);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Insert&nbsp;a&nbsp;cylinder20_shell&nbsp;component</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AssemblyTitle&nbsp;=&nbsp;Part.<b>GetTitle</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmpObj&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\cylinder20_shell.sldprt&quot;</span>,&nbsp;1,&nbsp;32,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;longstatus,&nbsp;longwarnings);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssembly&nbsp;=&nbsp;(<span style="color:#2b91af;">AssemblyDoc</span>)swApp.<b>ActivateDoc3</b>(AssemblyTitle,&nbsp;<span style="color:blue;">true</span>,&nbsp;0,&nbsp;longstatus);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swInsertedComponent&nbsp;=&nbsp;swAssembly.<b>AddComponent5</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\cylinder20_shell.sldprt&quot;</span>,&nbsp;0,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">false</span>,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;0.119562469422817,&nbsp;-0.0102308109635487,&nbsp;-0.0474663286004215);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>CloseDoc</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\cylinder20_shell.sldprt&quot;</span>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Insert&nbsp;another&nbsp;cylinder20_shell&nbsp;component</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmpObj&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\cylinder20_shell.sldprt&quot;</span>,&nbsp;1,&nbsp;32,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;longwarnings);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssembly&nbsp;=&nbsp;(<span style="color:#2b91af;">AssemblyDoc</span>)swApp.<b>ActivateDoc3</b>(AssemblyTitle,&nbsp;<span style="color:blue;">true</span>,&nbsp;0,&nbsp;errors);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swInsertedComponent&nbsp;=&nbsp;swAssembly.<b>AddComponent5</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\cylinder20_shell.sldprt&quot;</span>,&nbsp;0,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">false</span>,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;-0.130620346986689,&nbsp;-0.0101738580269739,&nbsp;0.084551733918488);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>CloseDoc</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\cylinder20_shell.sldprt&quot;</span>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Select&nbsp;two&nbsp;cylindrical&nbsp;entities</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;Part.<b>Extension</b>.<b>SelectByRay</b>(-0.140174514310559,&nbsp;0.00237221117538411,&nbsp;0.0264513806530431,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.00086563679245283,&nbsp;2,&nbsp;<span style="color:blue;">false</span>,&nbsp;1,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt1&nbsp;=&nbsp;(<span style="color:#2b91af;">Entity</span>)((<span style="color:#2b91af;">SelectionMgr</span>)(Part.<b>SelectionManager</b>)).<b>GetSelectedObject6</b>(1,&nbsp;-1);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;Part.<b>Extension</b>.<b>SelectByRay</b>(0.0679787981690652,&nbsp;-0.00725673614920197,&nbsp;-0.0758574895979791,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.000636203082166533,&nbsp;2,&nbsp;<span style="color:blue;">true</span>,&nbsp;1,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt2&nbsp;=&nbsp;(<span style="color:#2b91af;">Entity</span>)((<span style="color:#2b91af;">SelectionMgr</span>)(Part.<b>SelectionManager</b>)).<b>GetSelectedObject6</b>(1,&nbsp;-1);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt1.<b>Select4</b>(<span style="color:blue;">true</span>,&nbsp;<span style="color:blue;">null</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt2.<b>Select4</b>(<span style="color:blue;">true</span>,&nbsp;<span style="color:blue;">null</span>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Add&nbsp;a&nbsp;center-to-center&nbsp;distance&nbsp;mate&nbsp;between&nbsp;the&nbsp;selected&nbsp;cylindrical&nbsp;entities</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMate&nbsp;=&nbsp;swAssembly.<b>AddDistanceMate</b>(2,&nbsp;<span style="color:blue;">false</span>,&nbsp;0.2,&nbsp;0,&nbsp;0,&nbsp;1,&nbsp;1,&nbsp;<span style="color:blue;">out</span>&nbsp;errors);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;First&nbsp;arc&nbsp;condition&nbsp;as&nbsp;defined&nbsp;in&nbsp;swDistanceMateArcConditions_e:&nbsp;&quot;</span>&nbsp;+&nbsp;swMate.<b>DistanceFirstArcCondition</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Second&nbsp;arc&nbsp;condition&nbsp;as&nbsp;defined&nbsp;in&nbsp;swDistanceMateArcConditions_e:&nbsp;&quot;</span>&nbsp;+&nbsp;swMate.<b>DistanceSecondArcCondition</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat&nbsp;=&nbsp;(<span style="color:#2b91af;">Feature</span>)swMate;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part.<b>EditRebuild3</b>();<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Edit&nbsp;the&nbsp;distance&nbsp;mate&nbsp;to&nbsp;change&nbsp;the&nbsp;distance&nbsp;from&nbsp;0.2&nbsp;to&nbsp;0.3</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;Part.<b>Extension</b>.<b>SelectByRay</b>(-0.0936626010895907,&nbsp;0.000678476678046991,&nbsp;-0.000454698905400619,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.000808436123348018,&nbsp;2,&nbsp;<span style="color:blue;">true</span>,&nbsp;1,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt1&nbsp;=&nbsp;(<span style="color:#2b91af;">Entity</span>)((<span style="color:#2b91af;">SelectionMgr</span>)(Part.<b>SelectionManager</b>)).<b>GetSelectedObject6</b>(1,&nbsp;-1);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;Part.<b>Extension</b>.<b>SelectByRay</b>(0.0803986691953469,&nbsp;-0.00107796570199525,&nbsp;-0.0914337018962783,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.000808436123348018,&nbsp;2,&nbsp;<span style="color:blue;">true</span>,&nbsp;2,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt2&nbsp;=&nbsp;(<span style="color:#2b91af;">Entity</span>)((<span style="color:#2b91af;">SelectionMgr</span>)(Part.<b>SelectionManager</b>)).<b>GetSelectedObject6</b>(2,&nbsp;-1);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt1.<b>Select4</b>(<span style="color:blue;">true</span>,&nbsp;<span style="color:blue;">null</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt2.<b>Select4</b>(<span style="color:blue;">true</span>,&nbsp;<span style="color:blue;">null</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat.<b>Select2</b>(<span style="color:blue;">true</span>,&nbsp;0);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssembly.<b>EditDistanceMate</b>(2,&nbsp;<span style="color:blue;">false</span>,&nbsp;0.3,&nbsp;0,&nbsp;0,&nbsp;1,&nbsp;1,&nbsp;<span style="color:blue;">out</span>&nbsp;errors);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part.<b>EditRebuild3</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:#2b91af;">SldWorks</span>&nbsp;swApp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+}</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

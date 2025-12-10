@@ -1,0 +1,179 @@
+<html>
+
+<head>
+<title>Set and Get Sheet Metal Part's Persistent Reference IDs Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,sheet metal">
+<meta name=MS-HKWD content="C# examples,persistent reference IDs">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Set and Get Sheet Metal Part's Persistent Reference IDs Example (C#)</h1>
+
+<p>This example shows how to set and get persistent reference IDs (PIDs) on a 
+ sheet metal part.</p>
+
+<p>The entities in flattened and unflattened (folded) states of sheet metal 
+ in SOLIDWORKS do not have the same properties, making it difficult to 
+ track entities across states of sheet metal.</p>
+
+<ul style="list-style: disc;"
+	type=disc>
+	
+	<li class=kadov-p><a href="SolidWorks.Interop.sldworks~SolidWorks.Interop.sldworks.IModelDocExtension~GetFlattenSheetMetalPersistReference.html">IModelDocExtension::GetFlattenSheetMetalPersistReference</a> 
+ returns a PID array for an entity in the flattened 
+ state of the sheet metal part.</li>
+	
+	<li class=kadov-p><a href="SolidWorks.Interop.sldworks~SolidWorks.Interop.sldworks.IModelDocExtension~GetSheetMetalObjectsByPersistReference.html">IModelDocExtension::GetSheetmetalObjectsByPersistReference</a> 
+ uses the PID byte array to retrieve an array of objects 
+ that comprise the previously selected entity in the folded state of the part.</li>
+</ul>
+
+<p>Together these methods provide a way to track entities across sheet 
+ metal states.</p>
+
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><span style="color: green">/<font face="Courier New">/------------------------------------------</font></span><font face="Courier New">
+<span style="color: green">//&nbsp;Preconditions:</span>
+<span style="color: green">//&nbsp;1.&nbsp;Verify that the specified&nbsp;part&nbsp;exists.</span>
+<span style="color: green">//&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">//</span>
+<span style="color: green">//&nbsp;Postconditions:</span>
+<span style="color: green">//&nbsp;1.&nbsp;Opens&nbsp;specified&nbsp;part&nbsp;document.</span>
+<span style="color: green">//&nbsp;2.&nbsp;Unsuppresses&nbsp;the&nbsp;<b>Flat-Pattern1</b>&nbsp;feature.</span>
+<span style="color: green">//&nbsp;3.&nbsp;Gets&nbsp;the&nbsp;PIDs&nbsp;of&nbsp;the&nbsp;selected&nbsp;face&nbsp;on&nbsp;the</span>
+<span style="color: green">//&nbsp;&nbsp;&nbsp;&nbsp;<b>Flat-Pattern1</b>&nbsp;feature.</span>
+<span style="color: green">//&nbsp;4.&nbsp;Suppresses&nbsp;the&nbsp;<b>Flat-Pattern1&nbsp;</b>feature.</span>
+<span style="color: green">//&nbsp;5.&nbsp;Uses&nbsp;the&nbsp;PIDs&nbsp;to retrieve&nbsp;and&nbsp;highlight&nbsp;the&nbsp;</span>
+<span style="color: green">//&nbsp;&nbsp;&nbsp;&nbsp;array&nbsp;of&nbsp;objects that&nbsp;comprise&nbsp;the&nbsp;previously&nbsp;</span>
+<span style="color: green">//&nbsp;&nbsp;&nbsp;&nbsp;selected&nbsp;face&nbsp;in&nbsp;the folded&nbsp;state&nbsp;of&nbsp;the&nbsp;part.
+// 6. Examine the Immediate window, graphics area, and
+//    FeatureManager design tree.</span>
+<span style="color: green">//</span>
+<span style="color: green">//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;part&nbsp;document&nbsp;is&nbsp;used&nbsp;elsewhere,</span>
+<span style="color: green">//&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span>
+<span style="color: green">//--------------------------------------------</span>
+ 
+ 
+<span style="color: blue">using</span>&nbsp;SolidWorks.Interop.sldworks;
+<span style="color: blue">using</span>&nbsp;SolidWorks.Interop.swconst;
+<span style="color: blue">using</span>&nbsp;System;
+<span style="color: blue">using</span>&nbsp;System.Diagnostics;
+ 
+<span style="color: blue">namespace</span>&nbsp;EditSuppress2.csproj
+{
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">partial</span>&nbsp;<span style="color: blue">class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span>
+&nbsp;&nbsp;&nbsp;&nbsp;{
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension&nbsp;swModelDocExt;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr&nbsp;swSelectionMgr;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Face2&nbsp;swFace;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectData&nbsp;swSelectData;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">byte</span>[]&nbsp;pid;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">object</span>&nbsp;selObj;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">object</span>[]&nbsp;swObjList;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">string</span>&nbsp;fileName;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">int</span>&nbsp;errors;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">int</span>&nbsp;warnings;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">bool</span>&nbsp;boolstatus;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">int</span>&nbsp;i;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">int</span>&nbsp;j;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">public</span>&nbsp;<span style="color: blue">void</span>&nbsp;Main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;Open&nbsp;the&nbsp;specified&nbsp;sheet&nbsp;metal&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color: #a31515">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\api\\2012-sm.sldprt&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>OpenDoc6</b>(fileName,&nbsp;(<span style="color: blue">int</span>)swDocumentTypes_e.swDocPART,&nbsp;(<span style="color: blue">int</span>)swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color: #a31515">&quot;&quot;</span>,&nbsp;<span style="color: blue">ref</span>&nbsp;errors,&nbsp;<span style="color: blue">ref</span>&nbsp;warnings);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;Get&nbsp;flat-pattern&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;(ModelDocExtension)swModel.<b>Extension</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Flat-Pattern1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">false</span>,&nbsp;0,&nbsp;<span style="color: blue">null</span>,&nbsp;(<span style="color: blue">int</span>)swSelectOption_e.swSelectOptionDefault);</font>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font face="Courier New">
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;Unsuppress&nbsp;(unfold)&nbsp;flat-pattern&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swModel.<b>EditUnsuppress2</b>();
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;Select&nbsp;the&nbsp;top&nbsp;face&nbsp;on&nbsp;the&nbsp;flattened&nbsp;sheet&nbsp;metal&nbsp;part</span>
+</font>        <font face="Courier New">     boolstatus = swModelDocExt.<b>SelectByID2</b>(<font color="#800000">&quot;&quot;</font>, <font color="#800000">&quot;FACE&quot;</font>, -3.46526388559596E-02, 0, 0.011695220708134, <font color="#0000FF">false</font>, 0, <font color="#0000FF">null</font>, 0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr&nbsp;=&nbsp;(SelectionMgr)swModel.<b>SelectionManager</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace&nbsp;=&nbsp;(Face2)swSelectionMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;Get&nbsp;the&nbsp;persistent&nbsp;reference&nbsp;IDs&nbsp;for&nbsp;the</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;the&nbsp;selected&nbsp;face&nbsp;on&nbsp;the&nbsp;flattened&nbsp;sheet</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;metal&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pid&nbsp;=&nbsp;(<span style="color: blue">byte</span>[])swModelDocExt.<b>GetFlattenSheetMetalPersistReference</b>(swFace);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;Print&nbsp;the&nbsp;PID&nbsp;values&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">for</span>&nbsp;(j&nbsp;=&nbsp;pid.GetLowerBound(0);&nbsp;j&nbsp;&lt;=&nbsp;pid.GetUpperBound(0);&nbsp;j++)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;PID&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;pid[j]);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;Suppress&nbsp;(fold)&nbsp;flat-pattern&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Flat-Pattern1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">false</span>,&nbsp;0,&nbsp;<span style="color: blue">null</span>,&nbsp;(<span style="color: blue">int</span>)swSelectOption_e.swSelectOptionDefault);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditSuppress2</b>();
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;Use&nbsp;the&nbsp;persistent&nbsp;reference&nbsp;IDs&nbsp;to</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;retrieve&nbsp;an&nbsp;array&nbsp;of&nbsp;objects&nbsp;that&nbsp;comprise&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">//&nbsp;the&nbsp;entity&nbsp;in&nbsp;the&nbsp;folded&nbsp;state&nbsp;of&nbsp;the&nbsp;part</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swObjList&nbsp;=&nbsp;(<span style="color: blue">object</span>[])swModelDocExt.<b>GetSheetMetalObjectsByPersistReference</b>((pid),&nbsp;<span style="color: blue">out</span>&nbsp;errors);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">if</span>&nbsp;((swObjList&nbsp;!=&nbsp;<span style="color: blue">null</span>))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">true</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">for</span>&nbsp;(i&nbsp;=&nbsp;swObjList.GetLowerBound(0);&nbsp;i&nbsp;&lt;=&nbsp;swObjList.GetUpperBound(0);&nbsp;i++)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selObj&nbsp;=&nbsp;swObjList[i];
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">if</span>&nbsp;(selObj&nbsp;==&nbsp;<span style="color: blue">null</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Persistent&nbsp;reference&nbsp;ID&nbsp;conversion&nbsp;error.&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">return</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectObject(selObj,&nbsp;<span style="color: blue">true</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;The&nbsp;entities&nbsp;that&nbsp;comprise&nbsp;the&nbsp;previously&nbsp;selected&nbsp;entity&nbsp;in&nbsp;the&nbsp;folded&nbsp;state&nbsp;are&nbsp;selected.&quot;</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">private</span>&nbsp;<span style="color: blue">void</span>&nbsp;SelectObject(<span style="color: blue">object</span>&nbsp;selObj,&nbsp;<span style="color: blue">bool</span>&nbsp;append)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">if</span>&nbsp;(selObj&nbsp;<span style="color: blue">is</span>&nbsp;Entity)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Entity&nbsp;selObj1;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selObj1&nbsp;=&nbsp;(Entity)selObj;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectData&nbsp;=&nbsp;(SelectData)swSelectionMgr.<b>CreateSelectData</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selObj1.<b>Select4</b>(append,&nbsp;swSelectData);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Need&nbsp;selection&nbsp;handle.&quot;</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: gray">///</span><span style="color: green">&nbsp;</span><span style="color: gray">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: gray">///</span><span style="color: green">&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: gray">///</span><span style="color: green">&nbsp;</span><span style="color: gray">&lt;/summary&gt;</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">public</span>&nbsp;SldWorks&nbsp;swApp;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}
+</font></pre>
+
+</body>
+
+</html>

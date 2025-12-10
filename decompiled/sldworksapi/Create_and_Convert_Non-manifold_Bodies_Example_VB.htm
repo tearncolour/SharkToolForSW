@@ -1,0 +1,220 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Create and Convert non-manifold Bodies Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=4012>
+<meta name=layout-width content=723>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+<META NAME="MS-HKWD" CONTENT="VBA examples,bodies">
+<META NAME="MS-HKWD" CONTENT="VBA examples,manifold bodies">
+<META NAME="MS-HKWD" CONTENT="VBA examples,non-manifold bodies">
+<META NAME="MS-HKWD" CONTENT="VBA examples,tessellate">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Create and Convert Non-manifold Bodies Example (VBA)</h1>
+
+<p>This example shows how to create non-manifold bodies, which by default 
+ are not allowed in SOLIDWORKS, and then convert the non-manifold bodies 
+ to manifold bodies. </p>
+<pre>'-----------------------------------------------------
+' Preconditions: Verify that the specified part document 
+' template exists.
+'
+' Postconditions:
+' 1. Click <b>Debug &gt; Step Into </b>in the IDE.
+' 2. Step through the rest of the macro by pressing F8
+'    while observing the graphics area.
+' 3. Creates and tessellates non-manifold bodies
+'    and coverts them to manifold bodies.
+'----------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModeler As SldWorks.Modeler
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSketchManager As SldWorks.SketchManager
+Dim swFeature As SldWorks.Feature
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swSketchSegment As SldWorks.SketchSegment
+Dim swFeatureManager As SldWorks.FeatureManager
+Dim tess As SldWorks.Tessellation
+Dim tool As SldWorks.Body2
+Dim tgt1 As SldWorks.Body2
+Dim tgt0 As SldWorks.Body2
+Dim sketchLines As Variant
+Dim resVar As Variant
+Dim resvar2 As Variant
+Dim manifVar As Variant
+Dim vFacetId As Variant
+Dim vFinId As Variant
+Dim vVertexId As Variant
+Dim vVertex1 As Variant
+Dim vVertex2 As Variant
+Dim f As Object
+Dim boolstatus As Boolean
+Dim i As Long
+Dim j As Long
+Dim clr(0 To 1) As Long</pre>
+<pre>Sub DisplayBody(ByVal b As Object, col As Long)
+    Call b.<b>Display2</b>(swModel, col, swTempBodySelectOptions_e.swTempBodySelectable)
+End Sub</pre>
+<pre>Sub HideBody(ByVal b As Object)
+    Call b.<b>Hide</b>(swModel)
+End Sub</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+
+    Set swModeler = swApp.<b>GetModeler</b>
+    'SOLIDWORKS requires this option to be 
+    'false, so make sure it is set to false
+    swModeler.<b>GeneralTopology</b> = False    </pre>
+<pre>    'Create part having a tool and target bodies
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SOLIDWORKS\SOLIDWORKS 2016\templates\Part.prtdot&quot;, 0, 0, 0)
+    Set swModelDocExt = swModel.<b>Extension</b>
+    boolstatus = swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstToRectEntity, swUserPreferenceOption_e.swDetailingNoOptionSpecified, False)
+    boolstatus = swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstLineDiagonalType, swUserPreferenceOption_e.swDetailingNoOptionSpecified, True)
+    Set swSketchManager = swModel.<b>SketchManager</b>
+    sketchLines = swSketchManager.<b>CreateCornerRectangle</b>(0, 0, 0, 0.13786334229408, 0.069192775961991, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Line2&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Line1&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Line4&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Line3&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 4, Nothing, 0)
+    Set swFeatureManager = swModel.<b>FeatureManager</b>
+    Set swFeature = swFeatureManager.<b>FeatureExtrusion2</b>(True, False, False, swEndConditions_e.swEndCondBlind, 0, 0.01524, 0.00254, False, False, False, False, 1.74532925199433E-02, 1.74532925199433E-02, False, False, False, False, True, True, True, swStartConditions_e.swStartSketchPlane, 0, False)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    swSelMgr.<b>EnableContourSelection</b> = False
+    swModel.<b>ClearSelection2</b> True
+    swModelDocExt.<b>SelectByID2</b>(&quot;Front&nbsp;Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    swSketchManager.<b>InsertSketch</b> (True)
+    Set swSketchSegment = swSketchManager.<b>CreateLine</b>(0#, 0.034596, 0#, 0.137863, 0.034596, 0#)
+    Set swSketchSegment = swSketchManager.<b>CreateLine</b>(0.068932, 0.069193, 0#, 0.068932, 0#, 0#)
+    Set swSketchSegment = swSketchManager.<b>CreateLine</b>(0#, 0#, 0#, 0.137863, 0#, 0#)
+    Set swSketchSegment = swSketchManager.<b>CreateLine</b>(0.137863, 0#, 0#, 0.137863, 0.069193, 0#)
+    Set swSketchSegment = swSketchManager.<b>CreateLine</b>(0.137863, 0.069193, 0#, 0#, 0.069193, 0#)
+    Set swSketchSegment = swSketchManager.<b>CreateLine</b>(0#, 0.069193, 0#, 0#, 0#, 0#)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCHREGION&quot;, 2.95651111315002E-02, 5.62122082077101E-02, 7.61999999999985E-03, True, 4, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCHREGION&quot;, 8.12426680973543E-02, 1.81340083381333E-02, 7.62000000000011E-03, True, 4, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Line9&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, 2.95651111315002E-02, 5.62122082077101E-02, 7.61999999999985E-03, True, 4, Nothing, 0)
+    swSelMgr.<b>EnableContourSelection</b> = True
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCHREGION&quot;, 2.95651111315002E-02, 5.62122082077101E-02, 7.61999999999985E-03, True, 4, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCHREGION&quot;, 8.12426680973543E-02, 1.81340083381333E-02, 7.62000000000011E-03, True, 4, Nothing, 0)
+    Set swFeature = swFeatureManager.<b>FeatureExtrusion2</b>(True, False, False, swEndConditions_e.swEndCondBlind, 0, 0.01524, 0.01524, False, False, False, False, 1.74532925199433E-02, 1.74532925199433E-02, False, False, False, False, False, True, True, swStartConditions_e.swStartSketchPlane, 0, False)
+    swSelMgr.<b>EnableContourSelection</b> = False</pre>
+<pre>    'Hide the boss-extrude and sketch features
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Boss-Extrude1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swFeatureManager.<b>HideBodies</b>
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Boss-Extrude2&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swFeatureManager.<b>HideBodies</b>    </pre>
+<pre>    'Make selections of tool and target bodies;
+    'Boss-Extrude1 is larger cube, whereas Boss-Extrude2[1]
+    'and Boss-Extrude2[2] are 1/4 the size of Boss-Extrude1,
+    'so (Boss-Extrude - Boss-Extrude2[1])-Boss-Extrude2[2])
+    'results in non-manifold bodies; under normal conditions,
+    'i.e., when non-manifold bodies are not allowed,
+    'such an operation results in two bodies;
+    'when creation of non-manifold bodies is allowed,
+    'then one general body is the result
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Boss-Extrude1&quot;, &quot;SOLIDBODY&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Boss-Extrude2[1]&quot;, &quot;SOLIDBODY&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Boss-Extrude2[2]&quot;, &quot;SOLIDBODY&quot;, 0, 0, 0, True, 0, Nothing, 0)    </pre>
+<pre>    Set tool = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set tgt0 = swSelMgr.<b>GetSelectedObject6</b>(2, -1)
+    Set tgt1 = swSelMgr.<b>GetSelectedObject6</b>(3, -1)    </pre>
+<pre>    'Create temporary bodies
+    Set tool = tool.<b>Copy</b>
+    Set tgt0 = tgt0.<b>Copy</b>
+    Set tgt1 = tgt1.<b>Copy</b>    </pre>
+<pre>    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'First cut operation : Boss-Extrude1 - Boss-Extrude2[1]
+    Dim errCode As Long
+    resVar = tool.<b>Operations2</b>(swBodyOperationType_e.SWBODYCUT, tgt0, errCode)    </pre>
+<pre>    'SOLIDWORKS requires this option
+    'to be false; thus, switch it back to false
+    'as soon as your intended operations complete
+    swModeler.<b>GeneralTopology</b> = True
+    
+    'Second cut operation: (Boss-Extrude1 - Boss-Extrude2[1])- Boss-Extrude2[2])
+    resvar2 = resVar(0).<b>Operations2</b>(swBodyOperationType_e.SWBODYCUT, tgt1, errCode)    </pre>
+<pre>    'Reset the option back to false
+    swModeler.<b>GeneralTopology</b> = False    </pre>
+<pre>    clr(0) = RGB(0, 0, 255)
+    clr(1) = RGB(255, 0, 0)
+    For i = LBound(resvar2) To UBound(resvar2)
+        Call DisplayBody(resvar2(i), clr(i))
+    Next i    </pre>
+<pre>    'Hide the displayed bodies
+    For i = LBound(resvar2) To UBound(resvar2)
+        HideBody (resvar2(i))
+    Next i    </pre>
+<pre>    'Try tessellation    </pre>
+<pre>    'Add sketch for this face
+    swModel.<b>Insert3DSketch2</b> False    </pre>
+<pre>    'Add lines directly to sketch to increase performance
+    swModel.<b>SetAddToDB</b> True
+    Set tess = resvar2(0).<b>GetTessellation</b>(Empty)
+    tess.<b>NeedFaceFacetMap</b> = True
+    tess.<b>MatchType</b> = swTesselationMatchFacetGeometry
+    boolstatus = tess.<b>Tessellate</b>
+    Set f = resvar2(0).<b>GetFirstFace</b>
+    While Not f Is Nothing
+        vFacetId = tess.<b>GetFaceFacets</b>(f)
+            For i = 0 To UBound(vFacetId)
+                vFinId = tess.<b>GetFacetFins</b>(vFacetId(i))
+                For j = 0 To 2
+                    'Should always be three fins per facet
+                    vVertexId = tess.<b>GetFinVertices</b>(vFinId(j))
+                    'Should always be two vertices per fin
+                    vVertex1 = tess.<b>GetVertexPoint</b>(vVertexId(0))
+                    vVertex2 = tess.<b>GetVertexPoint</b>(vVertexId(1))
+                    Call swModel.<b>CreateLine2</b>(vVertex1(0), vVertex1(1), vVertex1(2), vVertex2(0), vVertex2(1), vVertex2(2))
+                Next j
+            Next i
+            Set f = f.<b>GetNextFace</b>
+    Wend
+    </pre>
+<pre>    'Convert non-manifold bodies to manifold bodies
+    manifVar = swModeler.<b>MakeManifoldBodies</b>(resvar2(0))
+    For i = LBound(manifVar) To UBound(manifVar)
+        Call DisplayBody(manifVar(i), RGB(0, 255, 0))
+    Next i    </pre>
+<pre>    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    For i = LBound(manifVar) To UBound(manifVar)
+            HideBody (manifVar(i))
+    Next i 
+</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

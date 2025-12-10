@@ -1,0 +1,712 @@
+<html>
+
+<head>
+<title>Exclude Faces Before Flattening Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,persistent reference IDs">
+<meta name=MS-HKWD content="VB.NET examples,flat-pattern features">
+
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Exclude Faces Before Flattening Example (VB.NET)</h1>
+<p>This example shows how to exclude faces from a Flat-Pattern feature.</p>
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+		<p class="APICODE"><span style="color:Green">' 
+		---------------------------------------------------------------------------<br>
+		' Preconditions: Verify that the specified part to open exists.<br>
+		'<br>
+		' Postconditions: <br>
+		' 1. Opens the specified part.<br>
+		' 2. Excludes 22 faces from <b>Flat-Pattern1</b>.<br>
+		' 3. Unsuppresses <b>Flat-Pattern1</b>.<br>
+		' 4. Examine the graphics area and FeatureManager design tree.<br>
+		'<br>
+		' NOTE: Because the model is used elsewhere,<br>
+		' do not save changes.<br>
+		' 
+		---------------------------------------------------------------------------<br>
+		</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+		SolidWorks.Interop.sldworks<br>
+		</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+		SolidWorks.Interop.swconst<br>
+		</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+		System<br>
+		</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+		System.Diagnostics<br>
+		<br>
+		<br>
+		</span><span style="color:Blue">Partial</span><span style="color:Black">
+		</span><span style="color:Blue">Class</span><span style="color:Black"> 
+		SolidWorksMacro<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+		main()<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		Part </span><span style="color:Blue">As</span><span style="color:Black"> 
+		ModelDoc2<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		boolstatus </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Boolean<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		longstatus </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Long<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		LongWarnings </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Long<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		swFeature </span><span style="color:Blue">As</span><span style="color:Black"> 
+		Feature<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		swFlatPatternFeatureData </span><span style="color:Blue">As</span><span style="color:Black"> 
+		FlatPatternFeatureData<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		PIDCollection </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">New</span><span style="color:Black"> 
+		Collection<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		SwApp </span><span style="color:Blue">Is</span><span style="color:Black">
+		</span><span style="color:Blue">Nothing</span><span style="color:Black">
+		</span><span style="color:Blue">Then</span><span style="color:Black">
+		</span><span style="color:Blue">Exit</span><span style="color:Black">
+		</span><span style="color:Blue">Sub<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part = SwApp.<b>OpenDoc6</b>(</span><span style="color:#a31515">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 
+		2018\samples\tutorial\api\FPF.SLDPRT&quot;</span><span style="color:Black">, 
+		1, 0, </span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 
+		longstatus, LongWarnings)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		Part </span><span style="color:Blue">Is</span><span style="color:Black">
+		</span><span style="color:Blue">Nothing</span><span style="color:Black">
+		</span><span style="color:Blue">Then</span><span style="color:Black"> 
+		ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to open 
+		FPF.SLDPRT&quot;</span><span style="color:Black">)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection = PIDInitializer()<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.<b>Extension</b>.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;Flat-Pattern1&quot;</span><span style="color:Black">,
+		</span><span style="color:#a31515">&quot;BODYFEATURE&quot;</span><span style="color:Black">, 
+		0, 0, 0, </span><span style="color:Blue">False</span><span style="color:Black">, 
+		0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+		0)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.<b>EditUnsuppress2</b>()<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		View </span><span style="color:Blue">As</span><span style="color:Black"> 
+		ModelView<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;View = Part.<b>ActiveView</b><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		rect() </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Double<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rect = </span>
+		<span style="color:Blue">Nothing<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;View.<b>GraphicsRedraw</b>(rect)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.<b>Extension</b>.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;Flat-Pattern1&quot;</span><span style="color:Black">,
+		</span><span style="color:#a31515">&quot;BODYFEATURE&quot;</span><span style="color:Black">, 
+		0, 0, 0, </span><span style="color:Blue">False</span><span style="color:Black">, 
+		0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+		0)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.<b>EditSuppress2</b>()<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		boolstatus = </span><span style="color:Blue">False</span><span style="color:Black">
+		</span><span style="color:Blue">Then</span><span style="color:Black"> 
+		ErrorMsg(swApp, </span><span style="color:#a31515">&quot;EditSuppress Failed&quot;</span><span style="color:Black">)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part = SwApp.<b>ActiveDoc</b><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature = Part.<b>FirstFeature</b><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">While</span><span style="color:Black">
+		</span><span style="color:Blue">Not</span><span style="color:Black"> 
+		swFeature </span><span style="color:Blue">Is</span><span style="color:Black">
+		</span><span style="color:Blue">Nothing<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		swFeature.<b>GetTypeName</b> = </span><span style="color:#a31515">&quot;FlatPattern&quot;</span><span style="color:Black">
+		</span><span style="color:Blue">Then<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Select 
+		excluded faces<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFlatPatternFeatureData 
+		= swFeature.<b>GetDefinition</b><br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFlatPatternFeatureData.<b>AccessSelections</b>(Part, </span>
+		<span style="color:Blue">Nothing</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Pick by PID<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = 
+		SelectByPID(SwApp, Part, </span><span style="color:#a31515">&quot;selection1&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection2&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection3&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection4&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection5&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection6&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection7&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection8&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection9&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection10&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection11&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection12&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection13&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection14&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection15&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection16&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection17&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection18&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection19&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection20&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection21&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = SelectByPID(SwApp, Part, </span>
+		<span style="color:#a31515">&quot;selection22&quot;</span><span style="color:Black">, 
+		PIDCollection, 1, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		faces(0 </span><span style="color:Blue">To</span><span style="color:Black"> 
+		21) </span><span style="color:Blue">As</span><span style="color:Black"> 
+		Face2<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		ii </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Integer<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+		ii = 0 </span><span style="color:Blue">To</span><span style="color:Black"> 
+		21<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;faces(ii) = 
+		Part.<b>SelectionManager</b>.<b>GetSelectedObject6</b>(ii + 1, 1)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next</span><span style="color:Black"> 
+		ii<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		facesVar </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Object<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;facesVar = faces<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFlatPatternFeatureData.<b>ExcludedFaces</b> = facesVar<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = 
+		swFeature.<b>ModifyDefinition</b>(swFlatPatternFeatureData, Part, </span>
+		<span style="color:Blue">Nothing</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		boolstatus = </span><span style="color:Blue">False</span><span style="color:Black">
+		</span><span style="color:Blue">Then</span><span style="color:Black"> 
+		ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Selecting excluded 
+		faces failed&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green"><br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = 
+		Part.<b>Extension</b>.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;Flat-Pattern1&quot;</span><span style="color:Black">,
+		</span><span style="color:#a31515">&quot;BODYFEATURE&quot;</span><span style="color:Black">, 
+		0, 0, 0, </span><span style="color:Blue">False</span><span style="color:Black">, 
+		0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+		0)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.<b>EditUnsuppress2</b>()<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		boolstatus = </span><span style="color:Blue">False</span><span style="color:Black">
+		</span><span style="color:Blue">Then</span><span style="color:Black"> 
+		ErrorMsg(swApp, </span><span style="color:#a31515">&quot;EditUnsuppress 
+		Failed&quot;</span><span style="color:Black">)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;View.<b>GraphicsRedraw</b>(rect)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+		</span><span style="color:Blue">If<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature = 
+		swFeature.<b>GetNextFeature</b><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+		</span><span style="color:Blue">While<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part.<b>ForceRebuild3</b>(</span><span style="color:Blue">False</span><span style="color:Black">)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+		</span><span style="color:Blue">Sub<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+		ErrorMsg(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+		SwApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+		SldWorks, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+		Message </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String</span><span style="color:Black">)
+		</span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwApp.<b>SendMsgToUser2</b>(Message, 
+		0, 0)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwApp.<b>RecordLine</b>(</span><span style="color:#a31515">&quot;'*** 
+		WARNING - General&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwApp.<b>RecordLine</b>(</span><span style="color:#a31515">&quot;'*** &quot;</span><span style="color:Black"> 
+		&amp; Message)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwApp.<b>RecordLine</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Return</span><span style="color:Black">
+		</span><span style="color:#a31515">&quot;&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+		</span><span style="color:Blue">Function<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+		PIDInitializer() </span><span style="color:Blue">As</span><span style="color:Black"> 
+		Collection<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		PIDCollection </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">New</span><span style="color:Black"> 
+		Collection<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection1 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection2 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection3 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection4 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection5 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection6 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection7 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection8 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection9 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection10 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection11 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection12 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection13 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection14 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection15 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection16 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection17 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection18 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection19 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection20 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection21 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		selection22 </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Constants<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection1 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,80,2,0,0,103,1,0,0,120,1,117,81,77,75,2,81,20,61,38,154,17,45,50,201,69,203,104,27,88,70,33,180,242,3,5,65,153,153,192,133,48,216,248,38,71,199,153,97,102,148,8,130,249,9,45,250,27,109,90,244,7,250,71,253,0,167,243,28,53,44,186,240,222,125,247,220,115,207,125,239,190,143,60,144,6,16,47,98,238,244,113,10,251,152,186,141,129,33,20,97,234,70,106,9,3,89,233,37,147,246,252,249,122,246,214,122,215,214,62,41,59,146,101,150,109,139,80,157,249,102,107,168,8,79,55,146,84,86,166,20,221,144,234,7,60,215,31,195,206,253,88,24,97,2,29,18,170,170,161,111,57,15,205,129,51,180,5,225,69,92,169,162,130,62,238,16,64,192,231,222,199,156,126,128,39,198,14,198,140,107,60,5,152,32,132,11,143,177,199,188,203,140,128,65,76,86,148,112,141,50,46,232,117,52,208,229,234,83,193,131,69,159,196,231,80,209,166,82,23,10,52,236,69,236,156,78,50,59,192,215,113,175,141,76,242,234,205,78,198,174,236,108,82,105,6,155,157,214,86,226,225,150,235,165,21&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection1 = selection1 &amp;
+		</span><span style="color:#a31515">
+		&quot;6,107,203,193,165,35,32,19,229,54,88,142,152,156,65,145,15,214,70,150,211,49,205,224,215,184,36,253,148,180,194,63,18,188,212,82,34,79,137,238,204,49,70,91,195,150,213,55,100,4,172,150,141,10,100,213,132,111,205,197,240,15,239,138,60,109,197,59,33,175,225,187,83,117,18,214,157,240,178,229,108,255,161,148,45,147,222,92,93,42,166,49,92,154,188,208,143,125,3,250,224,143,245,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection1 = selection1 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection2 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,33,2,0,0,79,1,0,0,120,1,109,81,93,75,2,81,16,61,38,126,68,244,144,69,246,30,189,6,150,80,216,163,41,10,11,201,174,129,15,194,178,93,175,165,174,187,203,186,43,17,4,62,246,3,250,27,189,244,208,31,232,31,245,3,220,206,180,40,25,93,184,119,102,206,156,57,195,204,253,40,1,89,0,201,50,225,75,155,100,176,131,169,223,116,148,54,245,208,86,153,31,24,200,139,21,38,207,243,231,235,201,91,251,189,187,178,105,217,190,148,141,92,87,71,86,28,14,219,3,83,7,182,74,83,121,73,153,182,18,245,93,250,141,199,232,230,110,172,85,148,66,123,132,234,86,20,142,188,251,150,227,13,92,77,120,153,212,234,168,161,143,91,204,160,17,242,237,99,78,235,224,137,177,135,49,227,107,122,51,76,16,193,71,192,56,96,222,103,70,67,17,147,138,10,46,80,197,25,173,141,38,58,188,125,42,4,24,209,166,241,41,44,24,84,234,192,68,23,219,11,118,206,166,153,45,224,235,176,103,32,151,78,189,126,201,40,72,231,33,149,98,184,236,180,58,21,58,87,188,47,229,158,81,164,20&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection2 = selection2 &amp;
+		</span><span style="color:#a31515">
+		&quot;5,46,128,220,162,184,198,10,196,100,7,37,14,220,137,61,245,176,177,41,97,94,146,49,99,181,176,142,100,83,222,64,190,226,188,237,109,110,85,184,85,114,91,228,174,190,136,33,196,255,219,85,48,209,43,83,175,25,250,83,107,18,53,254,145,59,38,237,128,114,28,251,215,249,6,69,212,126,176,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection2 = selection2 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection3 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,191,1,0,0,37,1,0,0,120,1,101,80,203,74,195,80,16,61,53,168,21,113,225,3,253,2,23,110,132,138,32,212,157,213,98,33,96,73,90,232,162,16,226,205,141,164,198,36,164,169,136,32,100,233,7,248,27,110,92,248,3,254,145,31,208,120,38,215,22,196,129,59,103,230,204,204,25,238,124,238,0,22,128,106,94,209,19,171,6,54,241,144,118,125,165,29,29,122,170,81,211,192,170,160,116,210,94,190,222,14,223,123,31,131,5,154,177,93,25,139,226,88,23,238,44,15,123,129,163,51,79,153,210,154,148,28,79,137,250,22,227,171,167,226,230,118,162,85,97,168,109,82,29,183,200,163,228,238,218,79,130,88,147,158,87,237,14,218,24,99,136,41,52,114,250,49,30,137,62,158,153,39,152,48,191,100,52,197,61,10,164,200,152,103,172,167,172,104,40,114,50,209,194,25,78,113,66,244,208,69,159,111,76,133,12,17,209,228,199,112,97,83,169,15,7,3,108,148,220,108,153,202,10,240,189,63,178,205,215,205,207,107,207,142,117,217,28,82,105,134,152,155,22,214,98,112,206,247,122,48,1&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection3 = selection3 &amp;
+		</span><span style="color:#a31515">
+		&quot;78,229,112,86,201,195,149,205,37,71,197,250,194,114,170,97,114,161,147,224,207,169,164,245,136,45,123,191,227,12,255,73,52,133,92,218,15,251,216,101,19,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection3 = selection3 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection4 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,33,2,0,0,78,1,0,0,120,1,109,81,193,74,2,81,20,61,38,90,17,45,178,200,246,209,54,176,132,194,150,166,40,8,201,140,129,11,97,152,158,207,82,199,153,97,28,35,130,192,101,31,208,111,180,105,209,15,244,71,125,128,211,185,243,82,48,122,240,222,189,247,220,123,206,101,206,124,22,128,44,128,100,145,240,101,76,50,216,193,36,168,187,74,91,122,224,168,76,10,3,121,137,50,201,243,242,245,118,242,222,252,232,44,163,161,237,11,109,232,121,58,182,103,209,160,217,183,116,232,40,211,202,75,203,114,148,168,239,50,175,61,197,55,119,35,173,98,3,237,17,170,218,113,52,244,239,27,174,223,247,52,225,69,82,169,162,130,30,110,49,133,70,196,183,135,71,70,23,207,172,125,140,88,95,51,155,98,140,24,1,66,214,33,251,1,59,26,138,152,48,74,184,64,25,103,140,14,234,104,243,246,168,16,98,200,104,234,83,216,104,81,169,13,11,29,108,207,185,57,107,58,27,192,247,97,183,133,156,249,234,213,203,137,77,217,60,160,210,12,30,55,45,79,137,201,21,239,107,177&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection4 = selection4 &amp;
+		</span><span style="color:#a31515">
+		&quot;,219,34,27,217,57,144,155,111,173,176,212,105,122,80,20,63,162,96,98,143,227,154,191,110,151,140,31,147,122,64,9,241,254,175,132,96,98,99,129,18,237,153,175,30,214,204,22,246,37,39,166,100,203,212,145,152,237,247,229,111,158,55,255,217,84,230,108,227,119,19,211,244,44,255,184,169,126,0,76,6,126,165,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection4 = selection4 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection5 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,80,2,0,0,95,1,0,0,120,1,109,82,77,75,2,81,20,61,102,90,17,45,50,201,69,203,104,27,84,70,97,75,63,80,16,146,25,3,23,194,96,207,103,141,142,51,195,56,74,4,129,203,126,64,127,163,77,139,254,64,255,168,31,224,116,174,163,130,213,133,247,238,187,231,158,123,238,157,203,124,102,128,36,128,104,22,241,166,143,18,216,197,208,171,116,148,54,116,207,82,137,57,12,164,197,11,147,246,242,245,118,242,94,251,104,46,125,92,118,32,101,182,227,232,208,28,7,189,90,215,208,190,165,226,84,90,82,134,165,68,125,143,239,242,83,120,123,223,215,42,140,161,125,66,69,51,12,108,247,161,218,113,187,142,38,60,139,10,69,20,208,198,29,70,208,8,120,183,49,161,239,224,153,177,139,62,227,18,95,35,12,16,194,131,207,216,103,222,99,70,67,17,147,138,51,92,33,143,115,122,11,21,52,120,218,84,240,97,211,199,241,41,76,212,169,212,128,129,38,118,166,236,156,140,51,27,192,247,97,171,142,84,252,213,171,155,140,45,233,220,163,210,24,14,59,45,237,140,143,27,15&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection5 = selection5 &amp;
+		</span><span style="color:#a31515">
+		&quot;8,215,92,171,46,187,74,78,129,212,116,123,133,109,18,147,29,228,100,31,129,55,52,7,97,217,93,95,151,208,143,73,203,82,66,118,255,91,130,67,205,37,50,148,104,140,93,245,184,182,108,169,190,38,99,196,106,105,148,37,171,164,3,123,162,187,127,120,151,228,53,23,188,163,181,129,46,106,255,12,149,39,189,186,24,42,162,49,156,219,242,7,137,163,31,213,140,143,199,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection5 = selection5 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection6 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,89,2,0,0,97,1,0,0,120,1,133,80,203,74,195,80,16,61,181,84,43,226,194,42,86,112,237,86,168,15,148,186,236,131,22,10,150,164,66,23,133,80,147,91,77,155,38,33,185,45,34,8,89,250,1,254,134,27,23,254,128,127,228,7,52,158,219,107,80,233,194,129,123,103,230,204,204,153,199,123,9,200,3,72,23,41,127,234,52,135,45,76,131,230,208,22,134,24,89,118,110,9,3,5,165,85,38,229,233,227,229,232,181,253,214,203,180,46,43,177,172,59,243,237,123,115,22,141,218,142,33,66,203,214,145,117,69,104,88,182,34,223,166,221,120,144,215,183,99,97,75,13,237,16,170,153,50,114,253,187,214,208,119,60,65,120,145,86,107,168,98,128,27,196,16,136,248,15,48,167,30,226,145,190,143,49,253,58,173,24,19,72,4,8,233,135,140,7,140,8,216,196,84,69,5,23,56,195,9,181,133,38,186,124,3,50,132,112,169,181,127,12,19,29,50,117,97,160,135,205,132,157,243,58,178,6,124,238,247,59,122,115,189,248,242,103,198,134,234,60,34,211,12,30,59,101,82,161,113,201,23,151,251,29,181,&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection6 = selection6 &amp;
+		</span><span style="color:#a31515">
+		&quot;235,129,218,213,119,212,45,79,219,190,252,115,151,66,82,228,100,64,139,185,217,141,21,143,178,243,9,239,205,248,111,174,61,114,213,69,228,206,133,179,194,115,206,154,222,119,207,67,230,53,163,96,106,78,100,195,151,255,182,77,41,172,94,138,106,173,198,222,85,20,174,231,137,213,137,175,152,242,204,78,188,13,202,137,158,50,195,138,196,126,228,11,239,31,144,1,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection6 = selection6 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection7 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,137,2,0,0,111,1,0,0,120,1,125,82,77,75,195,64,16,125,181,180,85,196,131,181,88,193,179,87,161,90,81,234,177,31,180,80,176,36,21,122,40,132,154,108,53,109,154,132,52,45,34,8,57,250,3,252,27,94,60,248,7,252,71,254,128,198,183,221,70,170,5,7,50,111,103,230,237,155,217,221,124,228,129,52,128,120,17,211,19,227,20,118,49,241,26,3,83,104,98,104,152,169,101,26,200,74,148,76,218,243,231,235,201,91,235,189,155,160,218,150,231,182,206,204,53,31,244,89,48,108,89,154,240,13,83,85,178,82,80,51,76,41,190,199,117,253,49,188,185,27,9,51,84,169,125,166,170,122,24,216,238,125,115,224,90,142,96,122,17,87,170,168,160,143,91,76,33,16,208,247,49,39,14,240,196,216,197,136,113,141,171,41,198,8,225,193,103,236,179,238,177,34,96,50,39,119,148,112,137,50,206,136,6,26,232,240,235,83,193,135,77,84,241,41,116,180,169,212,129,134,46,118,34,118,78,171,202,22,240,117,216,107,35,163,14,253,227,201,200,201,206,67,42,205,224,176,83,98,37,46,174,24&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection7 = selection7 &amp;
+		</span><span style="color:#a31515">
+		&quot;8,77,139,189,182,60,107,129,7,171,137,192,158,11,235,215,157,100,162,109,92,144,215,93,241,142,229,253,4,222,68,31,135,117,55,60,111,185,225,6,189,76,122,147,116,249,28,49,141,176,52,25,167,35,64,74,174,183,62,146,215,236,90,242,25,255,213,83,42,202,43,237,20,14,228,56,182,227,136,205,49,174,201,124,225,24,242,71,248,219,182,16,169,49,214,71,85,194,128,148,46,174,234,137,70,46,41,46,241,27,228,35,148,209,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection7 = selection7 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection8 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,80,2,0,0,97,1,0,0,120,1,101,81,77,75,2,81,20,61,38,126,68,180,200,36,23,45,163,109,96,25,133,45,253,64,65,72,102,12,92,8,131,141,207,26,29,103,134,153,81,34,8,92,246,3,250,27,109,90,244,7,250,71,253,0,167,115,157,148,204,11,239,157,119,207,61,247,222,247,238,251,204,1,73,0,209,34,226,78,140,18,216,195,196,173,247,77,165,169,161,97,38,150,52,144,22,20,37,237,229,235,237,244,189,249,209,89,97,156,118,40,105,150,109,171,80,159,250,195,230,64,83,158,97,198,161,180,132,52,195,148,234,251,60,215,158,194,219,251,145,50,195,152,58,32,85,209,67,223,114,30,26,125,103,96,43,210,139,168,92,65,25,61,220,33,128,130,207,189,135,25,177,143,103,250,14,70,244,171,60,5,24,35,132,11,143,190,199,184,203,136,130,73,78,50,138,184,66,9,231,68,3,117,180,185,122,172,224,193,34,198,254,25,116,180,88,169,13,13,29,236,206,217,57,25,71,118,128,239,163,110,11,169,248,213,235,157,138,140,116,30,178,210,20,54,59,173,172,200,195,13,215,107,161,&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection8 = selection8 &amp;
+		</span><span style="color:#a31515">
+		&quot;219,202,16,147,115,32,53,207,174,57,25,162,204,32,199,7,183,167,142,249,184,49,41,81,94,83,17,48,91,84,121,170,170,202,183,102,106,176,165,187,164,174,243,171,59,166,174,238,187,19,125,28,214,156,240,162,233,108,126,128,148,45,81,222,160,92,126,51,162,17,150,38,254,255,75,102,201,73,251,194,70,217,173,27,156,80,150,103,73,78,233,143,253,0,130,43,143,212,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection8 = selection8 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection9 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,33,2,0,0,77,1,0,0,120,1,109,81,77,75,2,81,20,61,54,168,69,180,200,34,219,71,219,192,18,10,91,154,226,192,64,50,99,224,66,24,236,249,172,209,113,102,24,199,136,32,112,217,15,232,111,180,105,209,31,232,31,245,3,156,206,109,80,50,186,240,222,185,31,231,158,203,187,239,163,4,24,0,210,69,202,155,152,230,176,141,73,216,236,43,109,235,161,171,114,63,105,160,32,40,76,218,243,231,235,241,155,249,222,89,98,214,182,39,109,158,239,235,196,153,197,67,115,96,235,200,85,89,169,32,37,219,85,162,190,67,191,241,152,92,223,142,180,74,178,212,46,83,117,39,137,189,224,174,213,15,6,190,102,122,145,214,234,168,161,135,27,76,161,17,243,238,225,129,216,199,19,227,0,35,198,87,244,166,24,35,65,136,136,113,196,122,200,138,134,98,78,58,42,56,71,21,167,68,23,77,180,121,122,84,136,224,17,179,248,4,14,44,42,181,97,163,131,173,57,39,27,89,101,3,248,58,232,90,200,103,175,94,221,100,20,101,242,144,74,51,248,156,180,180,10,157,75,158,151,114,215,&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection9 = selection9 &amp;
+		</span><span style="color:#a31515">
+		&quot;146,133,25,115,32,63,223,92,229,68,73,118,80,226,131,219,179,64,221,175,109,74,152,23,100,76,217,45,172,67,217,84,48,144,175,56,51,131,245,173,10,183,74,110,139,92,194,202,228,187,254,78,45,50,39,122,101,234,53,227,112,226,140,147,198,63,114,71,164,237,83,142,207,254,101,223,67,241,126,177,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection9 = selection9 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection10 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,89,2,0,0,101,1,0,0,120,1,125,82,203,74,195,64,20,61,181,214,7,34,98,21,21,92,187,21,234,3,165,46,251,160,133,130,37,169,208,69,33,212,201,84,211,166,73,72,167,69,4,161,75,63,192,223,112,227,194,31,240,143,252,128,198,51,157,6,148,130,3,153,123,239,185,247,158,251,200,124,230,129,44,128,100,150,240,166,76,50,216,194,48,172,118,133,180,100,207,17,153,57,12,228,180,212,145,60,47,95,111,39,239,245,143,86,42,77,90,158,105,205,113,32,30,237,113,220,171,187,150,140,28,97,60,107,154,208,114,132,38,223,166,94,121,82,183,247,125,41,148,129,118,9,149,108,21,123,193,67,173,27,184,190,36,60,75,138,37,20,209,193,29,70,144,136,121,119,48,161,236,226,153,118,128,62,237,50,181,17,6,80,8,17,209,142,232,15,233,145,16,196,116,70,1,87,184,192,25,165,131,42,154,252,58,100,136,224,81,26,251,20,54,26,100,106,194,66,11,155,83,86,206,26,207,10,240,125,208,110,152,201,205,224,243,155,17,235,186,114,143,76,99,248,172,148,158,2,149,107,12&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection10 = selection10 &amp;
+		</span><span style="color:#a31515">
+		&quot;6,163,195,118,67,207,122,164,103,13,92,189,203,243,122,160,254,236,37,55,221,96,103,64,141,177,105,190,150,122,223,58,119,79,239,204,243,125,185,156,118,195,144,87,166,173,81,238,76,249,107,72,149,98,171,196,178,11,236,119,43,251,164,43,203,216,155,72,119,169,141,75,230,180,22,45,31,235,178,113,56,180,7,170,18,168,127,187,54,157,38,230,221,144,34,125,41,84,121,126,0,198,133,143,248,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection10 = selection10 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection11 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,191,1,0,0,37,1,0,0,120,1,93,80,203,74,195,80,16,61,53,90,21,113,225,3,253,2,23,110,132,138,32,212,157,213,98,33,96,73,90,232,162,16,226,205,141,164,198,36,164,169,136,32,100,233,7,248,27,110,92,248,3,254,145,31,208,120,166,151,40,58,112,231,204,156,51,15,238,124,108,3,22,128,106,94,209,19,171,6,54,112,159,118,125,165,29,29,122,170,177,160,129,21,65,169,164,61,127,190,30,188,245,222,7,53,154,182,29,105,139,226,88,23,238,44,15,123,129,163,51,79,25,169,41,146,227,41,153,190,201,248,242,177,184,190,153,104,85,24,106,139,84,199,45,242,40,185,189,242,147,32,214,164,231,85,187,131,54,198,24,98,10,141,156,126,140,7,162,143,39,230,9,38,204,47,24,77,113,135,2,41,50,230,25,245,148,138,134,34,39,29,45,156,226,4,199,68,15,93,244,249,198,156,144,33,34,154,252,8,46,108,78,234,195,193,0,235,37,55,91,70,89,2,190,246,70,182,249,186,249,249,194,179,98,85,54,135,156,52,67,204,77,181,181,24,156,241,189,236,143,108,57,152,85,242,11&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection11 = selection11 &amp;
+		</span><span style="color:#a31515">
+		&quot;2,229,218,15,215,36,39,55,144,83,13,147,115,157,4,127,78,37,165,135,44,217,101,123,125,247,255,35,150,169,255,218,55,254,120,101,23,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection11 = selection11 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection12 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,33,2,0,0,77,1,0,0,120,1,109,81,209,74,2,81,16,61,102,90,17,61,100,145,189,71,175,129,37,20,246,104,138,130,144,236,26,248,32,44,118,189,150,186,238,46,187,107,68,16,236,99,31,208,111,244,210,67,63,208,31,245,1,110,103,188,40,24,93,184,115,102,206,204,156,225,206,253,42,0,89,0,233,60,165,37,166,25,236,98,234,215,251,74,91,122,232,168,204,130,6,242,130,82,201,243,250,253,126,250,209,252,236,44,209,180,29,72,219,200,117,117,108,207,194,97,115,96,233,192,81,38,149,151,148,229,40,81,223,163,95,123,142,111,239,199,90,197,134,218,39,85,181,227,112,228,61,52,250,222,192,213,164,231,105,165,138,10,122,184,67,4,141,144,182,135,39,98,31,47,140,61,140,25,223,208,139,48,65,12,31,1,227,128,121,159,25,13,69,78,58,74,184,68,25,231,68,7,117,180,121,123,84,8,48,34,154,248,12,54,90,84,106,195,66,7,59,9,39,103,77,102,3,248,57,234,182,144,51,175,94,89,86,108,201,228,33,149,102,112,57,105,121,74,116,174,121,223,138,221,214,38,49,15&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection12 = selection12 &amp;
+		</span><span style="color:#a31515">
+		&quot;5,0,185,100,123,197,137,146,236,160,40,251,8,253,169,61,137,107,222,250,186,164,252,132,101,135,148,144,221,255,149,88,124,22,37,10,148,104,207,60,245,184,182,108,233,190,98,87,196,110,25,116,44,203,246,6,242,155,23,205,127,38,149,89,219,96,45,97,117,150,63,110,136,95,79,192,126,170,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection12 = selection12 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection13 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,80,2,0,0,105,1,0,0,120,1,101,82,205,74,2,81,24,61,102,90,17,45,50,201,69,203,104,27,88,70,33,180,242,7,5,65,25,39,112,33,12,54,222,201,209,113,102,24,71,137,32,240,17,90,244,26,109,90,244,2,189,81,15,224,116,62,167,12,243,131,123,207,253,206,119,190,115,239,220,59,31,25,32,9,32,90,68,156,137,81,2,251,24,123,213,158,169,52,101,25,102,98,73,3,105,65,81,50,158,63,95,207,222,234,239,250,47,198,109,71,210,102,59,142,10,219,211,192,170,247,53,229,27,102,92,74,75,73,51,76,113,63,224,186,242,24,54,239,135,202,12,99,234,144,84,169,29,6,182,251,80,235,185,125,71,145,94,68,197,18,138,232,226,14,19,40,4,156,187,152,17,123,120,98,238,98,200,188,204,213,4,35,132,240,224,51,247,89,247,88,81,48,201,73,71,30,215,40,224,130,104,160,138,22,71,151,14,62,108,98,156,159,163,141,6,157,90,208,160,99,111,206,157,147,113,101,11,248,58,238,52,144,138,191,122,53,83,177,35,59,91,116,154,194,225,78,191,145,231,226,150,227,37,215,105,72,87,&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection13 = selection13 &amp;
+		</span><span style="color:#a31515">
+		&quot;114,14,164,230,187,43,110,155,156,220,65,142,31,172,15,108,183,105,89,147,127,215,37,242,83,202,178,180,224,1,54,44,228,29,196,34,67,139,214,212,53,7,107,151,45,221,55,84,76,216,45,170,44,85,101,21,216,51,213,223,208,93,81,167,255,232,78,168,171,6,222,184,61,10,43,110,120,89,119,215,223,80,108,11,148,215,40,151,31,34,98,16,150,33,135,252,139,111,254,95,143,250,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection13 = selection13 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection14 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,33,2,0,0,80,1,0,0,120,1,101,81,209,74,2,65,20,61,102,90,17,61,100,145,189,71,175,129,37,20,66,79,150,40,8,202,174,129,15,194,98,227,108,174,109,227,226,174,17,65,176,159,208,67,191,209,75,15,253,64,127,212,7,184,157,235,162,97,93,152,57,115,239,61,247,220,153,59,159,5,32,11,32,153,37,220,137,73,6,219,120,24,215,250,74,91,218,117,84,102,30,6,242,130,194,164,189,124,189,29,191,55,62,58,11,76,203,246,164,204,243,125,29,217,211,137,219,24,88,58,112,84,154,202,75,202,114,148,168,239,240,124,253,20,181,110,71,90,69,105,104,151,161,170,29,77,60,115,87,239,155,129,175,25,158,37,149,42,42,232,225,6,33,52,38,220,123,120,36,246,241,76,223,96,68,255,138,167,16,247,136,48,70,64,63,96,126,204,140,134,98,76,42,74,56,71,25,167,68,7,53,180,185,122,84,8,224,17,83,255,4,54,154,84,106,195,66,7,91,49,59,103,211,204,26,240,125,208,109,34,151,190,122,185,147,177,33,157,93,42,77,225,179,211,194,74,60,92,114,189,22,187,205,117,98,54,6&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection14 = selection14 &amp;
+		</span><span style="color:#a31515">
+		&quot;,114,241,230,50,38,74,50,131,2,31,220,158,26,53,92,153,148,48,47,200,8,89,45,172,67,153,148,25,200,87,156,53,204,234,84,133,91,38,183,78,46,97,105,188,243,191,174,243,255,165,94,145,122,157,161,103,90,174,27,254,249,36,145,59,98,233,62,229,68,226,215,126,0,85,137,126,215,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection14 = selection14 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection15 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,191,1,0,0,38,1,0,0,120,1,93,80,203,74,195,64,20,61,53,214,7,226,194,7,250,5,46,220,8,21,65,40,184,177,90,44,4,44,73,11,93,4,66,156,76,36,53,78,66,154,22,17,132,124,130,11,127,195,141,11,127,192,63,242,3,26,207,100,8,168,23,230,62,206,185,143,185,247,115,23,176,0,84,203,138,154,182,106,97,11,143,105,63,16,210,145,145,47,90,53,12,180,181,213,153,148,151,175,183,163,247,193,199,168,177,166,108,79,151,197,73,34,11,119,158,71,131,208,145,153,47,12,181,166,41,199,23,186,251,54,253,235,167,226,246,110,42,69,97,160,29,66,61,183,200,99,117,127,19,168,48,145,132,151,85,183,135,46,60,140,49,131,68,78,237,97,65,27,224,153,177,194,148,241,21,189,25,30,80,32,69,198,56,35,159,146,145,16,196,116,69,7,231,56,195,41,173,143,62,134,124,30,59,100,136,105,77,124,2,23,54,59,13,225,96,132,205,146,147,45,195,172,0,223,7,19,219,172,110,54,175,53,51,214,245,228,136,157,230,72,56,169,145,14,157,11,190,215,195,137,93,95,149,251,234,179,1&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection15 = selection15 &amp;
+		</span><span style="color:#a31515">
+		&quot;40,213,165,84,225,159,179,180,203,13,28,51,117,159,169,77,185,85,242,206,196,155,22,171,36,254,99,252,212,47,249,1,100,81,101,46,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection15 = selection15 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection16 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,33,2,0,0,78,1,0,0,120,1,109,81,93,75,2,65,20,61,182,104,69,244,144,69,246,30,189,6,150,80,8,61,89,162,32,40,171,129,15,194,98,227,108,174,109,227,226,174,17,65,224,79,232,161,191,209,75,15,253,129,254,81,63,192,237,92,7,5,163,129,153,115,63,206,61,151,185,247,43,15,56,0,210,121,202,151,152,102,176,131,199,113,181,175,180,171,125,79,101,22,97,32,39,40,76,158,215,239,247,147,143,250,103,103,137,182,108,95,202,130,48,212,73,123,58,241,235,3,87,71,158,178,169,156,164,92,79,137,250,46,237,155,231,164,121,55,210,42,177,161,61,134,42,237,100,18,152,251,90,223,12,66,205,240,60,45,87,80,70,15,183,136,161,49,225,219,195,19,177,143,23,250,6,35,250,215,180,98,60,32,193,24,17,253,136,249,49,51,26,138,49,169,40,226,2,37,156,17,61,84,209,226,237,81,33,66,64,180,254,41,218,104,80,169,5,23,29,108,207,216,217,177,153,13,224,231,176,219,64,214,254,122,245,146,177,41,157,125,42,77,17,178,211,242,20,105,92,241,190,21,186,13,86,195&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection16 = selection16 &amp;
+		</span><span style="color:#a31515">
+		&quot;,153,1,217,217,214,42,182,152,52,103,144,231,135,91,83,163,134,107,147,18,230,37,171,98,86,203,164,142,100,82,102,32,171,56,175,155,245,169,10,183,68,110,141,92,194,234,252,215,85,86,40,122,5,234,117,134,129,105,250,126,252,103,73,34,119,76,218,1,229,150,27,183,154,191,82,13,126,208,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection16 = selection16 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection17 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,89,2,0,0,98,1,0,0,120,1,125,81,203,74,195,64,20,61,181,214,7,226,194,42,86,112,237,86,168,15,148,130,171,62,104,161,96,73,42,116,81,8,53,153,106,218,52,41,105,90,68,16,242,9,46,252,13,55,46,252,1,255,200,15,104,60,183,99,80,41,120,33,115,230,190,206,185,119,242,158,7,178,0,146,121,194,147,152,100,176,133,81,80,235,217,202,80,125,203,206,44,194,64,78,80,42,105,79,31,47,71,175,141,183,118,138,186,45,207,182,214,212,183,239,205,105,216,111,56,134,26,91,182,206,172,9,161,97,217,66,190,205,123,245,33,186,190,29,40,59,210,161,29,134,202,102,20,186,254,93,189,231,59,158,98,120,158,148,202,40,161,139,27,76,160,16,242,236,98,70,236,225,145,190,143,1,253,10,111,19,12,17,33,192,152,254,152,249,128,25,5,155,49,233,40,226,2,103,56,33,90,168,161,197,175,75,134,49,92,162,246,143,97,162,73,166,22,12,180,177,25,83,57,171,51,43,192,231,126,167,169,55,215,139,47,78,86,172,139,114,159,76,83,120,84,74,173,200,203,37,191,73,161,211&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection17 = selection17 &amp;
+		</span><span style="color:#a31515">
+		&quot;,148,93,15,100,87,223,145,183,60,109,248,209,159,119,201,197,27,156,12,168,179,54,237,23,164,42,178,49,223,155,249,223,92,123,228,170,168,208,157,41,103,137,231,156,61,237,111,205,67,214,213,194,96,100,14,163,170,31,253,43,43,191,54,161,17,22,38,210,50,246,174,80,184,158,167,150,39,190,98,201,51,149,164,180,16,235,41,211,216,42,99,63,246,5,241,104,144,18,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection17 = selection17 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection18 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,137,2,0,0,109,1,0,0,120,1,133,81,77,75,2,81,20,61,38,90,17,45,50,201,160,117,219,192,50,10,161,149,31,40,8,201,140,129,11,97,176,153,103,141,142,51,50,142,18,65,48,63,161,69,127,163,77,139,254,64,255,168,31,224,116,174,227,68,214,162,11,239,157,119,239,61,239,220,251,238,123,207,1,105,0,209,34,226,78,140,82,216,193,216,171,247,77,165,169,129,97,166,150,97,32,43,40,76,218,211,199,203,241,107,243,173,147,96,124,45,199,107,237,153,107,222,235,51,127,208,180,52,53,49,204,56,147,21,65,205,48,69,124,151,231,218,67,112,125,59,84,102,16,135,246,24,170,232,129,111,187,119,141,190,107,57,138,225,69,84,174,160,140,30,110,48,133,130,207,189,135,57,177,143,71,250,46,134,244,171,60,77,49,66,0,15,19,250,19,230,61,102,20,76,198,228,70,17,23,40,225,148,104,160,142,54,87,143,10,19,216,196,216,63,129,142,22,149,218,208,208,193,118,200,202,233,56,179,1,124,30,116,91,200,196,143,254,222,201,216,148,202,3,42,205,224,176,82,98,69,30&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection18 = selection18 &amp;
+		</span><span style="color:#a31515">
+		&quot;,46,185,166,133,110,75,222,154,231,195,170,202,183,231,202,90,155,73,38,220,194,57,121,157,21,239,72,230,227,123,99,125,20,212,220,224,172,233,6,127,232,37,210,27,164,203,119,68,52,194,210,216,36,210,33,32,146,63,75,31,202,152,93,75,190,241,95,189,88,9,16,45,105,123,95,218,177,29,71,253,109,227,138,148,231,85,27,191,203,230,87,109,36,173,38,178,130,34,93,8,227,54,19,141,245,185,126,1,233,70,148,228,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection18 = selection18 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection19 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,33,2,0,0,79,1,0,0,120,1,101,81,205,74,2,81,20,254,76,212,34,90,100,145,237,163,109,96,9,133,208,202,18,5,65,25,13,92,8,195,116,189,147,99,211,117,112,102,34,130,192,71,104,209,107,180,105,209,11,244,70,61,128,211,119,154,52,172,11,247,252,126,231,59,247,158,243,94,4,178,0,146,121,66,73,157,100,176,137,187,73,221,81,218,210,174,173,50,223,97,32,47,90,144,60,79,31,47,135,175,205,183,222,66,167,101,59,82,230,249,190,142,186,241,212,109,14,45,29,216,42,77,229,37,101,217,74,216,183,104,95,62,68,237,235,177,86,81,26,218,102,168,214,141,166,158,185,105,56,102,232,107,134,231,73,181,134,42,6,184,66,8,141,41,229,0,247,212,14,30,233,27,140,233,95,208,10,113,139,8,19,4,244,3,230,39,204,104,40,198,164,162,140,83,84,112,76,109,163,142,14,239,128,12,1,60,234,212,63,66,23,45,50,117,96,161,135,141,25,59,103,211,204,26,240,185,215,111,33,151,254,122,41,137,40,72,103,151,76,49,124,118,90,156,50,141,115,222,231,82,191,37,3,203,2&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection19 = selection19 &amp;
+		</span><span style="color:#a31515">
+		&quot;06,128,220,108,125,25,19,38,153,65,137,31,238,141,60,211,118,221,240,207,184,4,126,64,216,46,41,248,128,127,20,133,31,138,34,41,58,177,81,163,149,97,75,245,25,17,33,171,165,209,190,12,219,12,101,155,39,77,179,186,24,193,86,136,109,16,187,216,50,93,72,215,223,243,5,111,127,126,222,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection19 = selection19 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection20 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,89,2,0,0,96,1,0,0,120,1,133,80,205,74,2,81,20,254,76,52,35,90,100,161,65,235,182,129,253,80,8,173,252,65,65,72,102,12,92,8,131,221,185,214,232,56,51,140,163,68,16,204,35,180,232,53,218,180,232,5,122,163,30,192,233,187,222,134,10,23,29,184,247,252,127,223,57,231,189,8,100,1,36,203,132,63,117,146,193,54,166,126,115,40,164,33,71,150,200,172,194,64,78,105,85,73,121,250,120,57,122,109,191,245,82,173,219,138,108,235,206,61,113,111,206,195,81,219,54,100,96,9,157,201,43,64,195,18,10,124,135,118,227,33,186,190,29,75,17,233,208,46,67,53,51,10,29,239,174,53,244,108,87,50,188,76,170,53,84,49,192,13,102,144,8,249,15,176,160,30,226,145,190,135,49,253,58,173,25,38,136,224,35,160,31,48,239,51,35,33,24,83,29,21,92,224,12,39,212,22,154,232,242,13,136,16,192,161,214,254,49,76,116,136,212,133,129,30,182,98,50,103,117,102,3,248,44,245,59,122,115,189,248,234,103,197,166,98,30,17,105,14,151,76,169,84,104,92,242,205,202,253,142,218,2&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection20 = selection20 &amp;
+		</span><span style="color:#a31515">
+		&quot;45,64,237,234,217,234,150,167,109,47,250,115,151,92,92,224,100,64,139,181,233,141,21,14,89,145,141,121,111,230,127,99,237,19,171,46,67,103,33,237,53,156,115,246,244,190,57,15,89,215,12,253,169,57,137,26,94,244,47,109,66,97,247,74,20,181,26,123,79,65,56,174,43,215,39,190,98,201,51,153,242,212,229,88,79,153,198,10,140,253,200,23,242,252,144,27,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection20 = selection20 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection21 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,191,1,0,0,38,1,0,0,120,1,93,80,203,74,195,64,20,61,53,216,86,196,133,15,244,11,92,184,17,42,130,80,112,99,181,88,8,88,146,22,186,8,132,56,153,72,106,76,66,58,21,17,132,124,130,11,127,195,141,11,127,192,63,242,3,26,207,100,136,160,23,230,158,123,207,185,15,230,126,238,0,22,128,106,85,209,19,171,22,54,241,144,13,3,33,29,25,249,162,85,211,192,186,70,93,73,123,249,122,59,124,31,125,76,26,52,109,187,186,45,78,18,169,220,101,17,141,66,71,230,190,48,82,91,75,142,47,244,244,45,198,87,79,234,230,118,46,133,50,212,54,169,129,171,138,56,189,187,14,210,48,145,164,87,85,127,128,62,60,76,177,128,68,65,239,225,145,24,224,153,121,138,57,243,75,70,11,220,67,33,67,206,60,167,158,81,145,16,228,116,71,15,103,56,197,9,209,199,16,99,62,143,19,114,196,68,147,31,195,133,205,73,99,56,152,96,163,228,102,203,40,107,192,247,254,204,54,95,55,63,175,61,43,58,122,115,196,73,75,36,220,212,88,143,193,57,223,235,193,204,238,16,173,146,135,43,1&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection21 = selection21 &amp;
+		</span><span style="color:#a31515">
+		&quot;87,191,92,155,156,190,129,62,213,52,189,144,105,248,231,84,186,244,136,37,123,108,39,212,246,127,68,183,17,106,252,1,7,155,101,58,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection21 = selection21 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection22 = </span>
+		<span style="color:#a31515">
+		&quot;35,29,213,113,218,129,72,162,168,88,152,178,27,137,239,153,33,2,0,0,80,1,0,0,120,1,93,81,93,75,2,81,16,61,38,126,68,244,144,69,246,30,189,6,150,80,8,61,89,162,32,40,171,129,15,194,98,215,187,185,182,93,23,119,55,34,8,252,9,61,244,55,122,233,161,63,208,63,234,7,184,157,113,83,210,129,123,103,230,204,153,51,220,185,95,5,32,13,32,158,199,188,233,227,20,118,240,56,169,13,148,182,180,99,171,212,2,6,178,226,133,73,123,253,126,63,249,104,124,118,151,62,105,219,151,54,215,243,116,216,137,166,78,99,104,105,223,86,73,41,43,37,203,86,162,190,203,248,230,57,108,221,141,181,10,19,104,143,80,181,19,78,93,115,95,31,152,161,167,9,207,227,74,21,21,244,113,139,0,26,83,222,125,60,209,15,240,194,220,96,204,252,154,81,128,7,132,152,192,103,238,179,62,97,69,67,17,147,142,18,46,80,198,25,189,141,26,218,60,125,42,248,112,233,147,252,20,29,52,169,212,134,133,46,182,103,156,156,78,42,91,192,207,97,175,137,76,242,234,213,77,70,78,38,59,84,138,224,113,210,210,74,12,174,120,222,138,189,102,158,62&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection22 = selection22 &amp;
+		</span><span style="color:#a31515">
+		&quot;,61,3,50,179,252,10,203,17,147,29,20,249,224,238,200,53,45,199,9,54,214,37,244,99,210,14,40,33,187,223,148,16,76,36,10,148,104,71,70,141,214,150,45,221,151,100,4,236,22,214,145,44,219,12,229,55,207,27,102,253,99,132,91,38,183,254,55,137,225,194,248,236,127,246,11,111,79,126,219,0,0,0,0,0,0,0,0&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selection22 = selection22 &amp;
+		</span><span style="color:#a31515">&quot;,Type=1&quot;<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Store 
+		constants in a collection<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection1,
+		</span><span style="color:#a31515">&quot;selection1&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection2, </span>
+		<span style="color:#a31515">&quot;selection2&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection3, </span>
+		<span style="color:#a31515">&quot;selection3&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection4, </span>
+		<span style="color:#a31515">&quot;selection4&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection5, </span>
+		<span style="color:#a31515">&quot;selection5&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection6, </span>
+		<span style="color:#a31515">&quot;selection6&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection7, </span>
+		<span style="color:#a31515">&quot;selection7&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection8, </span>
+		<span style="color:#a31515">&quot;selection8&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection9, </span>
+		<span style="color:#a31515">&quot;selection9&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection10, </span>
+		<span style="color:#a31515">&quot;selection10&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection11, </span>
+		<span style="color:#a31515">&quot;selection11&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection12, </span>
+		<span style="color:#a31515">&quot;selection12&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection13, </span>
+		<span style="color:#a31515">&quot;selection13&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection14, </span>
+		<span style="color:#a31515">&quot;selection14&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection15, </span>
+		<span style="color:#a31515">&quot;selection15&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection16, </span>
+		<span style="color:#a31515">&quot;selection16&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection17, </span>
+		<span style="color:#a31515">&quot;selection17&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection18, </span>
+		<span style="color:#a31515">&quot;selection18&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection19, </span>
+		<span style="color:#a31515">&quot;selection19&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection20, </span>
+		<span style="color:#a31515">&quot;selection20&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection21, </span>
+		<span style="color:#a31515">&quot;selection21&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDCollection.Add(selection22, </span>
+		<span style="color:#a31515">&quot;selection22&quot;</span><span style="color:Black">)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Pass this back<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDInitializer = PIDCollection<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+		</span><span style="color:Blue">Function<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+		SelectByPID(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+		SwApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+		SldWorks, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+		Part </span><span style="color:Blue">As</span><span style="color:Black"> 
+		ModelDoc2, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+		PIDName </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String</span><span style="color:Black">,
+		</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+		PIDCollection </span><span style="color:Blue">As</span><span style="color:Black"> 
+		Collection, </span><span style="color:Blue">Optional</span><span style="color:Black">
+		</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+		Mark </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Long</span><span style="color:Black"> = 
+		0, </span><span style="color:Blue">Optional</span><span style="color:Black">
+		</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+		Append </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Boolean</span><span style="color:Black"> 
+		= </span><span style="color:Blue">False</span><span style="color:Black">)
+		</span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Boolean<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		SelObj </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Object<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		PID() </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Byte<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		PIDVariant </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Object<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		PIDString </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">String<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		EntityType </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Long<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		i </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Integer<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+		boolstatus </span><span style="color:Blue">As</span><span style="color:Black">
+		</span><span style="color:Blue">Boolean<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Get 
+		the string from the collection<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDString = </span>
+		<span style="color:#a31515">&quot;&quot;<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDString = 
+		PIDCollection.Item(PIDName)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Parse the string into an array<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PIDVariant = Split(PIDString,
+		</span><span style="color:#a31515">&quot;,&quot;</span><span style="color:Black">)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReDim</span><span style="color:Black"> 
+		PID(UBound(PIDVariant))<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Change to a byte array<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+		i = 0 </span><span style="color:Blue">To</span><span style="color:Black"> 
+		(UBound(PIDVariant) - 1)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PID(i) = PIDVariant(i)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next</span><span style="color:Black"> 
+		i<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelObj = Part.Extension.<b>GetObjectByPersistReference</b>((PID))<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Get the entity type<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EntityType = 
+		Right(PIDVariant(UBound(PIDVariant)), 1)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		EntityType = 1 </span><span style="color:Blue">Then</span><span style="color:Black"> 
+		boolstatus = SelObj.<b>Select2</b>(Append, Mark)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		EntityType = 2 </span><span style="color:Blue">Then</span><span style="color:Black"> 
+		boolstatus = SelObj.<b>Annotation</b>.<b>Select3</b>(Append, Mark)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+		EntityType = 3 </span><span style="color:Blue">Then</span><span style="color:Black"> 
+		boolstatus = SelObj.<b>Select</b>(Append, Mark)<br>
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectByPID = boolstatus<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+		</span><span style="color:Blue">Function<br>
+		<br>
+		</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+		swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+		SldWorks<br>
+		<br>
+		<br>
+		</span><span style="color:Blue">End</span><span style="color:Black">
+		</span><span style="color:Blue">Class</span></div></div>
+
+</body>
+
+</html>

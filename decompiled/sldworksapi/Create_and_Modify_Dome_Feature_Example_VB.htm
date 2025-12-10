@@ -1,0 +1,99 @@
+<html>
+
+<head>
+<title>Create and Modify Dome Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,features">
+<meta name=MS-HKWD content="VBA examples,dome feature">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create and Modify Dome Feature Example (VBA)</h1>
+<p>This example shows how to create and modify a dome feature.</p>
+
+<pre>'---------------------------------------------------------
+' Preconditions:
+' 1. Verify that the part document to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the specified part document.
+' 2. Edits Sketch1, sketches an ellipse, and creates a boss feature.
+' 3. Selects a face on the boss feature and
+'    inserts a dome feature.
+' 4. Prints to the Immediate window some
+'    dome feature data.
+' 5. Reverses the direction of the dome feature.
+' 6. Examine the Immediate window, graphics area,
+'    and FeatureManager design tree.
+'
+' NOTE: Because the part is used elsewhere, do not
+' save changes.
+'----------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSketchMgr As SldWorks.SketchManager
+Dim swSketchSegment As SldWorks.SketchSegment
+Dim swFeature As SldWorks.Feature
+Dim swSelectionMgr As SldWorks.SelectionMgr
+Dim swDomeFeatureData As SldWorks.DomeFeatureData2
+Dim faces As Variant
+Dim aFace As Variant
+Dim swFace As SldWorks.Face2
+Dim oneBody As SldWorks.Body2
+Dim fileName As String
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Open model document to which to add a dome feature
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\box.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)    </pre>
+<pre>    'Open sketch to which to add a sketch of an ellipse
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>EditSketch</b>
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Sketch an ellipse
+    swModel.<b>ShowNamedView2</b> &quot;*Top&quot;, 5
+    Set swSketchMgr = swModel.<b>SketchManager</b>
+    Set swSketchSegment = swSketchMgr.<b>CreateEllipse</b>(-7.61501034873036E-02, 4.90523248480422E-02, 0, -5.13492425103863E-02, 4.90523248480422E-02, 0, -7.61501034873036E-02, 5.45451329838695E-02, 0)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True
+    swModel.<b>ViewZoomtofit2
+</b>    swModel.<b>ShowNamedView2</b> &quot;*Dimetric&quot;, 9</pre>
+<pre>    'Insert dome feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, -9.30732824141103E-02, 2.99999999999727E-02, -4.82299571224303E-02, True, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, -9.30732824141103E-02, 2.99999999999727E-02, -4.82299571224303E-02, False, 1, Nothing, 0)
+    swModel.<b>InsertDome</b> 0.01, False, True    </pre>
+<pre>    'Get and modify dome feature data
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Dome1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swSelectionMgr = swModel.<b>SelectionManager</b>
+    Set swFeature = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swDomeFeatureData = swFeature.<b>GetDefinition</b>
+    status = swDomeFeatureData.<b>AccessSelections</b>(swModel, Nothing)
+        Debug.Print &quot;Is dome feature elliptical? &quot; &amp; swDomeFeatureData.<b>Elliptical</b>
+        Debug.Print &quot;Height of dome: &quot; &amp; swDomeFeatureData.<b>Height</b>
+        Debug.Print &quot;Number of faces on dome feature: &quot; &amp; swDomeFeatureData.<b>GetFaceCount</b>
+        faces = swDomeFeatureData.<b>faces</b>
+        For Each aFace In faces
+            Set swFace = aFace
+            Set oneBody = swFace.<b>GetBody</b>
+            Debug.Print &quot;Name of body for this dome feature face: &quot; &amp; oneBody<b>.Name</b>
+        Next
+        'Change direction of dome feature to concave
+        swDomeFeatureData.<b>ReverseDir</b> = True        </pre>
+<pre>   status = swFeature.<b>ModifyDefinition</b>(swDomeFeatureData, swModel, Nothing)    </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

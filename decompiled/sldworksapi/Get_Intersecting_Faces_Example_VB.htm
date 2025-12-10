@@ -1,0 +1,171 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Intersecting Faces Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,faces">
+<meta name=MS-HKWD content="VBA examples,intersecting surfaces">
+<meta name=MS-HKWD content="VBA examples,surfaces">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3989>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Get Intersecting Faces Example (VBA)</h1>
+
+<p>This example shows how to get the intersection of two faces.</p>
+<p><b>NOTE:</b> This example uses some geometry- and topology-related methods 
+and properties; e.g., ISurface::IntersectSurface, to get intersecting surfaces. </p>
+
+<pre>'-------------------------------------------------------------
+' Preconditions:
+' 1. Open <i>public_documents</i><b>\samples\tutorial\api\cstick.sldprt</b>.
+' 2. Select the face of the finger holder that intersects
+'    the curved face at the base of the candlestick
+'    and the curved face at the base of the candlestick holder.
+'
+' Postconditions:
+' 1. Inserts a 3D sketch with a series of line segments
+'    approximating the intersection for each intersection curve.
+' 2. Examine the graphics area and FeatureManager design tree.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'-------------------------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>Sub CreateTessCurve(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swTrimCurve As SldWorks.Curve)
+    Dim nChordTol As Double
+    Dim nLengthTol As Double
+    Dim nStartParam As Double
+    Dim nEndParam As Double
+    Dim bIsClosed As Boolean
+    Dim bIsPeriodic As Boolean
+    Dim vStartPt As Variant
+    Dim vEndPt As Variant
+    Dim vTessPts As Variant
+    Dim swSketchSeg As SldWorks.SketchSegment
+    Dim bRet As Boolean
+    Dim i As Long</pre>
+<pre>    ' Not needed because curve is a trimmed curve
+    ' Could pass in trim points as parameters
+    bRet = swTrimCurve.<b>GetEndParams</b>(nStartParam, nEndParam, bIsClosed, bIsPeriodic)</pre>
+<pre>    vStartPt = swTrimCurve.<b>Evaluate</b>(nStartParam)
+    vEndPt = swTrimCurve.<b>Evaluate</b>(nEndParam)</pre>
+<pre>    nChordTol = 0.001
+    nLengthTol = 0.001
+    vTessPts = swTrimCurve.<b>GetTessPts</b>(nChordTol, nLengthTol, (vStartPt), (vEndPt))</pre>
+<pre>    swModel.<b>SetAddToDB</b> True
+    swModel.<b>Insert3DSketch2</b> False</pre>
+<pre>    ' Disable Visual Basic range checking because tessellation points
+    ' might not be a multiple of 6
+    On Error Resume Next
+    For i = 0 To UBound(vTessPts) Step 6
+        Set swSketchSeg = swModel.<b>CreateLine2</b>(vTessPts(i + 0), vTessPts(i + 1), vTessPts(i + 2), vTessPts(i + 3), vTessPts(i + 4), vTessPts(i + 5))
+    Next i
+    On Error GoTo 0</pre>
+<pre>    swModel.<b>SetAddToDB</b> False
+    swModel.<b>Insert3DSketch2</b> True
+</pre>
+<pre>End Sub</pre>
+<pre>Function CreateTrimmedCurve(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swSurf As SldWorks.Surface, swCurve As SldWorks.Curve) As SldWorks.Curve
+    Dim nStartParam As Double
+    Dim nEndParam As Double
+    Dim bIsClosed As Boolean
+    Dim bIsPeriodic As Boolean
+    Dim vStartPt As Variant
+    Dim vEndPt As Variant
+    Dim nCurveBounds(0 To 5) As Double
+    Dim vCurveBounds As Variant
+    Dim vPointArray As Variant
+    Dim vTArray As Variant
+    Dim vUVArray As Variant
+    Dim bRet As Boolean</pre>
+<pre>    bRet = swCurve.<b>GetEndParams</b>(nStartParam, nEndParam, bIsClosed, bIsPeriodic)</pre>
+<pre>    vStartPt = swCurve.<b>Evaluate</b>(nStartParam)
+    vEndPt = swCurve.<b>Evaluate</b>(nEndParam)
+    nCurveBounds(0) = vStartPt(0)
+    nCurveBounds(1) = vStartPt(1)
+    nCurveBounds(2) = vStartPt(2)
+    nCurveBounds(3) = vEndPt(0)
+    nCurveBounds(4) = vEndPt(1)
+    nCurveBounds(5) = vEndPt(2)
+    vCurveBounds = nCurveBounds
+    bRet = swSurf.<b>IntersectCurve</b>(swCurve, (vCurveBounds), vPointArray, vTArray, vUVArray)</pre>
+<pre>    Set CreateTrimmedCurve = swCurve.<b>CreateTrimmedCurve</b>(vPointArray(0), vPointArray(1), vPointArray(2), vPointArray(3), vPointArray(4), vPointArray(5))
+End Function</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swFace1 As SldWorks.Face2
+    Dim swFace2 As SldWorks.Face2
+    Dim swSurf1 As SldWorks.Surface
+    Dim swSurf2 As SldWorks.Surface
+    Dim swCurve1 As SldWorks.Curve
+    Dim swCurve2 As SldWorks.Curve
+    Dim vCurveArray As Variant
+    Dim vBoundArray As Variant
+    Dim swIntCurve As SldWorks.Curve
+    Dim swTrimCurve As SldWorks.Curve
+    Dim nLength As Double
+    Dim i As Long
+    Dim bRet As Boolean</pre>
+<pre>    Set swApp = CreateObject(&quot;SldWorks.Application&quot;)
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swFace1 = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swFace2 = swSelMgr.<b>GetSelectedObject6</b>(2, -1)
+    Set swSurf1 = swFace1.<b>GetSurface</b>
+    Set swSurf2 = swFace2.<b>GetSurface</b></pre>
+<pre>    bRet = swSurf1.<b>IntersectSurface</b>(swSurf2, vCurveArray, vBoundArray)    
+</pre>
+<pre>    For i = 0 To UBound(vCurveArray)
+        Set swIntCurve = vCurveArray(i)
+        ' Curve could be infinite (that is, a straight line)
+        If swIntCurve.<b>IsTrimmedCurve</b> Then
+            nLength = swIntCurve.<b>GetLength2</b>(vBoundArray(2 * i), vBoundArray(2 * i + 1))
+            Debug.Print &quot;Curve(&quot; &amp; i &amp; &quot;) = &quot; &amp; nLength * 1000# &amp; &quot; mm&quot;
+            Set swTrimCurve = swIntCurve
+        Else
+            ' Create a trimmed curve by re-intersecting
+            ' intersection curve with surface
+            Set swTrimCurve = CreateTrimmedCurve(swApp, swModel, swSurf1, swIntCurve)
+        End If
+        CreateTessCurve swApp, swModel, swTrimCurve
+    Next i
+    </pre>
+<pre>    bRet = swModel.<b>EditRebuild3</b></pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

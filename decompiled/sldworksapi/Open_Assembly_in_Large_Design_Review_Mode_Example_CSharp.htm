@@ -1,0 +1,127 @@
+<html>
+
+<head>
+<title>Open an Assembly in Large Design Review Mode Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,Large Design Review">
+<meta name=MS-HKWD content="C# examples,assemblies">
+<meta name=MS-HKWD content="C# examples,snapshots">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Open an Assembly in Large Design Review Mode Example (C#)</h1>
+<p>This example shows how to open an assembly in Large Design Review mode.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">//----------------------------------------------------------------------------</span>
+<span style="color:green;">//&nbsp;Preconditions:&nbsp;</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;assembly&nbsp;to&nbsp;open&nbsp;in&nbsp;Large&nbsp;Design&nbsp;Review&nbsp;mode&nbsp;exists.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;Postconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Click&nbsp;<b>OK</b>&nbsp;in&nbsp;the&nbsp;Large&nbsp;Design&nbsp;Review&nbsp;dialog.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Opens&nbsp;the&nbsp;assembly.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Creates&nbsp;a&nbsp;section&nbsp;view.</span>
+<span style="color:green;">//&nbsp;4.&nbsp;Creates&nbsp;four&nbsp;snapshots&nbsp;in&nbsp;the&nbsp;DisplayManager:</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<b>Home</b></span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<b>ASnap</b></span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<b>Snap2</b></span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<b>Snap3</b></span>
+<span style="color:green;">//&nbsp;5.&nbsp;Click&nbsp;<b>OK</b>&nbsp;in&nbsp;the&nbsp;Name&nbsp;Snapshot&nbsp;dialog.</span>
+<span style="color:green;">//&nbsp;6.&nbsp;Selects&nbsp;and&nbsp;fully&nbsp;resolves&nbsp;a&nbsp;component.</span>
+<span style="color:green;">//&nbsp;7.&nbsp;Inspect&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;for&nbsp;snapshot&nbsp;information&nbsp;and&nbsp;inspect</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;the&nbsp;graphics&nbsp;area.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;assembly&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span>
+<span style="color:green;">//&nbsp;---------------------------------------------------------------------------</span>
+<span style="color:blue;">using</span>&nbsp;Microsoft.VisualBasic;
+<span style="color:blue;">using</span>&nbsp;System;
+<span style="color:blue;">using</span>&nbsp;System.Collections;
+<span style="color:blue;">using</span>&nbsp;System.Collections.Generic;
+<span style="color:blue;">using</span>&nbsp;System.Data;
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;
+ 
+<span style="color:blue;">namespace</span>&nbsp;Macro1CSharp.csproj
+{
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AssemblyDoc&nbsp;Part;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;Model;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SnapShot&nbsp;snap;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>[]&nbsp;snaps;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SnapShot&nbsp;snap1;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SnapShot&nbsp;snap2;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SnapShot&nbsp;snap3;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;i;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;boolstatus;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;longstatus;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;longwarnings;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;large_assembly_document;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;large_assembly_document&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\advdrawings\\motor&nbsp;casing.sldasm&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part&nbsp;=&nbsp;(AssemblyDoc)swApp.<b>OpenDoc6</b>(large_assembly_document,&nbsp;(<span style="color:blue;">int</span>)swDocumentTypes_e.swDocASSEMBLY,&nbsp;(<span style="color:blue;">int</span>)swOpenDocOptions_e.swOpenDocOptions_ViewOnly,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;longstatus,&nbsp;<span style="color:blue;">ref</span>&nbsp;longwarnings);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Model&nbsp;=&nbsp;(ModelDoc2)Part;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Create&nbsp;section&nbsp;view</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SectionViewData&nbsp;sViewData&nbsp;=&nbsp;<span style="color:blue;">default</span>(SectionViewData);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData&nbsp;=&nbsp;Model.<b>ModelViewManager</b>.<b>CreateSectionViewData</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData.<b>FirstPlane</b>&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData.<b>FirstReverseDirection</b>&nbsp;=&nbsp;<span style="color:blue;">false</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData.<b>FirstOffset</b>&nbsp;=&nbsp;-0.00508;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData.<b>FirstRotationX</b>&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData.<b>FirstRotationY</b>&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData.<b>FirstColor</b>&nbsp;=&nbsp;16711680;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData.<b>ShowSectionCap</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sViewData.<b>KeepCapColor</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelViewManager&nbsp;mvmgr&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelViewManager);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mvmgr&nbsp;=&nbsp;Model.<b>ModelViewManager</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;mvmgr.<b>CreateSectionView</b>(sViewData);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Model.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Model.<b>ShowNamedView2</b>(<span style="color:#a31515;">&quot;*Front&quot;</span>,&nbsp;1);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Model.<b>ShowNamedView2</b>(<span style="color:#a31515;">&quot;*Dimetric&quot;</span>,&nbsp;9);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Add&nbsp;a&nbsp;named&nbsp;snapshot</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snap1&nbsp;=&nbsp;mvmgr.<b>AddSnapShot</b>(<span style="color:#a31515;">&quot;ASnap&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Open&nbsp;dialog&nbsp;box&nbsp;to&nbsp;name&nbsp;the&nbsp;next&nbsp;snapshot</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snap2&nbsp;=&nbsp;mvmgr.<b>AddSnapShot</b>(<span style="color:#a31515;">&quot;?&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Add&nbsp;a&nbsp;snapshot&nbsp;with&nbsp;the&nbsp;next&nbsp;default&nbsp;name</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snap3&nbsp;=&nbsp;mvmgr.<b>AddSnapShot</b>(<span style="color:#a31515;">&quot;&quot;</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snap1.Comment&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&lt;TS&gt;&nbsp;This&nbsp;is&nbsp;a&nbsp;comment&nbsp;for&nbsp;ASnap.&quot;</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snaps&nbsp;=&nbsp;(<span style="color:blue;">object</span>[])mvmgr.<b>GetSnapShots</b>();
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">for</span>&nbsp;(i&nbsp;=&nbsp;0;&nbsp;i&nbsp;&lt;=&nbsp;snaps.GetUpperBound(0);&nbsp;i++)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snap&nbsp;=&nbsp;(SnapShot)snaps[i];
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snap.<b>Activate</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Snapshot&nbsp;name:&nbsp;&quot;</span>&nbsp;+&nbsp;snap.<b>Name</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Comment:&nbsp;&quot;</span>&nbsp;+&nbsp;snap.<b>Comment</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ViewID:&nbsp;&quot;</span>&nbsp;+&nbsp;snap.<b>ViewId</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Selects&nbsp;a&nbsp;component</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;Model.<b>Extension</b>.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;motor&nbsp;casing-1@motor&nbsp;casing&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">false</span>,&nbsp;0,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Fully&nbsp;resolve&nbsp;only&nbsp;the&nbsp;selected&nbsp;components</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part.<b>SelectiveOpen</b>(<span style="color:blue;">true</span>,&nbsp;<span style="color:blue;">false</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}</pre>
+
+</body>
+
+</html>

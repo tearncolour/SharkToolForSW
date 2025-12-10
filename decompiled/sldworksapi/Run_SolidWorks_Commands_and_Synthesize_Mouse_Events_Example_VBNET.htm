@@ -1,0 +1,145 @@
+<html>
+
+<head>
+<title>Run SOLIDWORKS Commands and Synthesize Mouse Events Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,SOLIDWORKS commands">
+<meta name=MS-HKWD content="VB.NET examples,mouse">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Run SOLIDWORKS Commands and Synthesize Mouse Events Example (VB.NET)</h1>
+<p>This example shows how to run SOLIDWORKS commands and synthesize mouse 
+ events. </p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'-----------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;document&nbsp;to&nbsp;open&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Click&nbsp;<b>Tools&nbsp;&gt;&nbsp;Options</b> and&nbsp;click to clear the&nbsp;<b>Stop&nbsp;VSTA&nbsp;debugger&nbsp;</b></span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color: green"><b>on&nbsp;macro&nbsp;exit</b> check box,&nbsp;if </span><span style="color:green;">it&nbsp;is&nbsp;selected.
+'&nbsp;3.&nbsp;</span><span style="COLOR: green">In the IDE, right-click the project name in the Project Explorer,
+'    click <b>Add Reference</b>, browse <i>install_dir</i><b>\api\redist</b>, click</span><span style="color:green;">&nbsp;<b>
+</b>' <b>   SolidWorks.Interop.swcommands.dll</b>, and click <b>OK</b>.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;part&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Fits&nbsp;the&nbsp;model&nbsp;to&nbsp;the&nbsp;graphics&nbsp;area.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Moves&nbsp;the&nbsp;mouse.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Changes&nbsp;the&nbsp;view&nbsp;orientation&nbsp;to&nbsp;<b>*Front</b>.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Select&nbsp;an&nbsp;edge&nbsp;on&nbsp;the&nbsp;model.</span>
+<span style="color:green;">'&nbsp;6.&nbsp;Left-click&nbsp;anywhere&nbsp;outside&nbsp;the&nbsp;model&nbsp;in&nbsp;the&nbsp;graphics&nbsp;area.</span>
+<span style="color:green;">'&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;8.&nbsp;Click&nbsp;<b>Stop&nbsp;Debugging</b>&nbsp;in&nbsp;the&nbsp;IDE.</span>
+<span style="color:green;">'&nbsp;9.&nbsp;Click&nbsp;<b>Tools&nbsp;&gt;&nbsp;Options</b>&nbsp;and&nbsp;click&nbsp;to&nbsp;select&nbsp;the&nbsp;<b>Stop&nbsp;VSTA&nbsp;debugger</b>&nbsp;</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;<b>on&nbsp;macro&nbsp;exit</b>&nbsp;check&nbsp;box, if it is clear.</span>
+<span style="color:green;">'-----------------------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swcommands
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">WithEvents</span>&nbsp;msMouse&nbsp;<span style="color:blue;">As</span>&nbsp;Mouse
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelView&nbsp;<span style="color:blue;">As</span>&nbsp;ModelView
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;TheMouse&nbsp;<span style="color:blue;">As</span>&nbsp;Mouse
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;x&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span> 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\block20.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelView&nbsp;=&nbsp;swModel.<b>GetFirstModelView</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TheMouse&nbsp;=&nbsp;swModelView.<b>GetMouse</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;up&nbsp;events</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;msMouse&nbsp;=&nbsp;TheMouse
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventHandlers()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x&nbsp;=&nbsp;0
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Fit&nbsp;model&nbsp;to&nbsp;graphics&nbsp;area&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>RunCommand</b>(swCommands_e.swCommands_ZoomToFit,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Move&nbsp;the&nbsp;mouse</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;TheMouse.<b>Move</b>(50,&nbsp;150,&nbsp;swMouse_e.swMouse_Absolute&nbsp;+&nbsp;swMouse_e.swMouse_MouseMove&nbsp;+&nbsp;swMouse_e.swMouse_LeftDown)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;First&nbsp;call&nbsp;to&nbsp;Move:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Calls&nbsp;to&nbsp;Move&nbsp;within&nbsp;loop:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;1&nbsp;<span style="color:blue;">To</span>&nbsp;5
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;TheMouse.<b>Move</b>(5,&nbsp;5,&nbsp;swMouse_e.swMouse_MouseMove)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Call&nbsp;&quot;</span>&nbsp;&amp;&nbsp;i&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;to&nbsp;Move:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;TheMouse.<b>Move</b>(0,&nbsp;0,&nbsp;swMouse_e.swMouse_LeftUp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Last&nbsp;call&nbsp;to&nbsp;Move:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;TheMouse.<b>MoveXYZ</b>(0.03720615681732,&nbsp;0.0316583060694,&nbsp;0.04991700841805,&nbsp;swMouse_e.swMouse_LeftDown)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Call&nbsp;to&nbsp;MoveXYZ:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Calls&nbsp;to&nbsp;Move&nbsp;within&nbsp;next&nbsp;loop:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;1&nbsp;<span style="color:blue;">To</span>&nbsp;5
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;TheMouse.<b>Move</b>(5,&nbsp;5,&nbsp;swMouse_e.swMouse_MouseMove)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Call&nbsp;&quot;</span>&nbsp;&amp;&nbsp;(i&nbsp;+&nbsp;1).ToString&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;to&nbsp;Move:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;TheMouse.<b>Move</b>(10,&nbsp;10,&nbsp;swMouse_e.swMouse_LeftUp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Last&nbsp;call&nbsp;to&nbsp;Move:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Change&nbsp;view&nbsp;to&nbsp;*Front&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>RunCommand</b>(swCommands_e.swCommands_Front,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachEventHandlers()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachSWEvents()
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachSWEvents()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;msMouse.MouseSelectNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.ms_MouseSelectNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;msMouse.MouseLBtnDownNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.ms_MouseLBtnDownNotify
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;ms_<b>MouseSelectNotify</b>(<span style="color:blue;">ByVal</span>&nbsp;Ix&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Iy&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;x&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;y&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;z&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Selection&nbsp;made:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Mouse&nbsp;location:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;Window&nbsp;space&nbsp;coordinates:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;Ix)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;Iy)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;World&nbsp;space&nbsp;coordinates:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;x)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;y)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;z)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;ms_<b>MouseLBtnDownNotify</b>(<span style="color:blue;">ByVal</span>&nbsp;x&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;y&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;WParam&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Left-mouse&nbsp;button&nbsp;pressed.&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

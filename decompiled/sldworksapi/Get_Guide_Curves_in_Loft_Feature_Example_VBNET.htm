@@ -1,0 +1,151 @@
+<html>
+
+<head>
+<title>Get Guide Curves in Loft Feature Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,lofts">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Guide Curves in Loft Feature Example (VB.NET)</h1>
+<p>This example shows how to get the guide curves in a loft feature.</p>
+
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><font face="Courier New"><span style="color: green">'----------------------------------------</span>
+<span style="color: green">'&nbsp;Preconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;document</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;template&nbsp;exists.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'</span>
+<span style="color: green">'&nbsp;Postconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Creates&nbsp;a&nbsp;new&nbsp;part&nbsp;document.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Creates&nbsp;a&nbsp;loft&nbsp;feature.</span>
+<span style="color: green">'&nbsp;3.&nbsp;Prints&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;the&nbsp;feature&nbsp;type&nbsp;and&nbsp;feature&nbsp;name&nbsp;of&nbsp;the&nbsp;loft&nbsp;</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;feature.</span>
+<span style="color: green">'&nbsp;4.&nbsp;Accesses&nbsp;the&nbsp;guide&nbsp;curves&nbsp;in&nbsp;the&nbsp;loft&nbsp;feature.</span>
+<span style="color: green">'&nbsp;5.&nbsp;Prints&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;whether&nbsp;the</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;loft&nbsp;is&nbsp;a&nbsp;boss&nbsp;feature,&nbsp;the&nbsp;number&nbsp;guide</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;curves&nbsp;in&nbsp;the&nbsp;loft,&nbsp;and&nbsp;the&nbsp;feature&nbsp;types&nbsp;of&nbsp;the&nbsp;
+'    guide&nbsp;curves.</span>
+<span style="color: green">'&nbsp;6.&nbsp;Releases&nbsp;access&nbsp;to&nbsp;the&nbsp;loft&nbsp;feature.</span>
+<span style="color: green">'&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'----------------------------------------</span>
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color: blue">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color: blue">Imports</span>&nbsp;System
+<span style="color: blue">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color: blue">Partial</span>&nbsp;<span style="color: blue">Class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModel&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color: blue">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swFeatureManager&nbsp;<span style="color: blue">As</span>&nbsp;FeatureManager
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swRefPlane&nbsp;<span style="color: blue">As</span>&nbsp;RefPlane
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSketchManager&nbsp;<span style="color: blue">As</span>&nbsp;SketchManager
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSketchSegment&nbsp;<span style="color: blue">As</span>&nbsp;SketchSegment
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swFeature&nbsp;<span style="color: blue">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swLoftFeatureData&nbsp;<span style="color: blue">As</span>&nbsp;LoftFeatureData
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;pointArray&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;points()&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;guideCurves&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;guideCurve&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;nbrGuideCurves&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;i&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;status&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;<span style="color: blue">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Open&nbsp;new&nbsp;part&nbsp;document</span> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>NewDocument</b>(<span style="color: #a31515">&quot;C:\ProgramData\SolidWorks\SolidWorks&nbsp;2015\templates\Part.prtdot&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Create&nbsp;reference&nbsp;plane</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Right&nbsp;Plane&quot;</span>,&nbsp;<span style="color: #a31515">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatureManager&nbsp;=&nbsp;swModel.<b>FeatureManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRefPlane&nbsp;=&nbsp;swFeatureManager.<b>InsertRefPlane</b>(8,&nbsp;0.0635,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Create&nbsp;circle&nbsp;for&nbsp;loft&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Plane1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager&nbsp;=&nbsp;swModel.<b>SketchManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager.<b>InsertSketch</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;swSketchManager.<b>CreateCircle</b>(-0.0#,&nbsp;0.0#,&nbsp;0.0#,&nbsp;0.003857,&nbsp;-0.009744,&nbsp;0.0#)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager.<b>InsertSketch</b>(<span style="color: blue">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Create&nbsp;another&nbsp;circle&nbsp;for&nbsp;loft&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Right&nbsp;Plane&quot;</span>,&nbsp;<span style="color: #a31515">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager.<b>InsertSketch</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;swSketchManager.<b>CreateCircle</b>(-0.0#,&nbsp;0.0#,&nbsp;0.0#,&nbsp;0.014007,&nbsp;-0.029232,&nbsp;0.0#)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager.<b>InsertSketch</b>(<span style="color: blue">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Create&nbsp;sketch&nbsp;for&nbsp;guide&nbsp;curve</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Front&nbsp;Plane&quot;</span>,&nbsp;<span style="color: #a31515">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ReDim</span>&nbsp;points(8)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(0)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(1)&nbsp;=&nbsp;0.0324150959148675
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(2)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(3)&nbsp;=&nbsp;0.02176137524458
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(4)&nbsp;=&nbsp;0.0209549481725162
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(5)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(6)&nbsp;=&nbsp;0.0635
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(7)&nbsp;=&nbsp;0.0104797609372824
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(8)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointArray&nbsp;=&nbsp;points
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager.<b>InsertSketch</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;swSketchManager.<b>CreateSpline</b>((pointArray))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager.<b>InsertSketch</b>(<span style="color: blue">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Create&nbsp;loft&nbsp;feature&nbsp;with&nbsp;guide&nbsp;curve</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch2&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch3&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCH&quot;</span>,&nbsp;0.0635,&nbsp;0,&nbsp;-0.0104797609372824,&nbsp;<span style="color: blue">False</span>,&nbsp;1,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch2&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;-0.0324150959148675,&nbsp;<span style="color: blue">True</span>,&nbsp;1,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch3&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">True</span>,&nbsp;4098,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swFeatureManager.<b>InsertProtrusionBlend2</b>(<span style="color: blue">False</span>,&nbsp;<span style="color: blue">True</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;1,&nbsp;0,&nbsp;0,&nbsp;1,&nbsp;1,&nbsp;<span style="color: blue">True</span>,&nbsp;<span style="color: blue">True</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">True</span>,&nbsp;<span style="color: blue">True</span>,&nbsp;<span style="color: blue">True</span>,&nbsp;swGuideCurveInfluence_e.swGuideCurveInfluenceNextGlobal)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Feature:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Type:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swFeature.<b>GetTypeName2</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Name:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swFeature.<b>Name</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Change&nbsp;the&nbsp;orientation&nbsp;of&nbsp;the&nbsp;view</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ShowNamedView2</b>(<span style="color: #a31515">&quot;*Isometric&quot;</span>,&nbsp;7)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Access&nbsp;loft&nbsp;feature&nbsp;data,&nbsp;get&nbsp;guide&nbsp;curves,</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'get&nbsp;feature&nbsp;type&nbsp;of&nbsp;guide&nbsp;curves,&nbsp;and&nbsp;release</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'access&nbsp;to&nbsp;loft&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swLoftFeatureData&nbsp;=&nbsp;swFeature.<b>GetDefinition</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;Boss&nbsp;feature:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swLoftFeatureData.<b>IsBossFeature</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrGuideCurves&nbsp;=&nbsp;swLoftFeatureData.<b>GetGuideCurvesCount</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;Number&nbsp;of&nbsp;guide&nbsp;curves:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrGuideCurves)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swLoftFeatureData.<b>AccessSelections</b>(swModel,&nbsp;<span style="color: blue">Nothing</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Guide&nbsp;curve:&nbsp;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;guideCurves&nbsp;=&nbsp;swLoftFeatureData.<b>guideCurves</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color: blue">To</span>&nbsp;(nbrGuideCurves&nbsp;-&nbsp;1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;guideCurve&nbsp;=&nbsp;guideCurves(i)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Type&nbsp;of&nbsp;feature:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swLoftFeatureData.<b>GetGuideCurvesType</b>(i))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Next</span>&nbsp;i
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swLoftFeatureData.<b>ReleaseSelectionAccess</b>()
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;swApp&nbsp;<span style="color: blue">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color: blue">End</span>&nbsp;<span style="color: blue">Class</span></font></pre>
+
+</body>
+
+</html>

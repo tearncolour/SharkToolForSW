@@ -1,0 +1,198 @@
+<html>
+
+<head>
+<title>Create Machining Costing Analysis Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,Costing analysis">
+<meta name=MS-HKWD content="VBA examples">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS Costing API 
+ Help</span></h1>
+<h1>Create Machining Costing Analysis Example (VBA)</h1>
+<p>This example shows how to create a machining Costing analysis.</p>
+
+<pre>'-----------------------------------------------
+' Preconditions:
+' 1. Open:
+'    <b>C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\costing\machined_part.sldprt</b>
+' 2. Verify that the Costing templates exist by clicking <b>Tools &gt; Options &gt;</b>
+'    <b>System Options &gt; File Locations</b> and selecting <b>Costing templates</b> in
+'    <b>Show folders for</b> in SOLIDWORKS. Click <b>Cancel</b> to close the dialog.
+' 3. Add a reference to <b>SldCosting API 20</b><i>nn</i> <b>Type Library</b>.
+' 4. Open the Immediate window.
+' 5. Run the macro.
+'
+' Postconditions:
+' 1. Creates machining Costing analysis, which might
+'    take one or more minutes to complete.
+' 2. Examine the Immediate window
+'
+<font size="2">'&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;part&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not<br>'&nbsp;save&nbsp;changes.</font>
+'------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swCosting As SldCostingAPI.CostManager
+Dim swCostingPart As SldCostingAPI.CostPart
+Dim swCostingBody As SldCostingAPI.CostBody
+Dim swCostingModel As Object
+Dim swCostingAnalysis As SldCostingAPI.CostAnalysis
+Dim swCostingMachining As SldCostingAPI.CostAnalysisMachining
+Dim machiningCostingTemplatePathName As String
+Dim machiningCostingReportTemplateFolderName As String
+Dim nbrMachiningCostingTemplate As Long
+Dim nbrCommonCostingTemplate As Long
+Dim commonCostingTemplates As Variant
+Dim machiningCostingTemplates As Variant
+Dim nbrCostingBodies As Long
+Dim costingBodies As Variant
+Dim costingBodyName As String
+Dim i As Long
+Dim isBody as Boolean
+Dim swCostingFeat As SldCostingAPI.CostFeature
+Dim swCostingNextFeat As SldCostingAPI.CostFeature
+Dim swCostingSubFeat As SldCostingAPI.CostFeature
+Dim swCostingNextSubFeat As SldCostingAPI.CostFeature</pre>
+<pre>Sub main()</pre>
+<blockquote>
+	<pre>Set swApp = Application.SldWorks
+Set swModel = swApp.<b>ActiveDoc</b>
+Set swModelDocExt = swModel.<b>Extension</b></pre>
+	<pre>' Get Costing templates names
+Debug.Print (&quot;Costing template folders:&quot;)
+machiningCostingTemplatePathName = swApp.<b>GetUserPreferenceStringValue</b>(swUserPreferenceStringValue_e.swFileLocationsCostingTemplates)
+Debug.Print &quot;    Name of Costing template folder: &quot; &amp; machiningCostingTemplatePathName
+machiningCostingReportTemplateFolderName = swApp.<b>GetUserPreferenceStringValue</b>(swUserPreferenceStringValue_e.swFileLocationsCostingReportTemplateFolder)
+Debug.Print &quot;    Name of Costing report template folder: &quot; &amp; machiningCostingReportTemplateFolderName
+Debug.Print &quot;&quot;</pre>
+	<pre>' Get CostingManager
+Set swCosting = swModelDocExt.<b>GetCostingManager</b>
+swCosting.<b>WaitForUIUpdate</b>
+</pre>
+	<pre>' Get the number of templates
+nbrMachiningCostingTemplate = swCosting.<b>GetTemplateCount</b>(swcCostingType_e.swcCostingType_Machining)
+nbrCommonCostingTemplate = swCosting.<b>GetTemplateCount</b>(swcCostingType_e.swcCostingType_Common)</pre>
+	<pre>' Get names of templates
+machiningCostingTemplates = swCosting.<b>GetTemplatePathnames</b>(swcCostingType_e.swcCostingType_Machining)
+commonCostingTemplates = swCosting.<b>GetTemplatePathnames</b>(swcCostingType_e.swcCostingType_Common)</pre>
+	<pre>ReDim Preserve machiningCostingTemplates(nbrMachiningCostingTemplate)
+ReDim Preserve commonCostingTemplates(nbrCommonCostingTemplate)</pre>
+	<pre>Debug.Print (&quot;Costing templates:&quot;)</pre>
+	<pre>' Print names of templates to Immediate window
+For i = 0 To (UBound(machiningCostingTemplates) - 1)
+    Debug.Print &quot;    Name of machining Costing template: &quot; &amp; machiningCostingTemplates(i)
+Next i</pre>
+	<pre>Debug.Print &quot;&quot;</pre>
+	<pre>For i = 0 To (UBound(commonCostingTemplates) - 1)
+    Debug.Print &quot;    Name of common Costing template: &quot; &amp; commonCostingTemplates(i)
+Next i</pre>
+	<pre>Debug.Print &quot;&quot;
+</pre>
+	<pre>' Get Costing part
+Set swCostingModel = swCosting.<b>CostingModel</b>
+Set swCostingPart = swCostingModel</pre>
+	<pre>' Create common Costing analysis
+Set swCostingAnalysis = swCostingPart.<b>CreateCostAnalysis</b>(&quot;c:\program files\solidworks corp\solidworks\lang\english\costing templates\multibodytemplate_default(englishstandard).sldctc&quot;)</pre>
+	<pre>' Get common Costing analysis data
+Debug.Print (&quot;Common Costing analysis data:&quot;)
+Debug.Print (&quot;    Template name:  &quot; &amp; swCostingAnalysis.<b>costingTemplateName</b>)
+Debug.Print (&quot;    Currency code: &quot; &amp; swCostingAnalysis.<b>CurrencyCode</b>)
+Debug.Print (&quot;    Currency name: &quot; &amp; swCostingAnalysis.<b>CurrencyName</b>)
+Debug.Print (&quot;    Currency separator: &quot; &amp; swCostingAnalysis.<b>CurrencySeparator</b>)
+Debug.Print (&quot;    Total manufacturing cost: &quot; &amp; swCostingAnalysis.<b>GetManufacturingCost</b>)
+Debug.Print (&quot;    Material costs: &quot; &amp; swCostingAnalysis.<b>GetMaterialCost</b>)
+Debug.Print (&quot;    Setup cost: &quot; &amp; swCostingAnalysis.<b>GetSetupCost</b>)
+Debug.Print (&quot;    Total cost to charge: &quot; &amp; swCostingAnalysis.<b>GetTotalCostToCharge</b>)
+Debug.Print (&quot;    Total cost to manufacture: &quot; &amp; swCostingAnalysis.<b>GetTotalCostToManufacture</b>)
+Debug.Print (&quot;    Lot size: &quot; &amp; swCostingAnalysis.<b>LotSize</b>)
+Debug.Print (&quot;    Total quantity: &quot; &amp; swCostingAnalysis.<b>TotalQuantity</b>)
+Debug.Print &quot;&quot;</pre>
+	<pre>' Get Costing bodies
+nbrCostingBodies = swCostingPart.<b>GetBodyCount
+</b>isBody = False
+If (nbrCostingBodies &gt; 0) Then
+    Debug.Print &quot;Costing bodies:&quot;
+    Debug.Print (&quot;    Number of Costing bodies: &quot; &amp; nbrCostingBodies)
+    costingBodies = swCostingPart.<b>GetBodies</b>
+        For i = 0 To (nbrCostingBodies - 1)
+            Set swCostingBody = costingBodies(i)
+            costingBodyName = swCostingBody.<b>GetName</b>
+            Debug.Print (&quot;    Name of Costing body: &quot; &amp; costingBodyName)
+            ' Make sure body is machining body
+            If (swCostingBody.<b>GetBodyType</b> = swcBodyType_e.swcBodyType_Machined) Then
+                isBody = True
+                ' Determine analysis status of Costing body
+                Select Case swCostingBody.BodyStatus
+                    Case swcBodyStatus_e.swcBodyStatus_NotAnalysed
+                        ' Create Costing analysis
+                        Set swCostingAnalysis = swCostingBody.<b>CreateCostAnalysis</b>(&quot;c:\program files\solidworks corp\solidworks\lang\english\costing templates\machiningtemplate_default(englishstandard).sldcts&quot;)
+                        Debug.Print (&quot;    Creating machining Costing analysis for: &quot; &amp; swCostingBody.<b>GetName</b>)
+                    Case swcBodyStatus_e.swcBodyStatus_Analysed
+                        ' Get Costing analysis
+                        Set swCostingAnalysis = swCostingBody.<b>GetCostAnalysis</b>
+                        Debug.Print (&quot;    Getting machining Costing analysis for: &quot; &amp; swCostingBody.<b>GetName</b>)
+                    Case swcBodyStatus_e.swcBodyStatus_Excluded
+                        ' Body excluded from Costing analysis
+                        Debug.Print (&quot;    Excluded from machining Costing analysis: &quot; &amp; swCostingBody.<b>GetName</b>)
+                    Case swcBodyStatus_e.swcBodyStatus_AssignedCustomCost
+                        ' Body has an assigned custom Cost
+                        Debug.Print (&quot;    Custom cost assigned: &quot; &amp; swCostingBody.<b>GetName</b>)
+                End Select                </pre>
+	<pre>                Debug.Print &quot;&quot;                </pre>
+	<pre>            End If
+        Next i
+End If
+
+If Not isBody Then
+    Debug.Print (&quot;&quot;)
+    Debug.Print (&quot;No bodies in part! Exiting macro.&quot;)
+    Exit Sub
+End If</pre>
+	<pre>' Get machining Costing Analysis data
+Set swCostingMachining = swCostingAnalysis.<b>GetSpecificAnalysis</b>
+Debug.Print &quot;Machining Costing analysis: &quot;
+Debug.Print (&quot;    Current material: &quot; &amp; swCostingMachining.<b>CurrentMaterial</b>)
+Debug.Print (&quot;    Current material class: &quot; &amp; swCostingMachining.<b>CurrentMaterialClass</b>)
+Debug.Print (&quot;    Current plate thickness: &quot; &amp; swCostingMachining.<b>CurrentPlateThickness</b>)</pre>
+	<pre>Debug.Print (&quot;&quot;)</pre>
+	<pre>' Get Costing features
+Debug.Print &quot;Costing features:&quot;
+Set swCostingFeat = swCostingAnalysis.<b>GetFirstCostFeature</b>
+While Not swCostingFeat Is Nothing
+    Debug.Print (&quot;    Feature: &quot; &amp; swCostingFeat.<b>Name</b>)
+    Debug.Print (&quot;      Type: &quot; &amp; swCostingFeat.<b>GetType</b>)
+    Debug.Print (&quot;        Setup related: &quot; &amp; swCostingFeat.<b>IsSetup</b>)
+    Debug.Print (&quot;        Overridden: &quot; &amp; swCostingFeat.<b>IsOverridden</b>)
+    Debug.Print (&quot;        Combined cost: &quot; &amp; swCostingFeat.<b>CombinedCost</b>)
+    Debug.Print (&quot;        Combined time: &quot; &amp; swCostingFeat.<b>CombinedTime</b>)
+    </pre>
+	<pre>    Set swCostingSubFeat = swCostingFeat.<b>GetFirstSubFeature</b>
+    While Not swCostingSubFeat Is Nothing
+        Debug.Print (&quot;      Subfeature: &quot; &amp; swCostingSubFeat.<b>Name</b>)
+        Debug.Print (&quot;        Type: &quot; &amp; swCostingSubFeat.<b>GetType</b>)
+        Debug.Print (&quot;          Setup related: &quot; &amp; swCostingSubFeat.<b>IsSetup</b>)
+        Debug.Print (&quot;          Overridden: &quot; &amp; swCostingSubFeat.<b>IsOverridden</b>)
+        Debug.Print (&quot;          Combined cost: &quot; &amp; swCostingSubFeat.<b>CombinedCost</b>)
+        Debug.Print (&quot;          Combined time: &quot; &amp; swCostingSubFeat.<b>CombinedTime</b>)
+        Set swCostingNextSubFeat = swCostingSubFeat.<b>GetNextFeature</b>
+        Set swCostingSubFeat = Nothing
+        Set swCostingSubFeat = swCostingNextSubFeat
+        Set swCostingNextSubFeat = Nothing
+    Wend
+    Set swCostingNextFeat = swCostingFeat.<b>GetNextFeature</b>
+    Set swCostingFeat = Nothing
+    Set swCostingFeat = swCostingNextFeat
+    Set swCostingNextFeat = Nothing
+Wend
+    </pre>
+</blockquote>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

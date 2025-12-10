@@ -1,0 +1,184 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Excel Design Table Worksheet Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,design tables">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3356>
+<meta name=layout-width content=750>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Get Excel Design Table Worksheet Example (VBA)</h1>
+
+<p>This example shows how to get the Excel worksheet of a design table.</p>
+
+<pre>'-------------------------------------
+' Preconditions:
+' 1. Open a drawing document that contains an
+'    Excel-based design table.
+' 2. Add a reference to <b>Microsoft Excel</b><i> release </i><b>Object Library</b>.
+' 3. Open the Immediate window.
+'
+' Postconditions: Examine the Immediate window.
+'-------------------------------------
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim myModelDoc As SldWorks.ModelDoc2
+    Dim myDrawingDoc As SldWorks.DrawingDoc
+    Dim myView As SldWorks.View
+    Dim myDesignTable As SldWorks.DesignTable
+    Dim designTableDoc As SldWorks.ModelDoc2
+    Dim hasDT As Boolean
+    Dim viewModelName As String
+    Dim longstatus As Long
+    Dim myWorksheet As Excel.Worksheet
+    Dim tableRowCount As Long, tableColCount As Long
+    Dim tableFirstRow As Long, tableFirstCol As Long</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set myModelDoc = swApp.<b>ActiveDoc</b>
+    Set myDrawingDoc = myModelDoc
+    Set myView = myDrawingDoc.<b>GetFirstView</b>
+    While Not myView Is Nothing
+        hasDT = myView.<b>HasDesignTable</b>()
+        If Not (hasDT = 0) Then
+            viewModelName = myView.<b>GetReferencedModelName</b>()
+            Set designTableDoc = swApp.<b>ActivateDoc2</b>(viewModelName, True, longstatus)
+            Set myDesignTable = designTableDoc.<b>GetDesignTable</b>()
+            If Not myDesignTable Is Nothing Then
+                myDesignTable.<b>Attach</b>
+            ' These methods deal with the actual design table data,
+            ' not necessarily all of the information
+            ' that is in the Excel worksheet
+                Debug.Print &quot;Total Row Count = &quot; &amp; myDesignTable.<b>GetTotalRowCount</b>
+                Debug.Print &quot;      Col Count = &quot; &amp; myDesignTable.<b>GetTotalColumnCount</b>
+                Debug.Print &quot;Start Row = &quot; &amp; myDesignTable.<b>GetStartRowNumber</b>
+                Debug.Print &quot;      Col = &quot; &amp; myDesignTable.<b>GetStartColumnNumber</b>
+            ' These methods and properties deal with the information in
+            ' the Excel worksheet
+                tableRowCount = myDesignTable.<b>GetVisibleRowCount</b>
+                Debug.Print &quot;Table row count = &quot; &amp; tableRowCount
+                tableColCount = myDesignTable.<b>GetVisibleColumnCount</b>
+                Debug.Print &quot;Table column count = &quot; &amp; tableColCount
+                tableFirstRow = myDesignTable.<b>GetVisibleTopRowNumber</b>
+                tableFirstCol = myDesignTable.<b>GetVisibleLeftColumnNumber</b>
+                Debug.Print &quot;Visible Row Count = &quot; &amp; tableRowCount
+                Debug.Print &quot;        Col Count = &quot; &amp; tableColCount
+                Debug.Print &quot;Visible Top Row  = &quot; &amp; tableFirstRow
+                Debug.Print &quot;        Left Col = &quot; &amp; tableFirstCol
+            ' Exposing the Excel interface provides you with more information
+            ' than currently available from the SOLIDWORKS API; for example,
+            ' DXF/DWG translation can now reproduce a table that looks like
+            ' the design table
+                Set myWorksheet = myDesignTable.<b>Worksheet</b>
+                If Not myWorksheet Is Nothing Then
+                    Debug.Print &quot;&quot;
+                    Debug.Print &quot;The name of the worksheet is &quot; &amp; myWorksheet.Name
+                    Dim i As Integer, rowIndex As Integer
+                    Dim j As Integer, colIndex As Integer
+                    Dim cellRange As Excel.Range
+                    Dim rowRange As Excel.Range
+                    Dim colRange As Excel.Range
+                    Dim rowHeight As Double, colWidth As Double
+                    Dim rowHidden As Boolean, colHidden As Boolean
+                    Dim cellValue As String, cellText As String
+                    Dim horzalign As Integer, vertalign As Integer, ismerged As Boolean
+                    Dim halignStr As String, valignStr As String
+                    For i = 1 To tableRowCount
+                        rowIndex = tableFirstRow + i - 1
+                        Set rowRange = myWorksheet.Rows(rowIndex)
+                        rowHeight = rowRange.rowHeight
+                        rowHidden = rowRange.Hidden
+                        Debug.Print &quot;Row[&quot; &amp; rowIndex &amp; &quot;] Height = &quot; &amp; rowHeight &amp; &quot;, Hidden = &quot; &amp; rowHidden
+                    Next i
+                    For j = 1 To tableColCount
+                        colIndex = tableFirstCol + j - 1
+                        Set colRange = myWorksheet.Columns(colIndex)
+                        colWidth = colRange.ColumnWidth
+                        colHidden = colRange.Hidden
+                        Debug.Print &quot;Col[&quot; &amp; colIndex &amp; &quot;] Width = &quot; &amp; colWidth &amp; &quot;, Hidden = &quot; &amp; colHidden
+                    Next j</pre>
+<pre>                    For i = 1 To tableRowCount
+                        rowIndex = tableFirstRow + i - 1
+                        For j = 1 To tableColCount
+                            colIndex = tableFirstCol + j - 1
+                            Set cellRange = myWorksheet.Cells(rowIndex, colIndex)
+                            cellValue = cellRange.Value2
+                            cellText = cellRange.Text
+                            horzalign = cellRange.HorizontalAlignment
+                            Select Case horzalign
+                            Case XlHAlign.xlHAlignLeft
+                                halignStr = &quot;Left&quot;
+                            Case XlHAlign.xlHAlignCenter
+                                halignStr = &quot;Center&quot;
+                            Case XlHAlign.xlHAlignRight
+                                halignStr = &quot;Right&quot;
+                            Case XlHAlign.xlHAlignCenterAcrossSelection
+                                halignStr = &quot;Center Across&quot;
+                            Case XlHAlign.xlHAlignDistributed
+                                halignStr = &quot;Distributed&quot;
+                            Case Else
+                                halignStr = &quot;unknown&quot;
+                            End Select
+                            vertalign = cellRange.VerticalAlignment
+                            Select Case vertalign
+                            Case XlVAlign.xlVAlignBottom
+                                valignStr = &quot;Bottom&quot;
+                            Case XlVAlign.xlVAlignCenter
+                                valignStr = &quot;Middle&quot;
+                            Case XlVAlign.xlVAlignTop
+                                valignStr = &quot;Top&quot;
+                            Case XlVAlign.xlVAlignDistributed
+                                valignStr = &quot;Distributed&quot;
+                            Case Else
+                                valignStr = &quot;unknown&quot;
+                            End Select
+                            ismerged = cellRange.MergeCells
+                            Debug.Print &quot;Cell[&quot; &amp; rowIndex &amp; &quot;,&quot; &amp; colIndex &amp; &quot;] = &quot; &amp; cellText &amp; &quot; &quot; &amp; cellValue &amp; &quot; &quot; &amp; halignStr &amp; &quot; &quot; &amp; valignStr &amp; &quot; &quot; &amp; ismerged
+                        Next j
+                    Next i
+                End If
+                Set myWorksheet = Nothing
+                myDesignTable.<b>Detach</b>
+            End If
+            swApp.<b>CloseDoc</b> viewModelName
+        End If
+        Set myView = myView.<b>GetNextView</b>()
+    Wend</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

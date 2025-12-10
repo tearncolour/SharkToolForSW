@@ -1,0 +1,147 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html LANG=EN-US>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Traverse Assembly at Component and Feature Level Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=date content="10 11, 2002 4:20:26 PM">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2696>
+<meta name=layout-width content=1395>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body LANG=EN-US>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Traversing Assembly at Component and Feature Levels Example (VBA)</h1>
+
+<p>This example shows how to traverse an assembly at the component and feature 
+levels. </p>
+<pre>'------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified assembly document to open
+'    exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Specified assembly document opens.
+' 2. Traverses the components and features in the assembly.
+' 3. Examine the Immediate window.
+'-------------------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>Sub TraverseFeatureFeatures(swFeat As SldWorks.Feature, nLevel As Long)</pre>
+<pre>    Dim swSubFeat As SldWorks.Feature
+    Dim swSubSubFeat As SldWorks.Feature
+    Dim swSubSubSubFeat As SldWorks.Feature
+    Dim sPadStr As String
+    Dim i As Long</pre>
+<pre>    For i = 0 To nLevel
+        sPadStr = sPadStr + &quot;  &quot;
+    Next i</pre>
+<pre>    While Not swFeat Is Nothing
+        Debug.Print sPadStr + swFeat.<b>Name</b> + &quot; [&quot; + swFeat.<b>GetTypeName</b> + &quot;]&quot;
+        Set swSubFeat = swFeat.<b>GetFirstSubFeature</b>
+        While Not swSubFeat Is Nothing
+            Debug.Print sPadStr + &quot;  &quot; + swSubFeat.<b>Name</b> + &quot; [&quot; + swSubFeat.<b>GetTypeName</b> + &quot;]&quot;
+            Set swSubSubFeat = swSubFeat.<b>GetFirstSubFeature</b>
+            While Not swSubSubFeat Is Nothing
+                Debug.Print sPadStr + &quot;    &quot; + swSubSubFeat.<b>Name</b> + &quot; [&quot; + swSubSubFeat.<b>GetTypeName</b> + &quot;]&quot;
+                Set swSubSubSubFeat = swSubFeat.<b>GetFirstSubFeature</b>
+                While Not swSubSubSubFeat Is Nothing
+                    Debug.Print sPadStr + &quot;      &quot; + swSubSubSubFeat.<b>Name</b> + &quot; [&quot; + swSubSubSubFeat.<b>GetTypeName</b> + &quot;]&quot;
+                    Set swSubSubSubFeat = swSubSubSubFeat.<b>GetNextSubFeature</b>()
+                Wend
+                Set swSubSubFeat = swSubSubFeat.<b>GetNextSubFeature</b>()
+            Wend
+            Set swSubFeat = swSubFeat.<b>GetNextSubFeature</b>()
+        Wend
+        Set swFeat = swFeat.<b>GetNextFeature</b>
+    Wend</pre>
+<pre>End Sub</pre>
+<pre>Sub TraverseComponentFeatures(swComp As SldWorks.Component2, nLevel As Long)</pre>
+<pre>    Dim swFeat As SldWorks.Feature
+
+    Set swFeat = swComp.<b>FirstFeature</b>
+    TraverseFeatureFeatures swFeat, nLevel    </pre>
+<pre>End Sub</pre>
+<pre>Sub TraverseComponent(swComp As SldWorks.Component2, nLevel As Long)</pre>
+<pre>    Dim vChildComp As Variant
+    Dim swChildComp As SldWorks.Component2
+    Dim swCompConfig As SldWorks.Configuration
+    Dim sPadStr As String
+    Dim i As Long</pre>
+<pre>    For i = 0 To nLevel - 1
+        sPadStr = sPadStr + &quot;  &quot;
+    Next i</pre>
+<pre>    vChildComp = swComp.<b>GetChildren</b>
+    For i = 0 To UBound(vChildComp)
+        Set swChildComp = vChildComp(i)
+        Debug.Print sPadStr &amp; &quot;+&quot; &amp; swChildComp.<b>Name2</b> &amp; &quot; &lt;&quot; &amp; swChildComp.<b>ReferencedConfiguration</b> &amp; &quot;&gt;&quot;
+        TraverseComponentFeatures swChildComp, nLevel
+        TraverseComponent swChildComp, nLevel + 1
+    Next i</pre>
+<pre>End Sub</pre>
+<pre>Sub TraverseModelFeatures(swModel As SldWorks.ModelDoc2, nLevel As Long)</pre>
+<pre>    Dim swFeat As SldWorks.Feature</pre>
+<pre>    Set swFeat = swModel.<b>FirstFeature</b>
+    TraverseFeatureFeatures swFeat, nLevel</pre>
+<pre>End Sub</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swAssy As SldWorks.AssemblyDoc
+    Dim swConf As SldWorks.Configuration
+    Dim swRootComp As SldWorks.Component2
+    Dim nStart As Long
+    Dim bRet As Boolean
+    Dim fileName As String
+    Dim errors As Long
+    Dim warnings As Long</pre>
+<pre>    Set swApp = CreateObject(&quot;SldWorks.Application&quot;)    </pre>
+<pre>    ' Open assembly
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\smartcomponents\stepped_shaft.sldasm&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocASSEMBLY, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)</pre>
+<pre>    Set swConf = swModel.<b>GetActiveConfiguration</b>
+    Set swRootComp = swConf.<b>GetRootComponent3</b>(True)</pre>
+<pre>    nStart = Timer</pre>
+<pre>    Debug.Print &quot;File = &quot; &amp; swModel.<b>GetPathName</b></pre>
+<pre>    ' Traverse components and features
+    TraverseModelFeatures swModel, 1
+    TraverseComponent swRootComp, 1
+    </pre>
+<pre>    Debug.Print &quot;&quot;
+    Debug.Print &quot;Time = &quot; &amp; Timer - nStart &amp; &quot; seconds&quot;</pre>
+<pre>End Sub
+</pre>
+
+</body>
+
+</html>

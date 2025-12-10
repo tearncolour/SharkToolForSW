@@ -1,0 +1,308 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Annotations Arrays Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=6241>
+<meta name=layout-width content=1214>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+ <META NAME="MS-HKWD" CONTENT="VBA examples,annotations">
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Get Annotations Arrays Example (VBA)</h1>
+
+<p>Methods added to the IView interface in SOLIDWORKS API 2009 SP1 can return arrays 
+of each annotation type in a drawing view.<!--kadov_tag{{<spaces>}}--> This example 
+shows how to call these methods.</p>
+<pre>'-----------------------------------------------------------------------------
+' Preconditions: Verify that the specified path and template file exist.
+'
+' Postconditions:
+' 1. Creates a part with annotations.
+' 2. Click <b>Save</b>.
+' 3. Creates a drawing with third-angle views of the part
+'    and annotations.
+' 4. Iterates through each annotation array and pops up message boxes
+'    containing information about each annotation in the drawing views.
+' 5. Click <b>OK</b> to close each message box.
+'---------------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Const filedir As String = &quot;C:\ProgramData\SOLIDWORKS\SOLIDWORKS 2016\templates\&quot;
+Const TemplateName As String = &quot;C:\ProgramData\SOLIDWORKS\SOLIDWORKS 2016\templates\Drawing.drwdot&quot;
+Const TemplateSize As Long = swDwgTemplateBsize
+Const PaperSize As Long = swDwgPaperBsize
+Const ScaleNum As Double = 1#
+Const ScaleDenom As Double = 2#
+Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swFeatMgr As SldWorks.FeatureManager
+Dim Response As Integer
+Dim ThirdAngle As Boolean
+Dim swDraw As SldWorks.DrawingDoc
+Dim swSheet As SldWorks.Sheet
+Dim i As Long
+Dim j As Long
+Dim retval As Boolean
+Dim swView As SldWorks.View
+Dim count As Long
+Dim Annotations As Variant
+Dim msg As String</pre>
+<pre>Sub main()</pre>
+<pre>    'Create a part
+    Build_Part
+    </pre>
+<pre>        'Create a drawing of the part
+        Set swApp = Application.SldWorks
+        Set swModel = swApp.<b>ActiveDoc</b>
+        Set swDraw = swApp.<b>NewDocument</b>(TemplateName, PaperSize, 0#, 0#)    </pre>
+<pre>        ThirdAngle = False
+        swDraw.<b>ActivateSheet</b> &quot;Sheet1&quot;
+        Set swSheet = swDraw.<b>GetCurrentSheet</b>
+        swSheet.<b>SetSize</b> PaperSize, 0#, 0#
+        swSheet.<b>SetScale</b> ScaleNum, ScaleDenom, True, True
+    
+        ' Create third-angle drawing views
+        ' Pop up Save As dialog
+        ' Click Save in the dialog
+        retval = swDraw.<b>Create3rdAngleViews2</b>(swModel.<b>GetPathName</b>)    </pre>
+<pre>        Dim LocX As Double
+        Dim LocY As Double
+        LocX = 0.2635088599471
+        LocY = 0.1934578136726    </pre>
+<pre>        ' Create isometric drawing view
+        swDraw.<b>CreateDrawViewFromModelView3</b> swModel.<b>GetPathName</b>, &quot;*Isometric&quot;, LocX, LocY, 0
+        swDraw.<b>ViewDisplayShaded</b>    </pre>
+<pre>        ' Insert display dimension annotations
+        ' from the current model
+        swDraw.<b>InsertModelAnnotations3</b> 0, swInsertDimensionsMarkedForDrawing, True, True, False, True        </pre>
+<pre>         ' Insert datum target symbol annotations
+         ' from the current model
+        swDraw.<b>InsertModelAnnotations3</b> 0, swInsertDatumTargets, True, True, False, True    </pre>
+<pre>        ' Insert geometric tolerance annotations
+        ' from the current model
+        swDraw.<b>InsertModelAnnotations3</b> 0, swInsertGTols, True, True, False, True    </pre>
+<pre>        ' Insert surface finish symbol annotations
+        ' from the current model
+        swDraw.<b>InsertModelAnnotations3</b> 0, swInsertSFSymbols, True, True, False, True    </pre>
+<pre>        ' Insert datum tag annotations from the current model
+        swDraw.<b>InsertModelAnnotations3</b> 0, swInsertDatums, True, True, False, True    </pre>
+<pre>        swDraw.<b>ForceRebuild3</b> True    </pre>
+<pre>        ' Iterate through all the views on the
+        ' drawing to find display dimensions
+        Set swView = swDraw.<b>GetFirstView</b>
+        Do While Not swView Is Nothing
+            count = swView.<b>GetDisplayDimensionCount</b>
+            Dim DisplayDimension As SldWorks.DisplayDimension
+            Dim swDim As SldWorks.Dimension
+            ' Iterate through all the display dimension
+            ' annotations in each drawing view that has them
+            If count &gt; 0 Then
+                Annotations = swView.<b>GetDisplayDimensions</b>
+                For j = 0 To UBound(Annotations)
+                    Set DisplayDimension = Annotations(j)
+                    Set swDim = DisplayDimension.<b>GetDimension</b>
+                    ' For each annotation in each drawing view,
+                    ' pop up a message box with the
+                    ' annotation name and corresponding dimension
+                    msg = &quot;Display dimension found: &quot; &amp; swView.GetName2 &amp; &quot;:&quot; &amp; DisplayDimension.<b>GetAnnotation</b>.<b>GetName</b> &amp; &quot; = &quot; &amp; swDim.<b>GetSystemValue2</b>(&quot;&quot;) &amp; &quot; meters&quot;
+                    swApp.<b>SendMsgToUser2</b> msg, swMbInformation, swMbOk
+                Next j
+            End If
+            Set swView = swView.<b>GetNextView</b>
+        Loop    </pre>
+<pre>        ' Iterate through all the views on the drawing
+        ' to find datum target symbols
+        Set swView = swDraw.<b>GetFirstView</b>
+        Do While Not swView Is Nothing
+            count = swView.<b>GetDatumTargetSymCount</b>
+            Dim dtsymbol As SldWorks.DatumTargetSym
+            ' Iterate through all the datum target symbol
+            ' annotations in each drawing view that has them
+            If count &gt; 0 Then
+                Annotations = swView.<b>GetDatumTargetSyms</b>
+                For j = 0 To UBound(Annotations)
+                    Set dtsymbol = Annotations(j)
+                    ' For each annotation in each drawing view,
+                    ' pop up a message box with the
+                    ' annotation name and name of each
+                    ' datum target symbol found
+                    msg = &quot;Datum target symbol found: &quot; &amp; swView.<b>GetName2</b> &amp; &quot;:&quot; &amp; dtsymbol.<b>GetAnnotation</b>.<b>GetName</b>
+                    swApp.<b>SendMsgToUser2</b> msg, swMbInformation, swMbOk
+                Next j
+            End If
+            Set swView = swView.<b>GetNextView</b>
+        Loop    </pre>
+<pre>        ' Iterate through all the views on the drawing
+        ' to find surface finish symbols
+        Set swView = swDraw.<b>GetFirstView</b>
+        Do While Not swView Is Nothing
+            count = swView.<b>GetSFSymbolCount</b>
+            Dim sfsymbol As SldWorks.sfsymbol
+            ' Iterate through all the surface
+            ' finish symbol annotations in each
+            ' drawing view that has them
+            If count &gt; 0 Then
+                Annotations = swView.<b>GetSFSymbols</b>
+                For j = 0 To UBound(Annotations)
+                    Set sfsymbol = Annotations(j)
+                    ' For each annotation in each drawing
+                    ' view, pop up a message box with the
+                    ' annotation name and name of each
+                    ' surface finish symbol found
+                    msg = &quot;Surface finish symbol found: &quot; &amp; swView.<b>GetName2</b> &amp; &quot;:&quot; &amp; sfsymbol.<b>GetAnnotation</b>.<b>GetName</b>
+                    swApp.<b>SendMsgToUser2</b> msg, swMbInformation, swMbOk
+                Next j
+            End If
+            Set swView = swView.<b>GetNextView</b>
+        Loop    </pre>
+<pre>        ' Iterate through all the views on the
+        ' drawing to find datum tags
+        Set swView = swDraw.<b>GetFirstView</b>
+        Do While Not swView Is Nothing
+            count = swView.<b>GetDatumTagCount</b>
+            Dim dTag As SldWorks.DatumTag
+            ' Iterate through all the datum tags
+            ' in each drawing view that has them
+            If count &gt; 0 Then
+                Annotations = swView.<b>GetDatumTags</b>
+                For j = 0 To UBound(Annotations)
+                    Set dTag = Annotations(j)
+                    ' For each annotation in each drawing view,
+                    ' pop up a message box with the
+                    ' annotation name and name
+                    ' of each datum tag found
+                    msg = &quot;Datum tag found: &quot; &amp; swView.<b>GetName2</b> &amp; &quot;:&quot; &amp; dTag.<b>GetAnnotation</b>.<b>GetName</b>
+                    swApp.<b>SendMsgToUser2</b> msg, swMbInformation, swMbOk
+                Next j
+            End If
+            Set swView = swView.<b>GetNextView</b>
+        Loop    </pre>
+<pre>        ' Iterate through all the views on the
+        ' drawing to find geometric tolerances
+        Set swView = swDraw.<b>GetFirstView</b>
+        Do While Not swView Is Nothing
+            count = swView.<b>GetGTolCount</b>
+            Dim gtol As SldWorks.gtol
+            ' Iterate through all the geometric
+            ' tolerance symbols in each drawing view
+            ' that has them
+            If count &gt; 0 Then
+                Annotations = swView.<b>GetGTols</b>
+                For j = 0 To UBound(Annotations)
+                    Set gtol = Annotations(j)
+                    ' For each annotation in each drawing
+                    ' view, pop up a message box with the
+                    ' annotation name and name of each
+                    ' geometric tolerance found
+                    msg = &quot;Geometric tolerance symbol found: &quot; &amp; swView.<b>GetName2</b> &amp; &quot;:&quot; &amp; gtol.<b>GetAnnotation</b>.<b>GetName</b>
+                    swApp.<b>SendMsgToUser2</b> msg, swMbInformation, swMbOk
+                Next j
+            End If
+            Set swView = swView.<b>GetNextView</b>
+        Loop    </pre>
+<pre>        ' In a similar fashion:
+        ' Get other annotations on the drawing, if they exist
+        ' Iterate through all the views on the drawing
+        ' Get the annotation count, and if greater than zero,
+        ' get the annotation array
+        ' Iterate on each array, and set an annotation object
+        ' to each array member
+        ' Annotations = swView.<b>GetDowelSymbols</b>
+        ' Annotations = swView.<b>GetMultiJogLeaders</b>
+        ' Annotations = swView.<b>GetDatumOrigins</b>
+        ' Annotations = swView.<b>GetCenterLines</b>
+        ' Annotations = swView.<b>GetCThreads</b>
+        ' Annotations = swView.<b>GetWeldSymbols</b>
+        ' Annotations = swView.<b>GetWeldBeads</b>
+        ' Annotations = swView.<b>GetTableAnnotations</b>        </pre>
+<pre>        swApp.<b>SetUserPreferenceToggle</b> swInputDimValOnCreate, True
+        swModel.<b>SetUserPreferenceToggle</b> swDisplayAnnotations, False    </pre>
+<pre>    End Sub    </pre>
+<pre>    Private Sub Build_Part()
+    ' Build a part with these annotations:
+    ' display dimensions, geometric tolerance
+    ' symbol, surface finish symbol,
+    ' datum tag symbol, and datum target symbol
+        Set swApp = Application.SldWorks
+        Set swModel = swApp.<b>NewDocument</b>(filedir + &quot;Part.prtdot&quot;, 0, 0#, 0#)
+        swModel.<b>SetUserPreferenceIntegerValue</b> swUnitsLinear, swMETER
+        swModel.<b>SetUserPreferenceDoubleValue</b> swMaterialPropertyDensity, 7800
+        swModel.<b>SetUserPreferenceStringValue</b> swMaterialPropertyCrosshatchPattern, &quot;ISO (Steel)&quot;
+        swModel.<b>SketchManager</b>.<b>InsertSketch</b> False
+
+        Dim Height As Double
+        Dim Width As Double
+        Height = 0.05
+        Width = 0.05        </pre>
+<pre>        swApp.<b>SetUserPreferenceToggle</b> swInputDimValOnCreate, False
+        swModel.<b>SketchManager</b>.<b>CreateLine</b> 0.01, 0.01, 0, 0.01, 0.01 + Height, 0
+
+        swModel.<b>ViewZoomtofit2</b>    </pre>
+<pre>        ' Add display dimension to line
+        swModel.<b>AddDimension2</b> 0, 0.01 + Height / 2, 0    </pre>
+<pre>        ' Add geometric tolerance to line
+        swModel.<b>InsertGtol</b>
+        swModel.<b>SketchManager</b>.<b>CreateLine</b> 0.01, 0.01, 0, 0.01 + Width, 0.01, 0
+
+        swModel.<b>ViewZoomtofit2</b>    </pre>
+<pre>        ' Add display dimension
+        swModel.<b>AddDimension2</b> 0.01 + Width / 2, 0, 0    </pre>
+<pre>        ' Add surface finish symbol to line
+        swModel.Extension.<b>InsertSurfaceFinishSymbol3</b> swSFBasic, swSTRAIGHT, 0.01, 0.01, 0.01, swSFCircular, swDOT_ARROWHEAD, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;    </pre>
+<pre>        swModel.SketchManager.<b>CreateLine</b>(0, 0, 0, 0, 0.01, 0).<b>ConstructionGeometry</b> = True    </pre>
+<pre>        swModel.<b>ClearSelection2</b> True
+        swModel.<b>ViewZoomtofit2</b>        </pre>
+<pre>        Dim Thick As Double
+        Thick = 0.05    </pre>
+<pre>        Dim Depth As Double
+        Depth = 0.05
+        Set swFeatMgr = swModel.<b>FeatureManager</b>
+        swFeatMgr.<b>FeatureExtrusionThin2</b> True, False, True, 0, 0, Depth, 0, False, False, False, False, 0, 0, False, False, False, False, False, Thick, 0, 0, 0, 0, False, False, False, False, swStartSketchPlane, 0#, False        </pre>
+<pre>        swModel.<b>ViewZoomtofit2</b>
+        swModel.<b>SetUserPreferenceToggle</b> swDisplayAnnotations, True
+        swModel.<b>ShowNamedView2</b> &quot;Isometric&quot;, 7
+        swModel.<b>ViewZoomtofit2</b>    </pre>
+<pre>        ' Add datum tag to line
+        retval = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 0.06001738353251, -0.01284975502705, -0.05001738353241, False, 0, Nothing, 0)
+        Dim dTag As SldWorks.<b>DatumTag</b>
+        Set dTag = swModel.<b>InsertDatumTag2</b>    </pre>
+<pre>       ' Add datum target symbol to line
+        retval = swModel.Extension.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 0.06001738353251, -0.01284975502705, -0.05001738353241, False, 0, Nothing, 0)
+        Dim myDatumTarget As Object
+        Set myDatumTarget = swModel.<b>Extension</b>.<b>InsertDatumTargetSymbol2</b>(&quot;&quot;, &quot;&quot;, &quot;&quot;, 0, False, 0.03, 0.03, &quot;&quot;, &quot;&quot;, True, 12, 0, False, True, True)       
+</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

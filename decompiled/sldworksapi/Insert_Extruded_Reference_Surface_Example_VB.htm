@@ -1,0 +1,113 @@
+<html>
+
+<head>
+<title>Insert Extruded Surface Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,surfaces">
+<meta name=MS-HKWD content="VBA examples,extrusions">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Extruded Surface Example (VBA)</h1>
+<p>This example shows how to insert an extruded surface in a model.</p>
+
+<p class="APICODE">
+'--------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Verify that the specified part template exists.<br>
+' 2. Open the Immediate window.<br>
+'<br>
+' Postconditions:<br>
+' 1. Creates a new part and inserts <b>Surface-Extrude1</b>.<br>
+' 2. Expand the Surface Bodies folder to verify that it contains:<br>
+'&nbsp;&nbsp;&nbsp; * <b>Surface-Extrude[1]</b><br>
+'&nbsp;&nbsp;&nbsp; * <b>Surface-Extrude[2]</b><br>
+'&nbsp;&nbsp;&nbsp; * <b>Surface-Extrude[3]</b><br>
+' 3. Examine the Immediate window and graphics area.<br>
+'---------------------------------------------------------------------------<br>
+Option Explicit</p>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSketchManager As SldWorks.SketchManager
+Dim sketchLines As Variant
+Dim swSketchSegment As SldWorks.SketchSegment
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swFeatureManager As SldWorks.FeatureManager
+Dim swFeature As SldWorks.Feature
+Dim swSurfExtrudeFeature As SldWorks.SurfExtrudeFeatureData
+Dim status As Boolean</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SOLIDWORKS\SOLIDWORKS 2017\templates\Part.prtdot&quot;, 0, 0, 0)    </pre>
+<pre>    'Create sketches for extruded surface feature
+    Set swSketchManager = swModel.<b>SketchManager</b>
+    swSketchManager.<b>InsertSketch</b> True
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, -0.03891024234798, 0.02968528649877, 3.646590412283E-04, False, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    sketchLines = swSketchManager.<b>CreateCornerRectangle</b>(-0.05517876768764, 0.008130204900836, 0, -0.02399076855985, -0.0155939995639, 0)
+    swModel.<b>ClearSelection2</b> True
+    sketchLines = swSketchManager.<b>CreateCornerRectangle</b>(-0.003731897331531, 0.008130204900836, 0, 0.0285223581767, -0.02998846069981, 0)
+    swModel.<b>ClearSelection2</b> True
+    Set swSketchSegment = swSketchManager.<b>CreateCircle</b>(0.053579, 0.013995, 0#, 0.06819, 0.018462, 0#)
+    swModel.<b>ClearSelection2</b> True
+    swSketchManager.<b>InsertSketch</b> True
+    swModel.<b>ShowNamedView2</b> &quot;*Trimetric&quot;, 8
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 0, Nothing, 0)</pre>
+<pre>    ' Create a blind surface extrude 
+    ' in two directions from the selected sketch
+    ' in a direction normal to the selected sketch plane
+    Set swFeatureManager = swModel.<b>FeatureManager</b>
+    swFeatureManager.<b>FeatureExtruRefSurface3</b> False, False, swStartConditions_e.swStartSketchPlane, 0, swEndConditions_e.swEndCondBlind, swEndConditions_e.swEndCondBlind, 0.01, 0.01, True, False, False, False, 0.4, 0, False, False, False, False, False, False, False, False</pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    ' Get Surface-Extrude1 feature
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Surface-Extrude1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swFeature = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swSurfExtrudeFeature = swFeature.<b>GetDefinition</b>    </pre>
+<pre>    'Access Surface-Extrude1 feature data
+    swSurfExtrudeFeature.<b>AccessSelections</b> swModel, Nothing</pre>
+<pre>    Debug.Print swFeature.<b>Name</b>
+    Debug.Print &quot;  Depth:&quot;
+    Debug.Print &quot;    Forward direction: &quot; &amp; swSurfExtrudeFeature.<b>GetDepth</b>(True)
+    Debug.Print &quot;    Reverse direction: &quot; &amp; swSurfExtrudeFeature.<b>GetDepth</b>(False)
+    Debug.Print &quot;  End condition as defined in swSurfaceExtendEndCond_e:&quot;
+    Debug.Print &quot;    Forward direction: &quot; &amp; swSurfExtrudeFeature.<b>GetEndCondition</b>(True)
+    Debug.Print &quot;    Reverse direction: &quot; &amp; swSurfExtrudeFeature.<b>GetEndCondition</b>(False)
+    Debug.Print &quot;  Reverse offset enabled:&quot;
+    Debug.Print &quot;    Forward direction? &quot; &amp; swSurfExtrudeFeature.<b>GetReverseOffset</b>(True)
+    Debug.Print &quot;    Reverse direction? &quot; &amp; swSurfExtrudeFeature.<b>GetReverseOffset</b>(False)
+    Debug.Print &quot;  Translate surface setting enabled:&quot;
+    Debug.Print &quot;    Forward direction? &quot; &amp; swSurfExtrudeFeature.<b>GetTranslateSurface</b>(True)
+    Debug.Print &quot;    Reverse direction? &quot; &amp; swSurfExtrudeFeature.<b>GetTranslateSurface</b>(False)
+    Debug.Print &quot;  Surface extruded in both directions? &quot; &amp; swSurfExtrudeFeature.<b>BothDirections</b>
+    Debug.Print &quot;  Extrusion reversed? &quot; &amp; swSurfExtrudeFeature.<b>ReverseDirection</b>
+    Debug.Print &quot;  Direction 1 end:&quot;
+    Debug.Print &quot;    Capped? &quot; &amp; swSurfExtrudeFeature.<b>D1CapEnd</b>
+    Debug.Print &quot;    Drafted? &quot; &amp; swSurfExtrudeFeature.<b>D1DraftOn</b>
+    If swSurfExtrudeFeature.<b>D1DraftOn</b> Then
+        Debug.Print &quot;      Angle: &quot; &amp; swSurfExtrudeFeature.<b>D1DraftAngle</b>
+        Debug.Print &quot;      Inward (false) or outward (true)? &quot; &amp; swSurfExtrudeFeature.<b>D1DraftOutward</b>
+    End If
+    Debug.Print &quot;  Direction 2 end:&quot;
+    Debug.Print &quot;    Capped? &quot; &amp; swSurfExtrudeFeature.<b>D2CapEnd</b>
+    Debug.Print &quot;    Drafted? &quot; &amp; swSurfExtrudeFeature.<b>D2DraftOn</b>
+    If swSurfExtrudeFeature.<b>D2DraftOn</b> Then
+        Debug.Print &quot;      Angle: &quot; &amp; swSurfExtrudeFeature.<b>D2DraftAngle</b>
+        Debug.Print &quot;      Inward (false) or outward (true)? &quot; &amp; swSurfExtrudeFeature.<b>D2DraftOutward</b>
+    End If
+    Debug.Print &quot;  Delete original face? &quot; &amp; swSurfExtrudeFeature.<b>DeleteOriginalFace</b>
+    Debug.Print &quot;  Knit extrusion result? &quot; &amp; swSurfExtrudeFeature.<b>KnitResult</b></pre>
+<pre>    'Release Surface-Extrude1 feature data
+    swSurfExtrudeFeature.<b>ReleaseSelectionAccess</b></pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

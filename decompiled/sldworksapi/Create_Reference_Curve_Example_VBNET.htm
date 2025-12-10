@@ -1,0 +1,165 @@
+<html>
+
+<head>
+<title>Create Reference Curve Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<META NAME="MS-HKWD" CONTENT="VB.NET examples,curves">
+<META NAME="MS-HKWD" CONTENT="VB.NET examples,edge points">
+<META NAME="MS-HKWD" CONTENT="VB.NET examples,reference curves">
+<META NAME="MS-HKWD" CONTENT="VB.NET examples,packing arrays">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Reference Curve Example (VB.NET)</h1>
+<p class=APICODE><font face="Verdana" style="font-size: 8pt">This example shows how to create a reference curve by first creating 
+ a temporary spline curve.</font></p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'----------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;document&nbsp;template&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;a&nbsp;new&nbsp;part&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Adds&nbsp;a&nbsp;reference&nbsp;curve&nbsp;to&nbsp;the&nbsp;part&nbsp;document.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Selects&nbsp;an&nbsp;endpoint&nbsp;on&nbsp;the&nbsp;reference&nbsp;curve</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;prints&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;the</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;endpoint's&nbsp;position&nbsp;and&nbsp;coordinates.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;graphics&nbsp;area&nbsp;and&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'----------------------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swPart&nbsp;<span style="color:blue;">As</span>&nbsp;PartDoc
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swBody&nbsp;<span style="color:blue;">As</span>&nbsp;Body2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swCurve(0)&nbsp;<span style="color:blue;">As</span>&nbsp;Curve
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vCurve&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swRefCurve&nbsp;<span style="color:blue;">As</span>&nbsp;ReferenceCurve
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelObj&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swEdgePoint&nbsp;<span style="color:blue;">As</span>&nbsp;EdgePoint
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bRet&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;nRetVal&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;iDim&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;iOrd&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;incp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;iper&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;dprops(1)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;knots(9)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cPoints(17)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vprops&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vknots&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vcPoints&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;selType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;x&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;y&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;z&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;iValueIn1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;65535
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;iValueIn2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;345
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;dValueOut&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">DoubleIntConv</span>.Pack(iValueIn1,&nbsp;iValueIn2,&nbsp;dValueOut) &nbsp;</pre>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Open&nbsp;new&nbsp;part&nbsp;document&nbsp;and&nbsp;create&nbsp;a&nbsp;body</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>NewDocument</b>(<span style="color:#a31515;">&quot;C:\ProgramData\SolidWorks\SolidWorks&nbsp;2015\templates\Part.prtdot&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPart&nbsp;=&nbsp;swModel
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBody&nbsp;=&nbsp;swPart.<b>CreateNewBody</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color: #008000">        </span><span style="color:green;">'Create&nbsp;a&nbsp;curve</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;properties</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iDim&nbsp;=&nbsp;3&nbsp;:&nbsp;iOrd&nbsp;=&nbsp;4&nbsp;:&nbsp;incp&nbsp;=&nbsp;6&nbsp;:&nbsp;iper&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">DoubleIntConv</span>.Pack(iDim,&nbsp;iOrd,&nbsp;dprops(0))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">DoubleIntConv</span>.Pack(incp,&nbsp;iper,&nbsp;dprops(1))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vprops&nbsp;=&nbsp;dprops
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;knots</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;knots(0)&nbsp;=&nbsp;0&nbsp;:&nbsp;knots(1)&nbsp;=&nbsp;0&nbsp;:&nbsp;knots(2)&nbsp;=&nbsp;0&nbsp;:&nbsp;knots(3)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;knots(4)&nbsp;=&nbsp;0.33096&nbsp;:&nbsp;knots(5)&nbsp;=&nbsp;0.72
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;knots(6)&nbsp;=&nbsp;1&nbsp;:&nbsp;knots(7)&nbsp;=&nbsp;1&nbsp;:&nbsp;knots(8)&nbsp;=&nbsp;1&nbsp;:&nbsp;knots(9)&nbsp;=&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vknots&nbsp;=&nbsp;knots
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;control&nbsp;points</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cPoints(0)&nbsp;=&nbsp;0&nbsp;:&nbsp;cPoints(1)&nbsp;=&nbsp;0&nbsp;:&nbsp;cPoints(2)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cPoints(3)&nbsp;=&nbsp;0.008703&nbsp;:&nbsp;cPoints(4)&nbsp;=&nbsp;0.016501&nbsp;:&nbsp;cPoints(5)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cPoints(6)&nbsp;=&nbsp;0.027636&nbsp;:&nbsp;cPoints(7)&nbsp;=&nbsp;0.052399&nbsp;:&nbsp;cPoints(8)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cPoints(9)&nbsp;=&nbsp;0.069472&nbsp;:&nbsp;cPoints(10)&nbsp;=&nbsp;-0.011297&nbsp;:&nbsp;cPoints(11)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cPoints(12)&nbsp;=&nbsp;0.090421&nbsp;:&nbsp;cPoints(13)&nbsp;=&nbsp;0.017622&nbsp;:&nbsp;cPoints(14)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cPoints(15)&nbsp;=&nbsp;0.099188&nbsp;:&nbsp;cPoints(16)&nbsp;=&nbsp;0.029725&nbsp;:&nbsp;cPoints(17)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vcPoints&nbsp;=&nbsp;cPoints
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;a&nbsp;spline&nbsp;curve</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCurve(0)&nbsp;=&nbsp;swBody.<b>AddProfileBspline</b>((vprops),&nbsp;(vknots),&nbsp;(vcPoints))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vCurve&nbsp;=&nbsp;swCurve
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;a&nbsp;reference&nbsp;curve</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRefCurve&nbsp;=&nbsp;swModel.<b>FeatureReferenceCurve</b>(1,&nbsp;(vCurve),&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;nRetVal)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Rebuild&nbsp;to&nbsp;display&nbsp;curve</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditRebuild3</b>()
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;endpoint&nbsp;on&nbsp;reference&nbsp;curve</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Unknown&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;POINTREF&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selType&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObjectType3</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Type&nbsp;of&nbsp;selection:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;selType)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;swSelectType_e.swSelPOINTREFS&nbsp;=&nbsp;selType&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelObj&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEdgePoint&nbsp;=&nbsp;swSelObj
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Position&nbsp;of&nbsp;the&nbsp;endpoint:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swEdgePoint.<b>Position</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEdgePoint.<b>GetPointCoordinates</b>(x,&nbsp;y,&nbsp;z)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Endpoint&nbsp;coordinates:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;x&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;y&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;and&nbsp;&quot;</span>&nbsp;&amp;&nbsp;z)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span>
+ 
+&lt;System.Runtime.InteropServices.<span style="color:#2b91af;">StructLayout</span>(<span style="color:#2b91af;">LayoutKind</span>.Explicit)&gt;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">DoubleIntConv</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'An&nbsp;8-byte&nbsp;double&nbsp;contains&nbsp;2&nbsp;4-byte&nbsp;integers</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;System.Runtime.InteropServices.<span style="color:#2b91af;">FieldOffset</span>(0)&gt;&nbsp;<span style="color:blue;">Private</span>&nbsp;m_Int1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;System.Runtime.InteropServices.<span style="color:#2b91af;">FieldOffset</span>(4)&gt;&nbsp;<span style="color:blue;">Private</span>&nbsp;m_Int2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;System.Runtime.InteropServices.<span style="color:#2b91af;">FieldOffset</span>(0)&gt;&nbsp;<span style="color:blue;">Private</span>&nbsp;m_Double&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<span style="color:blue;">New</span>(<span style="color:blue;">ByVal</span>&nbsp;dValue&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'VB.NET&nbsp;wants&nbsp;these&nbsp;initialized&nbsp;in&nbsp;the&nbsp;constructor</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m_Int1&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m_Int2&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m_Double&nbsp;=&nbsp;dValue
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<span style="color:blue;">New</span>(<span style="color:blue;">ByVal</span>&nbsp;iValue1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;iValue2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'VB.NET&nbsp;wants&nbsp;these&nbsp;initialized&nbsp;in&nbsp;the&nbsp;constructor</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m_Double&nbsp;=&nbsp;0.0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m_Int1&nbsp;=&nbsp;iValue1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m_Int2&nbsp;=&nbsp;iValue2
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Use&nbsp;an&nbsp;out&nbsp;parameter,&nbsp;so&nbsp;client&nbsp;code&nbsp;can&nbsp;pass&nbsp;in&nbsp;an uninitialized&nbsp;variable</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Shared</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;Pack(<span style="color:blue;">ByVal</span>&nbsp;iIn1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;iIn2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByRef</span>&nbsp;dOut&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cv&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DoubleIntConv</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cv&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">DoubleIntConv</span>(iIn1,&nbsp;iIn2)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dOut&nbsp;=&nbsp;cv.m_Double
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

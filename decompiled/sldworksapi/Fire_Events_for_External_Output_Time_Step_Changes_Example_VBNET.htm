@@ -1,0 +1,574 @@
+<html>
+
+<head>
+<title>Fire Events for External Output Time Step Changes Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,motion studies">
+<meta name=MS-HKWD content="StreamWriter">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Fire Events for External Output Time Step Changes Example (VB.NET)</h1>
+<p>This example shows how to listen and catch events for external force and 
+motor output time step changes.</p>
+
+<p class="APICODE"><font color="Green" size="-1" face="Courier New">
+'--------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Start SOLIDWORKS Premium, which includes SOLIDWORKS Motion.<br>
+' 2. Verify that the <b>c:\temp</b> folder exists.<br>
+' 3. In SOLIDWORKS:<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;a. Start the SOLIDWORKS Motion Study add-in (in<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; SOLIDWORKS, click <b>Tools &gt; Add-Ins &gt; SOLIDWORKS Motion</b>).<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;b. Open<i> public_documents</i><b>\samples\tutorial\api\simple-block.sldasm.</b><br>
+'&nbsp;&nbsp;&nbsp;&nbsp;c. Click <b>MotionStudy 1</b> and select <b>Motion Analysis</b> in the 
+<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Type of Study list at the&nbsp; upper-left corner of the
+<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MotionManager.<br>
+' 4. In the IDE, reference the SOLIDWORKS Motion Study interop <br>
+'&nbsp;&nbsp;&nbsp;&nbsp;assembly (right-click the name of the project in the 
+Project<br>
+'&nbsp;&nbsp;&nbsp; Explorer &gt; click <b>Add Reference &gt; </b>
+</font><span style="COLOR: green">browse&nbsp;to&nbsp;<i><br>
+'&nbsp;&nbsp;&nbsp; install_dir</i><b>\api\redist</b> &gt; click </span>
+<font color="Green" size="-1" face="Courier New">
+<b>SolidWorks.Interop.swmotionstudy</b>).<br>
+'<br>
+' Postconditions:<br>
+' 1. Calculates motion analysis.<br>
+' 2. Opens <b>c:\temp\ForceAndMotorValuesVBNET.txt</b> for output.<br>
+' 3. Sets forces and motors to external.<br>
+' 4. Recalculates motion analysis.<br>
+' 5. Fires an event for every force and motor output time step change <br>
+'&nbsp;&nbsp;&nbsp;&nbsp;and recalculates and writes the force magnitude or 
+motor speed to<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;<b>c:\temp\ForceAndMotorValuesVBNET.txt</b>.<br>
+' 6. Open and examine <b>c:\temp\ForceAndMotorValuesVBNET.txt.</b></font><font size="-1" face="Courier New"><font color="Green"><br>
+'<br>
+' NOTE: Because this model is used elsewhere, do not save changes.<br>
+'--------------------------------------------------<br>
+<br>
+</font><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.sldworks<br>
+</font><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.swconst<br>
+</font><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.swmotionstudy<br>
+<br>
+</font><font color="Blue">Partial</font><font color="Black"> </font>
+<font color="Blue">Class</font><font color="Black"> SolidWorksMacro<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> </font>
+<font color="Blue">WithEvents</font><font color="Black"> motionstudy </font>
+<font color="Blue">As</font><font color="Black"> MotionStudy<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> swMotionStudy
+</font><font color="Blue">As</font><font color="Black"> MotionStudy<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> swModel </font>
+<font color="Blue">As</font><font color="Black"> ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> outputWrite
+</font><font color="Blue">As</font><font color="Black"> System.IO.StreamWriter<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> </font>
+<font color="Blue">Sub</font><font color="Black"> Main()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> swModelDocExt
+</font><font color="Blue">As</font><font color="Black"> ModelDocExtension<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> swMotionMgr
+</font><font color="Blue">As</font><font color="Black"> MotionStudyManager<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> studyName
+</font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">String<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+numStudies </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Integer<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt = swModel.<b>Extension</b><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Motion study name<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;studyName = </font><font color="#a31515">
+&quot;Motion Study 1&quot;<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Get the 
+MotionManager<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMotionMgr = swModelDocExt.<b>GetMotionStudyManager</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numStudies = swMotionMgr.<b>GetMotionStudyCount</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMotionStudy = swMotionMgr.<b>GetMotionStudy</b>(studyName)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">If</font><font color="Black"> </font>
+<font color="Blue">Not</font><font color="Black"> swMotionStudy.<b>IsActive</b>
+</font><font color="Blue">Then</font><font color="Black"> swMotionStudy.<b>Activate</b>()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">'Calculate the motion study<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMotionStudy.<b>Calculate</b>()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set up events<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;motionstudy = swMotionStudy<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventHandlers()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Open output file for writing force and 
+motor values<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite = IO.File.CreateText(</font><font color="#a31515">&quot;c:\temp\ForceAndMotorValuesVBNET.txt&quot;</font><font color="Black">)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set feature Force1 as external force<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Call</font><font color="Black"> 
+SetForceExternalFlag(</font><font color="#a31515">&quot;Force1&quot;</font><font color="Black">,
+</font><font color="Blue">True</font><font color="Black">)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set feature LinearMotor1 as external motor<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Call</font><font color="Black"> 
+SetMotorExternalFlag(</font><font color="#a31515">&quot;LinearMotor1&quot;</font><font color="Black">,
+</font><font color="Blue">True</font><font color="Black">)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Fire event at every output time step<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMotionStudy.SetFireOutputTimeStepEvents(</font><font color="Blue">True</font><font color="Black">)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">'Recalculate the motion study<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMotionStudy.<b>Calculate</b>()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Close output file<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.Close()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Private</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> SetForceExternalFlag(</font><font color="Blue">ByVal</font><font color="Black"> 
+featureName </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">String</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> setFlag </font><font color="Blue">As</font><font color="Black">
+</font><font color="#0000FF">
+Integer</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set forces to external; i.e., listen for 
+events<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+swFeature </font><font color="Blue">As</font><font color="Black"> Feature<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+swSimulationFeatureData </font><font color="Blue">As</font><font color="Black"> 
+SimulationForceFeatureData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> simTypeName
+</font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">String<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+motionFeatures </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+ret </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Boolean<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+i </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="#0000FF"> Integer</font><font color="Blue"><br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;motionFeatures = swMotionStudy.<b>GetMotionFeatures</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">For</font><font color="Black"> i = 0 </font>
+<font color="Blue">To</font><font color="Black"> UBound(motionFeatures)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature = motionFeatures(i)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;simTypeName = swFeature.<b>GetTypeName</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">If</font><font color="Black"> simTypeName 
+= </font><font color="#a31515">&quot;AEMLinearForce&quot;</font><font color="Black">
+</font><font color="Blue">Or</font><font color="Black"> simTypeName = </font>
+<font color="#a31515">&quot;AEMTorque&quot;</font><font color="Black"> </font>
+<font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">If</font><font color="Black"> 
+swFeature.<b>Name</b> = featureName </font><font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimulationFeatureData = 
+swFeature.<b>GetDefinition</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimulationFeatureData.<b>ExternalState</b> = setFlag<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret = swFeature.ModifyDefinition(swSimulationFeatureData, 
+swModel, </font><font color="Blue">Nothing</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;Feature: 
+&quot;</font><font color="Black"> &amp; swFeature.<b>Name</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;Listen 
+for events: &quot;</font><font color="Black"> &amp; swSimulationFeatureData.<b>ExternalState</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot; &quot;</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">If<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black">
+</font><font color="Blue">If<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Next</font><font color="Black"> 
+i<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Private</font><font color="Black">
+</font><font color="Blue">Sub</font><font color="Black"> SetMotorExternalFlag(</font><font color="Blue">ByVal</font><font color="Black"> 
+featureName </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">String</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> setFlag </font><font color="Blue">As</font><font color="Black">
+</font><font color="#0000FF">
+Integer</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Set motors to external; i.e., listen for 
+events<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+swFeature </font><font color="Blue">As</font><font color="Black"> Feature<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+swSimulationFeatureData </font><font color="Blue">As</font><font color="Black"> 
+SimulationMotorFeatureData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> simTypeName
+</font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">String<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+motionFeatures </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+i </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="#0000FF"> Integer</font><font color="Blue"><br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+ret </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Boolean<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;motionFeatures = swMotionStudy.<b>GetMotionFeatures</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">For</font><font color="Black"> i = 0 </font>
+<font color="Blue">To</font><font color="Black"> UBound(motionFeatures)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature = motionFeatures(i)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;simTypeName = swFeature.<b>GetTypeName</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">If</font><font color="Black"> simTypeName 
+= </font><font color="#a31515">&quot;AEMLinearMotor&quot;</font><font color="Black">
+</font><font color="Blue">Or</font><font color="Black"> simTypeName = </font>
+<font color="#a31515">&quot;AEMRotationalMotor&quot;</font><font color="Black"> </font>
+<font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">If</font><font color="Black"> 
+swFeature.<b>Name</b> = featureName </font><font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimulationFeatureData = 
+swFeature.<b>GetDefinition</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimulationFeatureData.<b>ExternalState</b> = setFlag<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret = swFeature.<b>ModifyDefinition</b>(swSimulationFeatureData, 
+swModel, </font><font color="Blue">Nothing</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;Feature 
+name: &quot;</font><font color="Black"> &amp; swFeature.<b>Name</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;Listen 
+for events: &quot;</font><font color="Black"> &amp; swSimulationFeatureData.<b>ExternalState</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot; &quot;</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">If<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black">
+</font><font color="Blue">If<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Next</font><font color="Black"> 
+i<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Sub</font><font color="Black"> 
+AttachEventHandlers()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachSWEvents()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Sub</font><font color="Black"> 
+AttachSWEvents()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">AddHandler</font><font color="Black"> 
+motionstudy.ForceOutputTimeStepChangeNotify, </font><font color="Blue">AddressOf</font><font color="Black">
+</font><font color="Blue">Me</font><font color="Black">.motionStudy_ForceOutputTimeStepChangeNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">AddHandler</font><font color="Black"> 
+motionstudy.MotorOutputTimeStepChangeNotify, </font><font color="Blue">AddressOf</font><font color="Black">
+</font><font color="Blue">Me</font><font color="Black">.motionStudy_MotorOutputTimeStepChangeNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">AddHandler</font><font color="Black"> 
+motionstudy.OutputTimeStepChangeNotify, </font><font color="Blue">AddressOf</font><font color="Black">
+</font><font color="Blue">Me</font><font color="Black">.motionStudy_OutputTimeStepChangeNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">AddHandler</font><font color="Black"> 
+motionstudy.StartCalculateNotify, </font><font color="Blue">AddressOf</font><font color="Black">
+</font><font color="Blue">Me</font><font color="Black">.motionStudy_StartCalculateNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">AddHandler</font><font color="Black"> 
+motionstudy.StopCalculateNotify, </font><font color="Blue">AddressOf</font><font color="Black">
+</font><font color="Blue">Me</font><font color="Black">.motionStudy_StopCalculateNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Private</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> motionStudy_<b>ForceOutputTimeStepChangeNotify</b>(</font><font color="Blue">ByVal</font><font color="Black"> 
+Time </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> ForceNames </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Object</font><font color="Black">, </font>
+<font color="Blue">ByVal</font><font color="Black"> Disp </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Object</font><font color="Black">, </font><font color="Blue">ByVal</font><font color="Black"> 
+Velocity </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> Acceleration </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Object</font><font color="Black">, </font>
+<font color="Blue">ByVal</font><font color="Black"> ForceOrTorque </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Object</font><font color="Black">, </font><font color="Blue">ByRef</font><font color="Black"> 
+ForceTorqueValue </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Fire event for 
+every external force or torque output time step change<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+swMotionStudyProperties </font><font color="Blue">As</font><font color="Black"> 
+MotionStudyProperties<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> i </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+frameRate </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+numForces </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+deltaT </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+pi </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+w </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+A </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pi = 3.14159265358979<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMotionStudyProperties = motionstudy.<b>GetProperties</b>(swMotionStudyType_e.swMotionStudyTypeCosmosMotion)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;frameRate = swMotionStudyProperties.<b>GetFrameRate</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;deltaT = 1 / frameRate<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numForces = motionstudy.<b>GetNumOfExternalForces</b><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">For</font><font color="Black"> i = 0 </font>
+<font color="Blue">To</font><font color="Black"> numForces - 1<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = Acceleration(i)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">If</font><font color="Black"> (ForceNames(i) 
+= </font><font color="#a31515">&quot;Force1&quot;</font><font color="Black"> </font>
+<font color="Blue">Or</font><font color="Black"> ForceNames(i) = </font>
+<font color="#a31515">&quot;Force2&quot;</font><font color="Black"> </font>
+<font color="Blue">Or</font><font color="Black"> ForceNames(i) = </font>
+<font color="#a31515">&quot;Force3&quot;</font><font color="Black">) </font>
+<font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&quot;</font><font color="Black"> 
+&amp; ForceNames(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = 0.8<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = 2 * pi / 1.5<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">ElseIf</font><font color="Black"> (ForceNames(i) 
+= </font><font color="#a31515">&quot;Torque1&quot;</font><font color="Black"> </font>
+<font color="Blue">Or</font><font color="Black"> ForceNames(i) = </font>
+<font color="#a31515">&quot;Torque2&quot;</font><font color="Black"> </font>
+<font color="Blue">Or</font><font color="Black"> ForceNames(i) = </font>
+<font color="#a31515">&quot;Torque3&quot;</font><font color="Black">) </font>
+<font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&quot;</font><font color="Black"> 
+&amp; ForceNames(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = 0.005<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = pi<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">ElseIf</font><font color="Black"> (ForceNames(i) 
+= </font><font color="#a31515">&quot;Action Reaction Force1&quot;</font><font color="Black">
+</font><font color="Blue">Or</font><font color="Black"> ForceNames(i) = </font>
+<font color="#a31515">&quot;Action Reaction Force2&quot;</font><font color="Black"> </font>
+<font color="Blue">Or</font><font color="Black"> ForceNames(i) = </font>
+<font color="#a31515">&quot;Action Reaction Force3&quot;</font><font color="Black">)
+</font><font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&quot;</font><font color="Black"> 
+&amp; ForceNames(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = 0.002<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = 2 * pi<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Else<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&quot;</font><font color="Black"> 
+&amp; ForceNames(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">If<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Compute the 
+return value<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ForceTorqueValue(i) = A * Math.Sin(w * 
+(Time + deltaT))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Force or 
+torque magnitude: &quot;</font><font color="Black"> &amp; ForceTorqueValue(i))<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Next</font><font color="Black"> i<br>
+<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Private</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> motionStudy_<b>MotorOutputTimeStepChangeNotify</b>(</font><font color="Blue">ByVal</font><font color="Black"> 
+Time </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> MotorNames </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Object</font><font color="Black">, </font>
+<font color="Blue">ByVal</font><font color="Black"> Position </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Object</font><font color="Black">, </font><font color="Blue">ByVal</font><font color="Black"> 
+Velocity </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">, </font><font color="Blue">
+ByVal</font><font color="Black"> Acceleration </font><font color="Blue">As</font><font color="Black">
+</font><font color="Blue">Object</font><font color="Black">, </font>
+<font color="Blue">ByVal</font><font color="Black"> ForceOrTorque </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+Object</font><font color="Black">, </font><font color="Blue">ByRef</font><font color="Black"> 
+MotorValue </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Object</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Fire event for 
+every external motor output time step change<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+numMotors </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="#0000FF"> Integer</font><font color="Blue"><br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+swMotionStudyProperties </font><font color="Blue">As</font><font color="Black"> 
+MotionStudyProperties<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> frameRate
+</font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+deltaT </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+pi </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+w </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+A </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+i </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Integer<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pi = 3.14159265358979<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMotionStudyProperties = motionstudy.<b>GetProperties</b>(swMotionStudyType_e.swMotionStudyTypeCosmosMotion)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;frameRate = swMotionStudyProperties.<b>GetFrameRate</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;deltaT = 1 / frameRate<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numMotors = motionstudy.<b>GetNumOfExternalMotors</b><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">For</font><font color="Black"> i = 0 </font>
+<font color="Blue">To</font><font color="Black"> numMotors - 1<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">If</font><font color="Black"> (MotorNames(i) 
+= </font><font color="#a31515">&quot;RotaryMotor1&quot;</font><font color="Black"> </font>
+<font color="Blue">Or</font><font color="Black"> MotorNames(i) = </font>
+<font color="#a31515">&quot;RotaryMotor2&quot;</font><font color="Black">) </font>
+<font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp; 
+&quot;</font><font color="Black"> &amp; MotorNames(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = (pi / 4)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = (pi / 2)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">ElseIf</font><font color="Black"> (MotorNames(i) 
+= </font><font color="#a31515">&quot;LinearMotor1&quot;</font><font color="Black">) </font>
+<font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&quot;</font><font color="Black"> 
+&amp; MotorNames(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = 0.05<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = 2 * pi / 3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">ElseIf</font><font color="Black"> (MotorNames(i) 
+= </font><font color="#a31515">&quot;LinearMotor2&quot;</font><font color="Black">) </font>
+<font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&quot;</font><font color="Black"> 
+&amp; MotorNames(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = 0.025<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = 2 * pi<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">ElseIf</font><font color="Black"> (MotorNames(i) 
+= </font><font color="#a31515">&quot;LinearMotor3&quot;</font><font color="Black">) </font>
+<font color="Blue">Then<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&quot;</font><font color="Black"> 
+&amp; MotorNames(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = 1.0472<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = 2 * pi<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Else<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;LinearMotor&quot;</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">If<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">'Compute the 
+return value<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotorValue(i) = A * Math.Sin(w * (Time + 
+deltaT))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Motor speed: 
+&quot;</font><font color="Black"> &amp; MotorValue(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Next</font><font color="Black"> i<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Private</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> motionStudy_<b>OutputTimeStepChangeNotify</b>(</font><font color="Blue">ByVal</font><font color="Black"> 
+Time </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Fire event at 
+every output step<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+myTime </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;myTime = Time<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Private</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> motionStudy_<b>StartCalculateNotify</b>(</font><font color="Blue">ByVal</font><font color="Black"> 
+Time </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Fire event when 
+recalculation starts<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+myTime </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;Recalculation 
+started...&quot;</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot; &quot;</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;myTime = Time<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Private</font><font color="Black">
+</font><font color="Blue">Function</font><font color="Black"> motionStudy_<b>StopCalculateNotify</b>(</font><font color="Blue">ByVal</font><font color="Black"> 
+Time </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double</font><font color="Black">) </font><font color="Blue">
+As</font><font color="Black"> </font><font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' Fire event when 
+recalculation stops<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+myTime </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Double<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot; 
+&quot;</font><font color="Black">)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputWrite.WriteLine(</font><font color="#a31515">&quot;Recalculation 
+stopped...&quot;</font><font color="Black">)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;myTime = Time<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Function<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' </font>
+<font color="Gray">&lt;summary&gt;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' The SldWorks swApp 
+variable is pre-assigned for you.<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' </font>
+<font color="Gray">&lt;/summary&gt;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> 
+swApp </font><font color="Blue">As</font><font color="Black"> SldWorks<br>
+<br>
+<br>
+</font><font color="Blue">End</font><font color="Black"> </font></font>
+<font color="Blue"><font size="-1" face="Courier New">Class</font></font></p>
+
+</body>
+
+</html>

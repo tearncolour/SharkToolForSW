@@ -1,0 +1,127 @@
+<html>
+
+<head>
+<title>Get Dispatch Objects for Selection Set Items Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,selection sets">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Dispatch Objects for Selection Set Items Example (VBA)</h1>
+<p>This example shows how to get the Dispatch objects for selection set items.</p>
+
+<pre>'-------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the part to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the part.
+' 2. Selects two faces and creates a selection set.
+' 3. Selects two edges and creates a selection set.
+' 4. Traverses the FeatureManager design tree. If the feature is the
+'    Selection Sets folder, then:
+'    a. Gets its name.
+'    b. Gets each selection set in the Selection Sets folder.
+'       1. Gets the selection set items and their types.
+'       2. Gets the Dispatch object for each selection set item.
+'       3. Gets the name of the body for each selection set item.
+' 5. Examine the Immediate window and FeatureManager design tree.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'-------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSelectionSet1 As SldWorks.SelectionSet
+Dim swSelectionSet2 As SldWorks.SelectionSet
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long
+Dim fileName As String</pre>
+<pre>Sub TraverseFeatureFeatures(swFeat As SldWorks.Feature, swModel As SldWorks.ModelDoc2)
+    Dim swSelectionSetFolder As SldWorks.SelectionSetFolder
+    Dim selectionSetArray As Variant
+    Dim selectionSetItemArray As Variant
+    Dim selectionSetItemArrayTypes As Variant
+    Dim swSelectionSet As SldWorks.SelectionSet
+    Dim swSelectionSetItem As SldWorks.SelectionSetItem
+    Dim swFace As SldWorks.Face2
+    Dim swEdge As SldWorks.Edge
+    Dim swBody As SldWorks.Body2
+    Dim i As Long
+    Dim j As Long   </pre>
+<pre>    While Not swFeat Is Nothing
+        If swFeat.<b>name</b> = &quot;Selection Sets&quot; Then
+            Debug.Print &quot;    &quot; &amp; swFeat.<b>name</b> &amp; &quot; [&quot; &amp; swFeat.<b>GetTypeName</b> &amp; &quot;]&quot;
+            'Get Selection Sets folder
+            Set swSelectionSetFolder = swFeat.<b>GetSpecificFeature2</b>
+            'Get selection sets in Selection Sets folder
+            selectionSetArray = swSelectionSetFolder.<b>GetSelectionSets</b>
+            For i = 0 To UBound(selectionSetArray)
+                Set swSelectionSet = selectionSetArray(i)
+                Debug.Print &quot;      Selection set[&quot; &amp; i &amp; &quot;] name: &quot; &amp; swSelectionSet.<b>GetName</b>
+                'Get the items and their types in this selection set
+                selectionSetItemArray = swSelectionSet.<b>GetSelectionSetItems</b>
+                selectionSetItemArrayTypes = swSelectionSet.<b>GetSelectionSetItemTypes</b>
+                For j = 0 To UBound(selectionSetItemArray)
+                    Set swSelectionSetItem = selectionSetItemArray(j)
+                    Select Case selectionSetItemArrayTypes(j)
+                        Case swSelectType_e.swSelFACES
+                            'Get the Dispatch object for the selection set item
+                            Set swFace = swSelectionSetItem.<b>GetCorrespondingItem
+</b>                            'Get the name of the body for the face
+                            Set swBody = swFace.<b>GetBody</b>
+                            Debug.Print &quot;        Name of face[&quot; &amp; j &amp; &quot;]'s body: &quot; &amp; swBody.<b>name</b>
+                        Case swSelectType_e.swSelEDGES
+                            'Get the Dispatch object for the selection set item
+                            Set swEdge = swSelectionSetItem.<b>GetCorrespondingItem</b>
+                            'Get the name of the body for the edge
+                            Set swBody = swEdge.<b>GetBody</b>
+                            Debug.Print &quot;        Name of edge[&quot; &amp; j &amp; &quot;]'s body: &quot; &amp; swBody.<b>name</b>
+                        End Select
+                Next
+            Next
+        End If
+        Set swFeat = swFeat.<b>GetNextFeature</b>
+    Wend
+End Sub</pre>
+<pre>&nbsp;</pre>
+<pre>Sub TraverseModelFeatures(swModel As SldWorks.ModelDoc2)
+    Dim swFeat As SldWorks.Feature    </pre>
+<pre>    Set swFeat = swModel.<b>FirstFeature</b>
+    TraverseFeatureFeatures swFeat, swModel
+End Sub</pre>
+<pre>
+</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\block.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModelDocExt = swModel.<b>Extension</b>    </pre>
+<pre>    'Create a selection set
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, -2.32252739277783E-02, -2.48041260152831E-02, 0, False, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, -2.58449612883283E-02, -6.28596853454155E-03, -7.49999999999318E-03, True, 0, Nothing, 0)
+     Set swSelectionSet1 = swModelDocExt.<b>SaveSelection</b>(errors)
+    Debug.Print &quot;  First selection set created (1 = succeeded; 0 = failed)? &quot; &amp; errors
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Create another selection set    
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 2.97500073491506E-02, -6.96186204362448E-03, -7.3680822854385E-03, False, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 2.99025466658236E-02, -1.99243068692567E-02, -3.6983143110092E-03, True, 0, Nothing, 0)
+    Set swSelectionSet2 = swModelDocExt.<b>SaveSelection</b>(errors)
+    Debug.Print &quot;  Second selection set created (1 = succeeded; 0 = failed)? &quot; &amp; errors
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Traverse the model to get Selection Sets folder
+    TraverseModelFeatures swModel    </pre>
+<pre>End Sub</pre>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

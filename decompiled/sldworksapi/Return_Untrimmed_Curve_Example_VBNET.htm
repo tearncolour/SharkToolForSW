@@ -1,0 +1,237 @@
+<html>
+
+<head>
+<title>Create Trimmed Curve Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,curves">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Trimmed Curve Example (VB.NET)</h1>
+<p>This example shows how to create a trimmed curve on a selected face.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	'----------------------------------------------------------------------------<br>
+	' Preconditions: <br>
+	' 1. Open a part and select a face.<br>
+	' 2. Open an Immediate window.<br>
+	'<br>
+	' Postconditions: <br>
+	' 1. Creates a trimmed curve.<br>
+	' 2. Inspect the Immediate window.<br>
+	'----------------------------------------------------------------------------<br>
+	<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Runtime.InteropServices<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Diagnostics<br>
+	<br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black">
+	</span><span style="color:Blue">Class</span><span style="color:Black"> 
+	SolidWorksMacro<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	main()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSelMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SelectionMgr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchManager<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swFace </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Face2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSurf </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Surface<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vFaceUV </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	surfParam </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SurfaceParameterizationData<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swCurveU </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Curve<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vUIsoStartPt </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vUIsoEndPt </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Const</span><span style="color:Black"> 
+	nChordTol </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double</span><span style="color:Black"> = 
+	0.001<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Const</span><span style="color:Black"> 
+	nLengthTol </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double</span><span style="color:Black"> = 
+	0.001<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	nStartParam </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	nEndParam </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	bIsClosed </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	bIsPeriodic </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vStartPt </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vEndPt </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vTessPts </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchSeg </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchSegment<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	i </span><span style="color:Blue">As</span><span style="color:Black"> </span>
+	<span style="color: #0000FF">Integer</span><span style="color:Blue"><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	bRet </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = swApp.<b>ActiveDoc</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr = swModel.<b>SelectionManager</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace = swSelMgr.<b>GetSelectedObject6</b>(1, -1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSurf = swFace.<b>GetSurface</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vFaceUV = swFace.<b>GetUVBounds</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;surfParam = swSurf.<b>Parameterization2</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vUIsoStartPt = swSurf.<b>Evaluate</b>((vFaceUV(0) + vFaceUV(1)) / 
+	2.0#, vFaceUV(2), 0, 0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vUIsoEndPt = swSurf.<b>Evaluate</b>((vFaceUV(0) + vFaceUV(1)) / 
+	2.0#, vFaceUV(3), 0, 0)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;File = &quot;</span><span style="color:Black"> 
+	&amp; swModel.<b>GetPathName</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Face:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;uRange&nbsp;&nbsp; = [&quot;</span><span style="color:Black"> 
+	&amp; vFaceUV(0) &amp; </span><span style="color:#a31515">&quot; , &quot;</span><span style="color:Black"> 
+	&amp; vFaceUV(1) &amp; </span><span style="color:#a31515">&quot;]&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;vRange&nbsp;&nbsp; = [&quot;</span><span style="color:Black"> 
+	&amp; vFaceUV(2) &amp; </span><span style="color:#a31515">&quot; , &quot;</span><span style="color:Black"> 
+	&amp; vFaceUV(3) &amp; </span><span style="color:#a31515">&quot;]&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Surface:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;uRange&nbsp;&nbsp; = [&quot;</span><span style="color:Black"> 
+	&amp; surfParam.<b>UMin</b> &amp; </span><span style="color:#a31515">&quot; , &quot;</span><span style="color:Black"> 
+	&amp; surfParam.<b>UMax</b> &amp; </span><span style="color:#a31515">&quot;]&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;vRange&nbsp;&nbsp; = [&quot;</span><span style="color:Black"> 
+	&amp; surfParam.<b>VMin</b> &amp; </span><span style="color:#a31515">&quot; , &quot;</span><span style="color:Black"> 
+	&amp; surfParam.<b>VMax</b> &amp; </span><span style="color:#a31515">&quot;]&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;U Curve:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Start Pt = (&quot;</span><span style="color:Black"> 
+	&amp; vUIsoStartPt(0) * 1000 &amp; </span><span style="color:#a31515">&quot;, &quot;</span><span style="color:Black"> 
+	&amp; vUIsoStartPt(1) * 1000 &amp; </span><span style="color:#a31515">&quot;, &quot;</span><span style="color:Black"> 
+	&amp; vUIsoStartPt(2) * 1000 &amp; </span><span style="color:#a31515">&quot;) mm&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;End&nbsp;&nbsp; Pt = (&quot;</span><span style="color:Black"> 
+	&amp; vUIsoEndPt(0) * 1000 &amp; </span><span style="color:#a31515">&quot;, &quot;</span><span style="color:Black"> 
+	&amp; vUIsoEndPt(1) * 1000 &amp; </span><span style="color:#a31515">&quot;, &quot;</span><span style="color:Black"> 
+	&amp; vUIsoEndPt(2) * 1000 &amp; </span><span style="color:#a31515">&quot;) mm&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Create untrimmed U curve<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCurveU = swSurf.<b>MakeIsoCurve2</b>(</span><span style="color:Blue">False</span><span style="color:Black">, 
+	(vFaceUV(0) + vFaceUV(1)) / 2.0#)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Trim U curve to start and end of 
+	U range<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCurveU = swCurveU.<b>CreateTrimmedCurve2</b>(vUIsoStartPt(0), 
+	vUIsoStartPt(1), vUIsoStartPt(2), vUIsoEndPt(0), vUIsoEndPt(1), 
+	vUIsoEndPt(2))<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Trimmed U curve:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = swCurveU.<b>GetEndParams</b>(nStartParam, nEndParam, 
+	bIsClosed, bIsPeriodic)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Start parameter 
+	is &quot;</span><span style="color:Black"> &amp; nStartParam)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;End parameter is 
+	&quot;</span><span style="color:Black"> &amp; nEndParam)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Is closed? &quot;</span><span style="color:Black"> 
+	&amp; bIsClosed)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Is periodic? &quot;</span><span style="color:Black"> 
+	&amp; bIsPeriodic)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vStartPt = swCurveU.<b>Evaluate2</b>(nStartParam, 0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vEndPt = swCurveU.<b>Evaluate2</b>(nEndParam, 0)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vTessPts = swCurveU.<b>GetTessPts</b>(nChordTol, nLengthTol, (vStartPt), 
+	(vEndPt))<br>
+	<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swSketchMgr = swModel.<b>SketchManager</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color: Black">swSketchMgr </span>
+	<span style="color:Black">.<b>Insert3DSketch</b>(</span><span style="color:Blue">False</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetAddToDB</b>(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Disable VB range checking since 
+	tessellation points<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	cannot be multiples of 6<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">On</span><span style="color:Black">
+	</span><span style="color:Blue">Error</span><span style="color:Black">
+	</span><span style="color:Blue">Resume</span><span style="color:Black">
+	</span><span style="color:Blue">Next<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	i = 0 </span><span style="color:Blue">To</span><span style="color:Black"> (UBound(vTessPts) 
+	- 3) </span><span style="color:Blue">Step</span><span style="color:Black"> 3<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSeg = swModel.<b>CreateLine2</b>(vTessPts(i + 0), 
+	vTessPts(i + 1), vTessPts(i + 2), vTessPts(i + 3), vTessPts(i + 4), 
+	vTessPts(i + 5))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next</span><span style="color:Black"> 
+	i<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">On</span><span style="color:Black">
+	</span><span style="color:Blue">Error</span><span style="color:Black">
+	</span><span style="color:Blue">GoTo</span><span style="color:Black"> 0<br>
+	<br>
+	&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetAddToDB</b>(</span><span style="color:Blue">False</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color: Black">swSketchMgr </span>
+	<span style="color:Black">.<b>Insert3DSketch</b>(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = swModel.<b>EditRebuild3</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	<br>
+	<br>
+	</span><span style="color:Blue">End</span><span style="color:Black"> </span>
+	<span style="color:Blue">Class</span>
+</div>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

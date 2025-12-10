@@ -1,0 +1,136 @@
+<html>
+
+<head>
+<title>Delete Instances and Dimensions in Variable Pattern Feature Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,patterns">
+<meta name=MS-HKWD content="VB.NET examples,variable patterns">
+<meta name=MS-HKWD content="VB.NET examples,display dimensions">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Delete Instances and Dimensions in Variable Pattern Feature Example (VB.NET)</h1>
+<p>This example shows how to:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">delete instances in a variable 
+pattern feature.</font></li>
+	<li><font face="Verdana" style="font-size: 8pt">add and delete dimensions in 
+	the pattern table of a variable pattern feature.</font></li>
+</ul>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'---------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;part&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;part&nbsp;and&nbsp;selects&nbsp;the&nbsp;variable&nbsp;pattern&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Accesses&nbsp;the&nbsp;variable&nbsp;pattern&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Deletes&nbsp;the&nbsp;last&nbsp;and&nbsp;fourth&nbsp;instance&nbsp;from&nbsp;the&nbsp;pattern&nbsp;table
+'    and pattern.
+' 4. Gets the number and names of the controlling dimensions.</span>
+<font color="#008000">' 5. Selects and adds two dimensions to the pattern table and
+'    deletes the second dimension from the pattern table.</font>
+<span style="color:green;">'&nbsp;6.&nbsp;Rolls&nbsp;forward&nbsp;the&nbsp;modified&nbsp;variable&nbsp;pattern&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;graphics&nbsp;area&nbsp;and&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;part&nbsp;used&nbsp;is&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span>
+<span style="color:green;">'----------------------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeature&nbsp;<span style="color:blue;">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDimensionDrivenTablePatternFeat&nbsp;<span style="color:blue;">As</span>&nbsp;DimPatternFeatureData
+	<font color="#0000FF">Dim</font> swDisplayDimension <font color="#0000FF">As</font> DisplayDimension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;dimNbr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;controllingDimNames()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;controllingDimName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Open&nbsp;part&nbsp;and&nbsp;select&nbsp;the&nbsp;variable&nbsp;pattern&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\bottle.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;VarPattern1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionDrivenTablePatternFeat&nbsp;=&nbsp;swFeature.<b>GetDefinition</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Roll&nbsp;back&nbsp;and&nbsp;access&nbsp;the&nbsp;variable&nbsp;pattern&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swDimensionDrivenTablePatternFeat.<b>AccessSelections</b>(swModel,&nbsp;<span style="color:blue;">Nothing</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Delete&nbsp;the&nbsp;last&nbsp;instance&nbsp;of&nbsp;the&nbsp;variable&nbsp;pattern&nbsp;in&nbsp;the&nbsp;pattern&nbsp;table and pattern</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swDimensionDrivenTablePatternFeat.<b>DeleteInstanceAt</b>(-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Last&nbsp;instance&nbsp;of&nbsp;variable&nbsp;pattern&nbsp;deleted&nbsp;from&nbsp;pattern&nbsp;table?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Delete&nbsp;another&nbsp;instance&nbsp;of&nbsp;the&nbsp;variable&nbsp;pattern&nbsp;in&nbsp;the&nbsp;pattern&nbsp;table and pattern</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swDimensionDrivenTablePatternFeat.<b>DeleteInstanceAt</b>(3)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Fourth&nbsp;instance&nbsp;of&nbsp;variable&nbsp;pattern&nbsp;deleted&nbsp;from&nbsp;pattern&nbsp;table?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;the&nbsp;number&nbsp;and&nbsp;names&nbsp;of&nbsp;the&nbsp;controlling&nbsp;dimensions&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dimNbr&nbsp;=&nbsp;swDimensionDrivenTablePatternFeat.<b>GetControllingDimensionCount</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;controlling&nbsp;dimensions:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;dimNbr)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Controlling&nbsp;dimension&nbsp;names:&nbsp;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">ReDim</span>&nbsp;<span style="color:blue;">Preserve</span>&nbsp;controllingDimNames(dimNbr)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;dimNbr&nbsp;-&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;controllingDimNames(i)&nbsp;=&nbsp;swDimensionDrivenTablePatternFeat.<b>GetControllingDimensionName</b>(i)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;controllingDimName&nbsp;=&nbsp;controllingDimNames(i)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;controllingDimName)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;i</pre>
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><font face="Courier New"><span style="color:green;">	'Select&nbsp;two&nbsp;display&nbsp;dimensions&nbsp;and&nbsp;add&nbsp;them&nbsp;to&nbsp;the&nbsp;pattern&nbsp;table</span>
+	status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;D1@Sketch2@bottle.SLDPRT&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;DIMENSION&quot;</span>,&nbsp;0.0176517231321772,&nbsp;0.0149650532369545,&nbsp;-0.0243235746513165,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+	swDisplayDimension&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+	status&nbsp;=&nbsp;swDimensionDrivenTablePatternFeat.<b>AddDimension</b>
+<span style="color:blue;">	If</span>&nbsp;status&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;		Debug.Print(<span style="color:#a31515;">&quot;Added&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDisplayDimension.<b>GetNameForSelection</b>&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;to&nbsp;pattern&nbsp;table&quot;</span>)
+<span style="color:blue;">	End</span>&nbsp;<span style="color:blue;">If
+</span>
+	swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+
+	status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;D2@Sketch2@bottle.SLDPRT&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;DIMENSION&quot;</span>,&nbsp;0.019517663324148,&nbsp;0.0297942417761803,&nbsp;-0.0237034236540374,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+	swDisplayDimension&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+	status&nbsp;=&nbsp;swDimensionDrivenTablePatternFeat.<b>AddDimension</b>
+<span style="color:blue;">	If</span>&nbsp;status&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;		Debug.Print(<span style="color:#a31515;">&quot;Added&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDisplayDimension.<b>GetNameForSelection</b>&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;to&nbsp;pattern&nbsp;table&quot;</span>)
+<span style="color:blue;">	End</span>&nbsp;<span style="color:blue;">If
+</span>
+<span style="color:green;">	'Delete&nbsp;the&nbsp;just-added&nbsp;display&nbsp;dimension&nbsp;from&nbsp;the&nbsp;pattern&nbsp;table</span>
+	status&nbsp;=&nbsp;swDimensionDrivenTablePatternFeat.<b>DeleteDimension</b>(swDisplayDimension.<b>GetNameForSelection</b>)
+<span style="color:blue;">	If</span>&nbsp;status&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;		Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Deleted&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDisplayDimension.<b>GetNameForSelection</b>&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;&nbsp;from&nbsp;pattern&nbsp;table&quot;</span>)
+<span style="color:blue;">	End</span>&nbsp;<span style="color:blue;">If</span></font>
+ 
+<font face="Courier New">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionDrivenTablePatternFeat.<b>PropagateVisualProperties</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Roll&nbsp;forward&nbsp;the&nbsp;variable&nbsp;pattern&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature.<b>ModifyDefinition</b>(swDimensionDrivenTablePatternFeat,&nbsp;swModel,&nbsp;<span style="color:blue;">Nothing</span>)</font>
+ 
+<font face="Courier New">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></font></pre>
+
+</body>
+
+</html>

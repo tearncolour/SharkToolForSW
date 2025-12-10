@@ -1,0 +1,238 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get and Set Sensor Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,sensors">
+<meta name=MS-HKWD content="Sensors (see also ISensor Interface)">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=4554>
+<meta name=layout-width content=951>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1><a name="Top"></a>Get and Set Sensor Example (VBA)</h1>
+
+<p>This example shows how to get a Measurement (dimension) sensor, resets 
+ its value to set off an alert, and fire notifications before resetting 
+ value.</p>
+
+<pre>'-------------------------------------------------------------------
+' Preconditions:
+' 1. Copy <a href="#Module">Main</a> into the macro.
+' 2. Click <b>Insert &gt; Class Module</b> and copy <a href="#Class">Class1</a> into that module.
+' 3. Open a part document that has a dimension
+'    of 2.5 inches and a corresponding Measurement
+'    (dimension) sensor that has an alert set to
+'    go off if the value of the dimension is
+'    reset to &gt; 3 inches.
+' 4. Select the Measurement (dimension) sensor
+'    of 2.5 inches in the Sensors folder in the
+'    FeatureManager design tree.
+' 5. Open the Immediate window.
+'
+' Postconditions:
+' 1. Enables the Measurement (dimension) sensor alert, if it
+'    wasn't previously enabled.
+' 2. Sets the value of the dimension to 3.5 inches.
+' 3. Triggers the Measurement (dimension) sensor alert; click
+'    <b>OK</b> to close it.
+' 4. Fires an event when updating the dimension; click
+'    <b>OK</b> to close it.
+' 5. Examine the FeatureManager design tree, Immediate window,
+'    and the graphics area.
+'--------------------------------------------------------------------
+<a name=Module></a>Module
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swPart As SldWorks.PartDoc
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swFeat As SldWorks.Feature
+    Dim swSensor As SldWorks.Sensor
+    Dim swDimSensor As SldWorks.DimensionSensorData
+    Dim swDisplayDim As SldWorks.DisplayDimension
+    Dim swDim As SldWorks.Dimension
+    Dim alertValue1 As Double
+    Dim alertvalue2 As Double
+    Dim sensorValue As Double
+    Dim retVal As Long
+    Dim swPartEvents As Class1</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>ActiveDoc</b></pre>
+<pre>    ' Event notification
+    Set swPart = swModel
+    Set swPartEvents = New Class1
+    Set swPartEvents.swPart = swApp.<b>ActiveDoc</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b></pre>
+<pre>    ' Get the selected Measurement (dimension) sensor
+    ' in Sensors folder in FeatureManager design tree
+    Set swFeat = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swSensor = swFeat.<b>GetSpecificFeature2</b></pre>
+<pre>    ' Get name of sensor
+    Debug.Print &quot;Sensor name = &quot; &amp; swFeat.<b>Name</b></pre>
+<pre>    ' Make sure that the selected sensor is a Measurement
+    ' (dimension) sensor (as of SOLIDWORKS 2009 SP2, only
+    ' Measurement (dimension) sensors supported);
+    ' if it's not, then exit the macro
+    If swSensor Is Nothing Then
+        Debug.Print &quot;Selected sensor is not a Measurement (dimension) sensor. Exiting macro.&quot;
+        Exit Sub
+    End If</pre>
+<pre>    ' Get type of sensor
+    Select Case swSensor.<b>SensorType</b>
+        Case swSensorSimulation
+            Debug.Print &quot;Sensor type = Simulation&quot;
+        Case swSensorMassProperty
+            Debug.Print &quot;Sensor type = Mass Property&quot;
+        Case swSensorDimension
+            Debug.Print &quot;Sensor type = Measurement (dimension)&quot;
+        Case swSensorInterfaceDetection
+            Debug.Print &quot;Sensor type = Interference Detection&quot;
+        End Select</pre>
+<pre>    ' Get whether the sensor is in an alerted state
+    Debug.Print &quot;Is an alert currently triggered for this sensor ? &quot; &amp; swSensor.<b>SensorAlertState</b></pre>
+<pre>    'Enable sensor's alert
+    swSensor.SensorAlertEnabled = True
+    Debug.Print &quot;Is an alert enabled for this sensor? &quot; &amp; swSensor.<b>SensorAlertEnabled</b></pre>
+<pre>    ' Get sensor's alert state
+    If swSensor.<b>SensorAlertState</b> Then
+        Select Case swSensor.<b>SensorAlertType</b>
+            Case swSensorAlert_GreaterThan
+                Debug.Print &quot;Sensor alert type = Greater than&quot;
+            Case swSensorAlert_LessThan
+                Debug.Print &quot;Sensor alert type = Less than&quot;
+            Case swSensorAlert_Exactly
+                Debug.Print &quot;Sensor alert type = Exactly&quot;
+            Case swSensorAlert_NotGreaterThan
+                Debug.Print &quot;Sensor alert type = Not greater than&quot;
+            Case swSensorAlert_NotLessThan
+                Debug.Print &quot;Sensor alert type = Not less than&quot;
+            Case swSensorAlert_NotExactly
+                Debug.Print &quot;Sensor alert type = Not exactly&quot;
+            Case swSensorAlert_Between
+                Debug.Print &quot;Sensor alert type = Between&quot;
+            Case swSensorAlert_NotBetween
+                Debug.Print &quot;Sensor alert type = Not between&quot;
+            Case swSensorAlert_True
+                Debug.Print &quot;Sensor alert type = True&quot;
+            Case swSensorAlert_False
+                Debug.Print &quot;Sensor alert type = False&quot;
+        End Select        
+</pre>
+<pre>        ' Get sensor's alert values
+        alertValue1 = swSensor.<b>SensorAlertValue1</b></pre>
+<pre>        ' ISensor::SensorAlertValue2 is only valid if sensor
+        ' alert type is swSensorAlert_Between
+        alertvalue2 = swSensor.<b>SensorAlertValue2</b>
+        Debug.Print &quot;  Alert value 1 = &quot; &amp; alertValue1
+        Debug.Print &quot;  Alert value 2 = &quot; &amp; alertvalue2</pre>
+<pre>    End If    
+</pre>
+<pre>    ' Set sensor to a different sensor type
+    swSensor.<b>SensorType</b> = swSensorSimulation
+    Select Case swSensor.<b>SensorType</b>
+        Case swSensorSimulation
+            Debug.Print &quot;Set sensor type to = Simulation&quot;
+        Case swSensorMassProperty
+            Debug.Print &quot;Set sensor type to = Mass Property&quot;
+        Case swSensorDimension
+            Debug.Print &quot;Set sensor type to = Measurement (dimension)&quot;
+        Case swSensorInterfaceDetection
+            Debug.Print &quot;Set sensor type to = Interference Detection&quot;
+        End Select</pre>
+<pre>    ' Update and evaluate sensor
+    swSensor.<b>UpdateSensor</b></pre>
+<pre>    ' Set sensor type back to original type
+    swSensor.<b>SensorType</b> = swSensorDimension</pre>
+<pre>    ' Update and evaluate sensor again
+    swSensor.<b>UpdateSensor</b></pre>
+<pre>    ' Print updated sensor type
+    Select Case swSensor.<b>SensorType</b>
+        Case swSensorSimulation
+            Debug.Print &quot;Sensor updated back to type = Simulation&quot;
+        Case swSensorMassProperty
+            Debug.Print &quot;Sensor updated back to type = Mass Property&quot;
+        Case swSensorDimension
+            Debug.Print &quot;Sensor updated back to type = Measurement (dimension)&quot;
+        Case swSensorInterfaceDetection
+            Debug.Print &quot;Sensor updated back to type = Interference Detection&quot;
+    End Select</pre>
+<pre>    ' Because sensor is a Measurement (dimension) sensor,
+    ' get the sensor's feature data, object, configuration name, and value
+    If TypeOf swSensor Is SldWorks.<b>DimensionSensorData</b> Then
+        Set swDimSensor = swSensor.<b>GetSensorFeatureData</b></pre>
+<pre>        ' Get Measurement (dimension) sensor value
+        sensorValue = swDimSensor.<b>sensorValue</b></pre>
+<pre>        ' Convert meters to inches
+        Debug.Print &quot;Sensor value: &quot; &amp; (sensorValue * 39.37) &amp; &quot; inches&quot;</pre>
+<pre>        ' Get the actual dimension and update it
+        ' to a value that sets off the alert
+        Set swDisplayDim = swDimSensor.<b>GetDisplayDimension</b>
+        Set swDim = swDisplayDim.<b>GetDimension2</b>(1)
+        retVal = swDim.<b>SetValue3</b>(3.5, swSetValue_UseCurrentSetting, Nothing)
+        swSensor.<b>UpdateSensor</b>
+        swModel.<b>ForceRebuild3</b> (True)</pre>
+<pre>        ' Get Measurement (dimension) sensor value again
+        sensorValue = swDimSensor.<b>sensorValue</b>
+        </pre>
+<pre>        ' Convert meters to inches
+        Debug.Print &quot;New sensor value: &quot; &amp; (sensorValue * 39.37) &amp; &quot; inches&quot;</pre>
+<pre>    End If</pre>
+<pre>End Sub</pre>
+<div align="center">
+	<pre><a href="#Top">Back to top </a></pre>
+</div>
+
+<p class=APICODE>&nbsp;</p>
+
+<h5><a name=Class></a><span style="font-weight: 400">
+<font face="Courier New" size="2">Class </font></span></h5>
+
+<p class=APICODE>Option Explicit</p>
+
+<p class=APICODE>Public WithEvents swPart As SldWorks.PartDoc</p>
+
+<p class=APICODE>Private Function swPart_<span style="font-weight: bold;">SensorAlertPreNotify</span>(ByVal 
+ SensorIn As Object, ByVal SensorAlertType As Long) As Long</p>
+
+<p class=APICODE><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->MsgBox 
+ &quot;The value of the sensor deviates from its limits.&quot;</p>
+
+<p class=APICODE>End Function</p>
+<p class=APICODE align="center"><a href="#Top">Back to top </a></p>
+
+</body>
+
+</html>

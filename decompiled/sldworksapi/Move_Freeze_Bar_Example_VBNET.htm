@@ -1,0 +1,290 @@
+<html>
+
+<head>
+<title>Move Freeze Bar Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,frozen features">
+<meta name=MS-HKWD content="VB.NET examples,hidden-lock features">
+<meta name=MS-HKWD content="VB.NET examples,rebuild">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Move Freeze Bar Example (VB.NET)</h1>
+<p>This example shows how to move the freeze bar to another location in the 
+FeatureManager design tree.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><font color="#008000">'----------------------------------------------------------------------------<br>
+	' Preconditions:<br>
+	' 1. Open <i>public_documents</i><b>\samples\tutorial\api\FreezeBarNeedsRebuild2.sldprt</b>.<br>
+	' 2. Inspect the FeatureManager design tree:<br>
+	'&nbsp;&nbsp;&nbsp; * The rebuild indicator is displayed in the 
+	FeatureManager design tree.<br>
+	'&nbsp;&nbsp;&nbsp; * The freeze bar is below Boss-Extrude1 in the FeatureManager design tree.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 is frozen in the FeatureManager design tree.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude2 is unfrozen in the FeatureManager design 
+tree.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 has freeze updates pending.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude2 has no freeze updates pending.<br>
+	'&nbsp;&nbsp;&nbsp; * The model needs to be rebuilt.<br>
+	'<br>
+	' Postconditions:<br>
+	' 1. Removes the rebuild indicator from the part.<br>
+	' 2. Inspect the Immediate window to see which features have hidden locks.<br>
+	' 3.&nbsp;Press F5 to continue.<br>
+	'&nbsp;&nbsp;&nbsp; * Freeze bar moved to the top of the FeatureManager design tree.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 is unfrozen.<br>
+	' 4. Press F5 to continue.<br>
+	'&nbsp;&nbsp;&nbsp; * Freeze bar moved to the bottom of the FeatureManager design tree.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 and Boss-Extrude2 are frozen.<br>
+	' 5. Press F5 to continue.<br>
+	'&nbsp;&nbsp;&nbsp; * Freeze bar moved to after Boss-Extrude2.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 and Boss-Extrude2 are frozen.<br>
+	' 6. Press F5 to continue.<br>
+	'&nbsp;&nbsp;&nbsp; * Freeze bar moved to the top of the FeatureManager design tree.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 and Boss-Extrude2 are unfrozen.<br>
+	' 7. Press F5 to continue.<br>
+	'&nbsp;&nbsp;&nbsp; * The model does not need to be rebuilt.<br>
+	'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 and Boss-Extrude2 have no freeze updates 
+pending.<br>
+	' 8. Press F5 to close the model.<br>
+	' 9. Inspect the Immediate window.<br>
+	'<br>
+	' NOTE: Because the model is used elsewhere,<br>
+	' do not save changes when closing it.<br>
+	' ---------------------------------------------------------------------------</font><span style="color:Green"><br>
+	<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Diagnostics<br>
+	<br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black">
+	</span><span style="color:Blue">Class</span><span style="color:Black"> 
+	SolidWorksMacro<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swModDocExt </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDocExtension<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	lRet </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color: #0000FF">Integer</span><span style="color:Blue"><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	featMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	FeatureManager<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	selMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SelectionMgr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	featFrozen </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	featUnFrozen </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	feat </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	boolstatus </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	bRetVal </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vfeats </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vfeat </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	main()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = swApp.<b>ActiveDoc</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModDocExt = swModel.<b>Extension</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featMgr = swModel.<b>FeatureManager</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selMgr = swModel.<b>SelectionManager<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </b></span>
+	<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swApp.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swUserEnableFreezeBar, 
+	True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModDocExt.<b>ShowPartRebuildIndicators</b> 
+	= False</p>
+	<p class="APICODE"><span style="color:Black"> 
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Number of Features 
+	is &quot;</span><span style="color:Black"> &amp; swModel.<b>GetFeatureCount</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vfeats = featMgr.<b>GetFeatures</b>(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black">
+	</span><span style="color:Blue">Each</span><span style="color:Black"> vfeat
+	</span><span style="color:Blue">In</span><span style="color:Black"> vfeats<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feat = vfeat<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Feature 
+	name 
+	from FeatureManager design tree is &quot;</span><span style="color:Black"> &amp; feat.<b>Name</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(feat.<b>Name</b> &amp; </span><span style="color:#a31515">&quot; has 
+	a hidden lock? &quot;</span><span style="color:Black"> &amp; feat.<b>IsHiddenLock</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = 
+	swModDocExt.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;Boss-Extrude1&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;BODYFEATURE&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">False</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swModDocExt.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;Boss-Extrude2&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;BODYFEATURE&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">True</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feat = featMgr.<b>GetFreezeLocation</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> feat
+	</span><span style="color:Blue">Is</span><span style="color:Black"> </span>
+	<span style="color:Blue">Nothing</span><span style="color:Black"> </span>
+	<span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Freeze bar 
+	location is after &quot;</span><span style="color:Black"> &amp; feat.<b>Name</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(feat.<b>Name</b> &amp; </span><span style="color:#a31515">&quot; is 
+	frozen? &quot;</span><span style="color:Black"> &amp; feat.<b>IsFrozen</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRetVal = swModDocExt.<b>NeedsRebuild2</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Needs rebuild? &quot;</span><span style="color:Black"> 
+	&amp; bRetVal)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featFrozen = selMgr.<b>GetSelectedObject6</b>(1, -1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Feature &quot;</span><span style="color:Black"> 
+	&amp; featFrozen.<b>Name</b> &amp; </span><span style="color:#a31515">&quot; has 
+	freeze updates 
+	pending? &quot;</span><span style="color:Black"> &amp; 
+	featFrozen.<b>HasFrozenUpdatePending</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featUnFrozen = selMgr.<b>GetSelectedObject6</b>(2, -1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Feature &quot;</span><span style="color:Black"> 
+	&amp; featUnFrozen.<b>Name</b> &amp; </span><span style="color:#a31515">&quot; has 
+	freeze 
+	updates pending? &quot;</span><span style="color:Black"> &amp; 
+	featUnFrozen.<b>HasFrozenUpdatePending</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	(featFrozen.<b>HasFrozenUpdatePending</b>) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToBeforeFeature, 
+	featFrozen.<b>Name</b>, </span><span style="color:Blue">True, True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Freeze bar moved 
+	to the top of the FeatureManager design tree. Press F5.&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToEnd, </span>
+	<span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, </span>
+	<span style="color:Blue">True, True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Freeze bar moved 
+	to the bottom of the FeatureManager design tree. Press F5.&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToAfterFeature, 
+	featUnFrozen.<b>Name</b>, </span><span style="color:Blue">True, True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Freeze bar moved 
+	to after Boss-Extrude2. Press F5.&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToTop, </span>
+	<span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, </span>
+	<span style="color:Blue">True, True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Freeze bar moved 
+	to the top of the FeatureManager design tree. Press F5.&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Else<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToBeforeFeature, 
+	featFrozen.<b>Name</b>, </span><span style="color:Blue">True, True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToEnd, </span>
+	<span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, </span>
+	<span style="color:Blue">True, True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToBeforeFeature, 
+	featUnFrozen.<b>Name</b>, </span><span style="color:Blue">True, True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToAfterFeature, 
+	featUnFrozen.<b>Name</b>, </span><span style="color:Blue">True</span><span style="color:Black">, </span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRet = 
+	featMgr.<b>EditFreeze2</b>(swMoveFreezeBarTo_e.swMoveFreezeBarToTop, </span>
+	<span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, </span>
+	<span style="color:Blue">True, True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRetVal = swModDocExt.<b>NeedsRebuild2</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Needs rebuild? &quot;</span><span style="color:Black"> 
+	&amp; bRetVal)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Feature &quot;</span><span style="color:Black"> 
+	&amp; featFrozen.<b>Name</b> &amp; </span><span style="color:#a31515">&quot; has 
+	freeze updates 
+	pending? &quot;</span><span style="color:Black"> &amp; 
+	featFrozen.<b>HasFrozenUpdatePending</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Feature &quot;</span><span style="color:Black"> 
+	&amp; featUnFrozen.<b>Name</b> &amp; </span><span style="color:#a31515">&quot; has 
+	freeze 
+	updates pending? &quot;</span><span style="color:Black"> &amp; 
+	featUnFrozen.<b>HasFrozenUpdatePending</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feat = featMgr.<b>GetFreezeLocation</b> </span><span style="color:Green">' 
+	feat = Nothing if freeze bar is at the top of FeatureManager design tree<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> feat
+	</span><span style="color:Blue">Is</span><span style="color:Black"> </span>
+	<span style="color:Blue">Nothing</span><span style="color:Black"> </span>
+	<span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(feat.<b>Name</b> &amp; </span>
+	<span style="color:#a31515">&quot; is frozen? &quot;</span><span style="color:Black"> 
+	&amp; feat.<b>IsFrozen</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Press 
+	F5 to close the model.&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>CloseDoc</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp; <br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	<br>
+	<br>
+	</span><span style="color:Blue">End</span><span style="color:Black"> </span>
+	<span style="color:Blue">Class</span>
+</div>
+<p class=APICODE>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

@@ -1,0 +1,350 @@
+<html>
+
+<head>
+<title>Get Version History of Future Version Document Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,version number">
+<meta name=MS-HKWD content="C# examples,history">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Version History of Future Version Document Example (C#)</h1>
+<p>This example shows how to get the version history of a future version document.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	//----------------------------------------------------------------------------
+	<br>
+	// Preconditions: <br>
+	// 1. Copy a future version part document to this macro's directory. <br>
+	// 2. Replace <i>Part1.sldprt </i>in the macro with 
+	the name <br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;of your future version part.<br>
+	// 3. Open an Immediate window. <br>
+	// <br>
+	// Postconditions:&nbsp;&nbsp;<br>
+	// 1. Does not throw swFileLoadError_e.swFutureVersion.<br>
+	// 2. Inspect the Immediate window for the version history of the document.<br>
+	// 
+	---------------------------------------------------------------------------<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	Microsoft.VisualBasic;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Collections;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Collections.Generic;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Data;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Diagnostics;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Runtime.InteropServices;<br>
+	<br>
+	</span><span style="color:Blue">namespace</span><span style="color:Black"> 
+	IsFutureVersion_CSharp.csproj<br>
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">partial</span><span style="color:Black">
+	</span><span style="color:Blue">class</span><span style="color:Black">
+	</span><span style="color:#2b91af">SolidWorksMacro<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> Main()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black"> 
+	swDocument = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDocExtension</span><span style="color:Black"> 
+	swExtension = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">ModelDocExtension</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	lErrors = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	lWarnings = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	lOptions = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	strFileName = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black">[] 
+	vVersionHistory = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	strBaseVersion = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	strCurrentVersion = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	strHotFixes = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	strRevisionNumber = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	lDateCode = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	strFormatVersion = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strFormatVersion = swApp.<b>GetLatestSupportedFileVersion</b>().ToString();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strRevisionNumber = swApp.<b>RevisionNumber</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>GetBuildNumbers2</b>(</span><span style="color:Blue">out</span><span style="color:Black"> 
+	strBaseVersion, </span><span style="color:Blue">out</span><span style="color:Black"> 
+	strCurrentVersion, </span><span style="color:Blue">out</span><span style="color:Black"> 
+	strHotFixes);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lDateCode = swApp.<b>DateCode</b>();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Format 
+	version = &quot;</span><span style="color:Black"> + strFormatVersion);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;RevisionNumber 
+	= &quot;</span><span style="color:Black"> + strRevisionNumber);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;BaseVersion&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + strBaseVersion);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;CurrentVersion 
+	= &quot;</span><span style="color:Black"> + strCurrentVersion);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;HotFixes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	= &quot;</span><span style="color:Black"> + strHotFixes);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;DateCode&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	= &quot;</span><span style="color:Black"> + lDateCode);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDocument = (</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">)swApp.<b>ActiveDoc</b>;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	((swDocument == </span><span style="color:Blue">null</span><span style="color:Black">))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strFileName = swApp.<b>GetCurrentMacroPathFolder</b>() +
+	</span><span style="color:#a31515">&quot;\\<i>Part1.sldprt</i>&quot;</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lOptions = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lOptions = lOptions | (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swOpenDocOptions_e</span><span style="color:Black">.swOpenDocOptions_Silent;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDocument = swApp.<b>OpenDoc6</b>(strFileName, (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swDocumentTypes_e</span><span style="color:Black">.swDocPART, 
+	lOptions, </span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:Blue">ref</span><span style="color:Black"> lErrors,
+	</span><span style="color:Blue">ref</span><span style="color:Black"> 
+	lWarnings);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;lErrors 
+	= &quot;</span><span style="color:Black"> + lErrors);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Starting with SW2012 
+	SP5, loading future file versions <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	</span><span style="color: #008000">// </span><span style="color:Green">is supported, so the future version error 
+	no longer occurs.<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;future 
+	version error = &quot;</span><span style="color:Black"> + ((lErrors &amp; (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swFileLoadError_e</span><span style="color:Black">.swFutureVersion) 
+	== (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swFileLoadError_e</span><span style="color:Black">.swFutureVersion));<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;lWarnings 
+	= &quot;</span><span style="color:Black"> + lWarnings);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	((swDocument == </span><span style="color:Blue">null</span><span style="color:Black">))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;No 
+	model&quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strFileName = swDocument.<b>GetPathName</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;File 
+	= &quot;</span><span style="color:Black"> + strFileName);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swExtension = swDocument.<b>Extension</b>;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// The version history of a 
+	future version document is the same <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // as that of the part/assembly template 
+	that is used to load it<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// 
+	into the older version of SOLIDWORKS. IModelDoc2::VersionHistory<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // returns the 
+	version history of the part template,<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// 
+	not the version history of the future version document. <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // Get the version 
+	history of a future version document from <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // its file on disk using SldWorks::VersionHistory.<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Is 
+	future version = &quot;</span><span style="color:Black"> + swExtension.<b>IsFutureVersion</b>());<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	((!(swExtension.<b>IsFutureVersion</b>() == </span><span style="color:Blue">
+	false</span><span style="color:Black">)))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vVersionHistory = (</span><span style="color:Blue">object</span><span style="color:Black">[])swApp.<b>VersionHistory</b>(strFileName);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	(((vVersionHistory != </span><span style="color:Blue">null</span><span style="color:Black">)))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Version 
+	history from file:&quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PrintVersionHistory(vVersionHistory);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vVersionHistory = (</span><span style="color:Blue">object</span><span style="color:Black">[])swDocument.<b>VersionHistory</b>();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	(((vVersionHistory != </span><span style="color:Blue">null</span><span style="color:Black">)))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Version 
+	history from document:&quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PrintVersionHistory(vVersionHistory);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;view-only&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + swDocument.<b>IsOpenedViewOnly</b>());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;read-only&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+	&quot;</span><span style="color:Black"> + swDocument.<b>IsOpenedReadOnly</b>());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;blocking 
+	state = &quot;</span><span style="color:Black"> + BlockingState2String((</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">)swDocument.<b>GetBlockingState</b>()));<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> 
+	PrintVersionHistory(</span><span style="color:Blue">object</span><span style="color:Black">[] 
+	vVersionHistory)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black">[] 
+	vSplitResults = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	strFormatVersion = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	strDateCodes = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	vDateCode = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	vHistoryEntry = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">foreach</span><span style="color:Black"> 
+	(</span><span style="color:Blue">string</span><span style="color:Black"> 
+	vHistoryEntry_loopVariable </span><span style="color:Blue">in</span><span style="color:Black"> 
+	vVersionHistory)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vHistoryEntry = vHistoryEntry_loopVariable;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&quot;</span><span style="color:Black"> 
+	+ vHistoryEntry);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vSplitResults = vHistoryEntry.Split(</span><span style="color:#a31515">'['</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strFormatVersion = (</span><span style="color:Blue">string</span><span style="color:Black">)vSplitResults[0];<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strDateCodes = vSplitResults[1].ToString().Replace(</span><span style="color:#a31515">']'</span><span style="color:Black">,
+	</span><span style="color:#a31515">' '</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vSplitResults = strDateCodes.Split(</span><span style="color:#a31515">','</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;format 
+	version = &quot;</span><span style="color:Black"> + strFormatVersion);<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">foreach</span><span style="color:Black"> 
+	(</span><span style="color:Blue">string</span><span style="color:Black"> 
+	vDateCode_loopVariable </span><span style="color:Blue">in</span><span style="color:Black"> 
+	vSplitResults)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vDateCode = vDateCode_loopVariable;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	datecode = &quot;</span><span style="color:Black"> + vDateCode);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">private</span><span style="color:Black">
+	</span><span style="color:Blue">string</span><span style="color:Black"> 
+	BlockingState2String(</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black"> 
+	nBlockingState)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	functionReturnValue = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">switch</span><span style="color:Black"> 
+	((nBlockingState))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">case</span><span style="color:Black">
+	</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">.swEditorBlock:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;editor block&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">case</span><span style="color:Black">
+	</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">.swEditSketchBlock:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;edit sketch block&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">case</span><span style="color:Black">
+	</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">.swFullBlock:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;full block&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">case</span><span style="color:Black">
+	</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">.swModifyBlock:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;modify block&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">case</span><span style="color:Black">
+	</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">.swNoBlock:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;no block&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">case</span><span style="color:Black">
+	</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">.swPartialModifyBlock:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;partial modify block&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">case</span><span style="color:Black">
+	</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">.swSystemBlock:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;system block&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">case</span><span style="color:Black">
+	</span><span style="color:#2b91af">swBlockingStates_e</span><span style="color:Black">.swViewOnlyBlock:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;view only block&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">default</span><span style="color:Black">:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functionReturnValue = </span>
+	<span style="color:#a31515">&quot;&lt;unknown blocking state&gt;&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">break</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">return</span><span style="color:Black"> 
+	functionReturnValue;<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:#2b91af">SldWorks</span><span style="color:Black"> 
+	swApp;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	}</span>
+</div>
+
+</body>
+
+</html>

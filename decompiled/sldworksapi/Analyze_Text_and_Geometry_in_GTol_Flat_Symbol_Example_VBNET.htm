@@ -1,0 +1,132 @@
+<html>
+
+<head>
+<title>Analyze Text and Geometry in GTol Symbol Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,symbols">
+<meta name=MS-HKWD content="VB.NET examples,GTol">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Analyze Text and Geometry in GTol Symbol Example (VB.NET)</h1>
+<p>This example shows how to analyze the text and geometry in a GTol 
+symbol.</p>
+
+<p style="font-family: Consolas; font-size: 13; color: black; background: white" class="APICODE">
+<font face="Courier New"><span style="color:green;">
+'----------------------------------------------------------------------------</span><br>
+<span style="color:green;">'&nbsp;Preconditions:</span><br>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;document&nbsp;exists.</span><br>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">'</span><br>
+<span style="color:green;">'&nbsp;Postconditions:</span><br>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;part&nbsp;document.<br>
+' 2. Gets whether </span>
+<span style="color:green;">&lt;&quot;GTOL-SPROF&quot;&gt; is bound.</span><br>
+<span style="color:green;">
+'&nbsp;3.&nbsp;Gets&nbsp;the&nbsp;number&nbsp;of&nbsp;lines,&nbsp;arcs,&nbsp;circles,&nbsp;text&nbsp;strings,</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;triangles&nbsp;in&nbsp;&lt;&quot;GTOL-SPROF&quot;&gt;.</span><br>
+<span style="color:green;">
+'&nbsp;4.&nbsp;Gets&nbsp;the&nbsp;number&nbsp;of&nbsp;point&nbsp;coordinates&nbsp;in&nbsp;the</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;lines&nbsp;in&nbsp;&lt;&quot;GTOL-SPROF&quot;&gt;.</span><br>
+<span style="color:green;">'&nbsp;5.&nbsp;Gets&nbsp;the&nbsp;x,y,z&nbsp;coordinates&nbsp;for&nbsp;the&nbsp;first&nbsp;and&nbsp;second&nbsp;points</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;of&nbsp;each&nbsp;line&nbsp;in&nbsp;&lt;&quot;GTOL-SPROF&quot;&gt;.</span><br>
+<span style="color:green;">'&nbsp;6.&nbsp;Gets&nbsp;the&nbsp;arc&nbsp;information&nbsp;for&nbsp;&lt;&quot;GTOL-SPROF&quot;&gt;.</span><br>
+<span style="color:green;">'&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">
+'---------------------------------------------------------------------------</span><br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+<span style="color:blue;">Imports</span>&nbsp;System<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics<br>
+&nbsp;<br>
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swEnvironment&nbsp;<span style="color:blue;">As</span>&nbsp;SolidWorks.Interop.sldworks.Environment<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;nbrSymbols&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;lineSymbols&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;arcInfo&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;nbrLineCoordinates&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\tolanalyst\minimum_clearance\top_plate.sldprt&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnvironment&nbsp;=&nbsp;swApp.<b>GetEnvironment</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;GTOL&nbsp;library&nbsp;-&nbsp;Surface&nbsp;Profile&nbsp;symbol&nbsp;name:&quot;</span>)<br>
+&nbsp;</font></p>
+<p style="font-family: Consolas; font-size: 13; color: black; background: white" class="APICODE">
+<font face="Courier New"><span style="background-position: 0 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<font color="#008000">&nbsp;'Get whether &lt;&quot;GTOL-SPROF&quot;&gt; is bound</font></span><br>
+<span style="background-position: 0 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<font color="#0000FF">Dim</font> bound <font color="#0000FF">As Boolean</font></span><br>
+<span style="background-position: 0 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swEnvironment.<b>GetIsBound</b>(<font color="#A31515">&quot;&lt;GTOL-SPROF&gt;&quot;</font>, 
+bound)</span><br>
+<span style="background-position: 0 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print(<font color="#A31515">&quot; Bound? &quot;</font> &amp; bound)</span><br>
+<span style="background-position: 0 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print(<font color="#A31515">&quot;&quot;</font>)</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;the&nbsp;number&nbsp;of&nbsp;lines,&nbsp;arcs,&nbsp;circles,&nbsp;text&nbsp;strings,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'and&nbsp;triangles&nbsp;in&nbsp;&lt;&quot;GTOL-SPROF&quot;&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrSymbols&nbsp;=&nbsp;swEnvironment.<b>GetSymEdgeCounts</b>(<span style="color:#a31515;">&quot;&lt;GTOL-SPROF&gt;&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;Line&nbsp;count:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrSymbols(0))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;Arc&nbsp;count:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrSymbols(1))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;Circle&nbsp;count:&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrSymbols(2))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;Text&nbsp;count:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrSymbols(3))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;Triangle&nbsp;count:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrSymbols(4))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;lines:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrSymbols(0))<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;the x,y,z&nbsp;coordinates&nbsp;for&nbsp;the&nbsp;first</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'and&nbsp;second&nbsp;points&nbsp;of&nbsp;each&nbsp;line</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lineSymbols&nbsp;=&nbsp;swEnvironment.<b>GetSymLines</b>(<span style="color:#a31515;">&quot;&lt;GTOL-SPROF&gt;&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrLineCoordinates&nbsp;=&nbsp;UBound(lineSymbols)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Number&nbsp;of&nbsp;point&nbsp;coordinates:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrLineCoordinates&nbsp;+&nbsp;1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Point&nbsp;coordinates:&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Line&nbsp;1's&nbsp;x,y,z&nbsp;coordinates&nbsp;for&nbsp;first&nbsp;and&nbsp;second&nbsp;points,&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Line&nbsp;2's&nbsp;x,y,z&nbsp;coordinates&nbsp;for&nbsp;first&nbsp;and&nbsp;second&nbsp;points,&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...)&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;nbrLineCoordinates<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;lineSymbols(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;i<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;arcs:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrSymbols(1))<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;the&nbsp;x,y,z&nbsp;coordinates&nbsp;of&nbsp;the&nbsp;center,&nbsp;start,&nbsp;and&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'end&nbsp;points&nbsp;of&nbsp;each&nbsp;arc, whether&nbsp;the&nbsp;arc&nbsp;is&nbsp;filled,&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'and&nbsp;whether&nbsp;a&nbsp;chord&nbsp;joining&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;points&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'of&nbsp;the&nbsp;arc&nbsp;is&nbsp;drawn</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;x,y,z&nbsp;coordinates&nbsp;of&nbsp;the&nbsp;center,&nbsp;start,&nbsp;and&nbsp;end&nbsp;points&nbsp;of&nbsp;each&nbsp;arc,&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;whether&nbsp;the&nbsp;arc&nbsp;is&nbsp;filled&nbsp;(1&nbsp;=&nbsp;true,&nbsp;0&nbsp;=&nbsp;false),&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;and&nbsp;whether&nbsp;a&nbsp;chord&nbsp;is&nbsp;displayed&nbsp;for&nbsp;each&nbsp;arc&nbsp;(1&nbsp;=&nbsp;true,&nbsp;0&nbsp;=&nbsp;false):&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arcInfo&nbsp;=&nbsp;swEnvironment.<b>GetSymArcs2</b>(<span style="color:#a31515;">&quot;&lt;GTOL-SPROF&gt;&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;UBound(arcInfo)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;arcInfo(i))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;i<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></font><br>
+&nbsp;</p>
+
+</body>
+
+</html>

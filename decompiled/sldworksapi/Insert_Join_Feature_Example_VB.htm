@@ -1,0 +1,141 @@
+<html>
+
+<head>
+<title>Insert Join Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,features">
+<meta name=MS-HKWD content="VBA examples,join feature">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=MS-HKWD content="VBA examples,mates">
+<meta name=MS-HKWD content="VBA examples,Inplace mates">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Join Feature Example (VBA)</h1>
+<p>This example shows how to insert a join feature.</p>
+
+<pre>'--------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified assembly document to open exists.
+' 2. Verify that <b>c:\temp</b> exists.
+' 3. Verify that <b>c:\temp\Part1^arm2.sldprt</b> does not exist. If it does,
+'    delete or drag it to a different folder.
+' 4. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the specified assembly document.
+' 2. Edits the assembly, selects a face, and inserts a new part.
+' 3. Selects the components for the join feature and inserts a
+'    join feature, which is a feature of <b>Part1^arm2&lt;1&gt;</b> in the
+'    the FeatureManager design tree.
+' 4. Accesses the join feature
+' 5. Gets the number of joined components.
+' 6. Iterates through the components, prints the name of
+'    each component, and if an <b>Inplace</b> mate,
+'    prints its mate component names and <b>Inplace</b> mate types.
+' 7. Examine the Immediate window, FeatureManager design tree, and
+'    the graphics area.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'--------------------------------------------------------------------------     </pre>
+<pre>Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swAssemblyDoc As SldWorks.AssemblyDoc
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSelectionMgr As SldWorks.SelectionMgr
+Dim swFace As SldWorks.Face2
+Dim swSketchManager As SldWorks.SketchManager
+Dim swFeature As SldWorks.Feature
+Dim swJoinFeatureData As SldWorks.JoinFeatureData
+Dim swSelObj As Object
+Dim fileName As String
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long
+Dim info As Long
+Dim state As Long
+Dim swComponent As SldWorks.Component2
+Dim singleComponent As Variant
+Dim components As Variant
+Dim mates As Variant
+Dim singleMate As Variant
+Dim swMate As SldWorks.Mate2
+Dim swMateInPlace As SldWorks.MateInPlace
+Dim numMateEntities As Long
+Dim typeOfMate As Long
+Dim i As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Open assembly document
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\arm2.sldasm&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocASSEMBLY, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swAssemblyDoc = swModel    </pre>
+<pre>    'Edit the assembly, select a face, and insert a new part
+    swAssemblyDoc.<b>EditPart2</b> True, False, info
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 1.02799485791252E-02, 2.85108269579837E-03, -4.54660000001184E-03, False, 0, Nothing, 0)
+    Set swSelectionMgr = swModel.<b>SelectionManager</b>
+    Set swFace = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swSelObj = swFace
+    state = swAssemblyDoc.<b>InsertNewPart2</b>(&quot;C:\temp\Part1^arm2.sldprt&quot;, swSelObj)
+    Set swSketchManager = swModel.<b>SketchManager</b>
+    swSketchManager.<b>InsertSketch</b> True
+    swModel.<b>EditUndo2</b> 1    </pre>
+<pre>    'Select the components for the join feature and insert a join feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;secondGrip-1@arm2&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;pincap-1@arm2&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;pincap-4@arm2&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;pincap-5@arm2&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;pincap-6@arm2&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swAssemblyDoc.<b>InsertJoin2</b>(True, False)
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Join1@Part1^arm2-1@arm2&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)    </pre>
+<pre>    'Access the join feature, which is a feature of Part1^arm2&lt;1&gt; in the
+    'the FeatureManager design tree
+    Set swFeature = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swJoinFeatureData = swFeature.<b>GetDefinition</b>
+    swJoinFeatureData.<b>AccessSelections</b> swModel, Nothing        </pre>
+<pre>    'Get the number of joined components
+    Debug.Print &quot;Number of joined components: &quot; &amp; swJoinFeatureData.<b>GetJoinedPartsCount
+</b>
+    swJoinFeatureData.<b>ReleaseSelectionAccess</b>
+
+    Debug.Print &quot;&quot;</pre>
+<pre>    'Get components 
+    components = swAssemblyDoc.<b>GetComponents</b>(False)
+    For Each singleComponent In components
+        Set swComponent = singleComponent
+        'Print name of component
+        Debug.Print &quot;Name of component: &quot; &amp; swComponent.<b>Name2</b>
+        'Get mates
+        mates = swComponent.<b>GetMates</b>()
+        If (Not IsEmpty(mates)) Then
+            For Each singleMate In mates
+                  'Get mate type
+                  If TypeOf singleMate Is SldWorks.Mate2 Then
+                    Set swMate = singleMate
+                    typeOfMate = swMate.<b>Type</b>
+                End If
+                'If Inplace mate, print mate component name and Inplace mate type
+                If TypeOf singleMate Is SldWorks.MateInPlace Then
+                    Set swMateInPlace = singleMate
+                    numMateEntities = swMateInPlace.<b>GetMateEntityCount</b>
+                    For i = 0 To numMateEntities - 1
+                        Debug.Print &quot;  Mate component name: &quot; &amp; swMateInPlace.<b>MateComponentName</b>(i)
+                        Debug.Print &quot;    Type of Inplace mate: &quot; &amp; swMateInPlace.<b>MateEntityType</b>(i)
+                    Next i
+                End If
+            Next
+        End If
+        Debug.Print &quot;&quot;
+    Next</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

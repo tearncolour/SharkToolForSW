@@ -1,0 +1,131 @@
+<html>
+
+<head>
+<title>Create Library Feature Data Object and Library Feature With References Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+<meta name=MS-HKWD content="VBA examples,library features">
+</head>
+
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+<h1>Create Library Feature Data Object and Library Feature With References Example (VBA)</h1>
+
+
+
+<p>This example shows how to create a library feature with references in order 
+to position the library feature on a model. </p>
+<pre>'-------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified part template and library feature
+'    exist.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Creates a new part containing a boss extrude.
+' 2. Creates a library feature data object.
+'    a. Initializes the newly created library feature using
+'       the specified library feature.
+'    b. Gets the type of references required for the library
+'       feature.
+'    c. Sets the name of the active library feature configuration.
+'    d. Selects the face where to create the library feature.
+'    e. Creates the library feature.
+'    f. Accesses the library feature and selects the edges where to
+'       position the it.
+'    g. Sets the references for positioning the library feature.
+'    h. Updates the definition of the library feature.
+'    i. Unsuppresses the library feature.
+' 3. Examine the Immediate window, FeatureManager design tree, and
+'    graphics area.
+'------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSketchManager As SldWorks.SketchManager
+Dim swFeature As SldWorks.Feature
+Dim swFeatureManager As SldWorks.FeatureManager
+Dim swSelectionManager As SldWorks.SelectionMgr
+Dim swLibFeat As SldWorks.LibraryFeatureData
+Dim sketchLines As Variant
+Dim status As Boolean
+Dim obj() As Object
+Dim vRefs As Variant
+Dim vRefTypes As Variant
+Dim refType As Variant
+Dim nRefCount As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    ' Create part
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SOLIDWORKS 2016\templates\Part.prtdot&quot;, 0, 0, 0)
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Top Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstToRectEntity, swUserPreferenceOption_e.swDetailingNoOptionSpecified, False)
+    status = swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstLineDiagonalType, swUserPreferenceOption_e.swDetailingNoOptionSpecified, True)
+    Set swSketchManager = swModel.<b>SketchManager</b>
+    sketchLines = swSketchManager.<b>CreateCornerRectangle</b>(0, 0, 0, 1, 0.5, 0)</pre>
+<pre>    swModel.<b>ShowNamedView2</b> &quot;*Trimetric&quot;, 8
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line2&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line1&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line4&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line3&quot;, &quot;SKETCHSEGMENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    Set swFeatureManager = swModel.<b>FeatureManager</b>
+    Set swFeature = swFeatureManager.<b>FeatureExtrusion2</b>(True, False, False, 0, 0, 0.01, 0.01, False, False, False, False, 1.74532925199433E-02, 1.74532925199433E-02, False, False, False, False, True, True, True, 0, 0, False)
+    Set swSelectionManager = swModel.<b>SelectionManager</b>
+    swSelectionManager.<b>EnableContourSelection</b> = False   </pre>
+<pre>    ' Create library feature data object
+    Set swLibFeat = swFeatureManager.<b>CreateDefinition</b>(swFmLibraryFeature)    </pre>
+<pre>    ' Initialize newly created library feature using the specified library part
+    status = swLibFeat.<b>Initialize</b>(&quot;C:\ProgramData\SOLIDWORKS\SOLIDWORKS 2016\design library\features\metric\slots\straight slot.sldlfp&quot;)    </pre>
+<pre>    ' Get the type of references required for the library feature
+    nRefCount = swLibFeat.<b>GetReferencesCount</b>
+    vRefs = swLibFeat.<b>GetReferences2</b>(swLibFeatureData_FeatureRespect, vRefTypes)
+    If Not IsEmpty(vRefTypes) Then
+        Debug.Print &quot;Types of references required (edge = 1): &quot;
+        For Each refType In vRefTypes
+            Debug.Print &quot;   &quot; &amp; CStr(refType)
+        Next
+    End If    </pre>
+<pre>    ' Set the name of the active library feature configuration
+    swLibFeat.<b>ConfigurationName</b> = &quot;Default&quot;    </pre>
+<pre>    ' Select the face where to create the library feature
+     status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 0.522458766456054, 0.288038964184011, 9.99999999987722E-03, False, 0, Nothing, 0)  </pre>
+<pre>   ' Create the library feature
+    Set swFeature = swFeatureManager.<b>CreateFeature</b>(swLibFeat)    </pre>
+<pre>    ' Access the library feature to position it on the part
+    Set swLibFeat = Nothing
+    Set swLibFeat = swFeature.<b>GetDefinition</b>
+    status = swLibFeat.<b>AccessSelections</b>(swModel, Nothing)</pre>
+<pre>    ' Select the edges where to position the library feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 0.960865149149924, 0.497807163546383, 1.31011390528215E-02, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 0.99866860703213, 0.481385806014544, 1.13313929676906E-02, True, 0, Nothing, 0)     </pre>
+<pre>    Dim selCount As Long
+    selCount = swSelectionManager.<b>GetSelectedObjectCount2</b>(-1)
+    selCount = selCount - 1
+    ReDim obj(selCount) As Object
+    Dim i As Long
+    For i = 0 To selCount
+        Set obj(i) = swSelectionManager.<b>GetSelectedObject6</b>(i + 1, -1)
+    Next    </pre>
+<pre>    ' Set the references for positioning the library feature on the part
+    Dim vLibRefs As Variant
+    vLibRefs = obj
+    swLibFeat.<b>SetReferences</b> (vLibRefs)    </pre>
+<pre>    ' Update the definition of the library feature
+    status = swFeature.<b>ModifyDefinition</b>(swLibFeat, swModel, Nothing)    </pre>
+<pre>    ' Unsuppress the library feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;straight slot&lt;1&gt;&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>EditUnsuppress2</b>    </pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>End Sub</pre>
+
+
+
+</body>
+
+</html>

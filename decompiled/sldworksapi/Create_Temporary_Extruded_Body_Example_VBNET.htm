@@ -1,0 +1,177 @@
+<html>
+
+<head>
+<title>Create Temporary Extruded Body Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,bodies">
+<meta name=MS-HKWD content="VB.NET examples,temporary body">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Temporary Extruded Body Example (VB.NET)</h1>
+<p>This example shows how to create a temporary extruded body.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;document&nbsp;</span>
+<span style="color:green;">'&nbsp;template&nbsp;exists.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions.</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;a&nbsp;new&nbsp;part&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Creates&nbsp;and&nbsp;selects&nbsp;a&nbsp;sheet&nbsp;(also&nbsp;called&nbsp;a&nbsp;surface)&nbsp;body.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Creates&nbsp;a&nbsp;temporary&nbsp;extruded&nbsp;body.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;graphics&nbsp;area.</span>
+<span style="color:green;">'------------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeatureManager&nbsp;<span style="color:blue;">As</span>&nbsp;FeatureManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchManager&nbsp;<span style="color:blue;">As</span>&nbsp;SketchManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelectionManager&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;sketchSegment&nbsp;<span style="color:blue;">As</span>&nbsp;SketchSegment
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModeler&nbsp;<span style="color:blue;">As</span>&nbsp;Modeler
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swMath&nbsp;<span style="color:blue;">As</span>&nbsp;MathUtility
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;profileBody&nbsp;<span style="color:blue;">As</span>&nbsp;Body2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;extrudedBody&nbsp;<span style="color:blue;">As</span>&nbsp;Body2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;dirVector&nbsp;<span style="color:blue;">As</span>&nbsp;MathVector
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;planeSurf&nbsp;<span style="color:blue;">As</span>&nbsp;Surface
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;trimCurves(3)&nbsp;<span style="color:blue;">As</span>&nbsp;Curve
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;points(11)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;pointArray&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;halfWidth&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;halfLength&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;startArr(2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;endArr(2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ptArr(2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;dirArr(2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;slotWidth&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;slotLength&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;slotDepth&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;slotThruAll&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModeler&nbsp;=&nbsp;swApp.<b>GetModeler</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMath&nbsp;=&nbsp;swApp.<b>GetMathUtility</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>NewDocument</b>(<span style="color:#a31515;">&quot;C:\ProgramData\SolidWorks\SolidWorks&nbsp;2014\templates\Part.prtdot&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatureManager&nbsp;=&nbsp;swModel.<b>FeatureManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager&nbsp;=&nbsp;swModel.<b>SketchManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionManager&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;and&nbsp;select&nbsp;extruded&nbsp;surface&nbsp;body</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(0)&nbsp;=&nbsp;-0.0720746414289124
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(1)&nbsp;=&nbsp;-0.0283600245263074
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(2)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(3)&nbsp;=&nbsp;-0.0514715593755
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(4)&nbsp;=&nbsp;-0.00345025084396866
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(5)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(6)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(7)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(8)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(9)&nbsp;=&nbsp;0.0872558597840225
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(10)&nbsp;=&nbsp;0.0521037067517796
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;points(11)&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointArray&nbsp;=&nbsp;points
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sketchSegment&nbsp;=&nbsp;swSketchManager.<b>CreateSpline</b>((pointArray))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchManager.<b>InsertSketch</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Sketch1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;4,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatureManager.<b>FeatureExtruRefSurface2</b>(<span style="color:blue;">True</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;0,&nbsp;0.0508,&nbsp;0.00254,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0.0174532925199433,&nbsp;0.0174532925199433,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionManager.<b>EnableContourSelection</b>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Surface-Extrude1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;slotDepth&nbsp;=&nbsp;0.01
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;slotWidth&nbsp;=&nbsp;0.04
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;slotLength&nbsp;=&nbsp;0.09
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;slotThruAll&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;halfWidth&nbsp;=&nbsp;slotWidth&nbsp;/&nbsp;2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;halfLength&nbsp;=&nbsp;slotLength&nbsp;/&nbsp;2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(0)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(0)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(2)&nbsp;=&nbsp;1.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(0)&nbsp;=&nbsp;1.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;planeSurf&nbsp;=&nbsp;swModeler.<b>CreatePlanarSurface2</b>((ptArr),&nbsp;(dirArr),&nbsp;(startArr))
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(0)&nbsp;=&nbsp;-halfLength
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(1)&nbsp;=&nbsp;halfWidth
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(0)&nbsp;=&nbsp;1.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trimCurves(0)&nbsp;=&nbsp;swModeler.<b>CreateLine</b>((ptArr),&nbsp;(dirArr))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trimCurves(0)&nbsp;=&nbsp;trimCurves(0).<b>CreateTrimmedCurve2</b>(-halfLength,&nbsp;halfWidth,&nbsp;0.0#,&nbsp;halfLength,&nbsp;halfWidth,&nbsp;0.0#)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(0)&nbsp;=&nbsp;halfLength
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(0)&nbsp;=&nbsp;halfLength
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(1)&nbsp;=&nbsp;halfWidth
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endArr(0)&nbsp;=&nbsp;halfLength
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endArr(1)&nbsp;=&nbsp;-halfWidth
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(0)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(2)&nbsp;=&nbsp;-1.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trimCurves(1)&nbsp;=&nbsp;swModeler.<b>CreateArc</b>((ptArr),&nbsp;(dirArr),&nbsp;halfWidth,&nbsp;(startArr),&nbsp;(endArr))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trimCurves(1)&nbsp;=&nbsp;trimCurves(1).<b>CreateTrimmedCurve2</b>(halfLength,&nbsp;halfWidth,&nbsp;0.0#,&nbsp;halfLength,&nbsp;-halfWidth,&nbsp;0.0#)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(0)&nbsp;=&nbsp;halfLength
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(1)&nbsp;=&nbsp;-halfWidth
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(0)&nbsp;=&nbsp;-1.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trimCurves(2)&nbsp;=&nbsp;swModeler.<b>CreateLine</b>((ptArr),&nbsp;(dirArr))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trimCurves(2)&nbsp;=&nbsp;trimCurves(2).<b>CreateTrimmedCurve2</b>(halfLength,&nbsp;-halfWidth,&nbsp;0.0#,&nbsp;-halfLength,&nbsp;-halfWidth,&nbsp;0.0#)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(0)&nbsp;=&nbsp;-halfLength
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ptArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(0)&nbsp;=&nbsp;-halfLength
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(1)&nbsp;=&nbsp;-halfWidth
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endArr(0)&nbsp;=&nbsp;-halfLength
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endArr(1)&nbsp;=&nbsp;halfWidth
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endArr(2)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(0)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(2)&nbsp;=&nbsp;-1.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trimCurves(3)&nbsp;=&nbsp;swModeler.<b>CreateArc</b>((ptArr),&nbsp;(dirArr),&nbsp;halfWidth,&nbsp;(startArr),&nbsp;(endArr))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trimCurves(3)&nbsp;=&nbsp;trimCurves(3).<b>CreateTrimmedCurve2</b>(-halfLength,&nbsp;-halfWidth,&nbsp;0.0#,&nbsp;-halfLength,&nbsp;halfWidth,&nbsp;0.0#)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;profileBody&nbsp;=&nbsp;planeSurf.<b>CreateTrimmedSheet</b>((trimCurves))
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(0)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(1)&nbsp;=&nbsp;0.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirArr(2)&nbsp;=&nbsp;-1.0#
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirVector&nbsp;=&nbsp;swMath.<b>CreateVector</b>((dirArr))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extrudedBody&nbsp;=&nbsp;swModeler.<b>CreateExtrudedBody</b>(profileBody,&nbsp;dirVector,&nbsp;slotDepth)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extrudedBody.<b>Display3</b>(swModel,&nbsp;RGB(1,&nbsp;0,&nbsp;0),&nbsp;swTempBodySelectOptions_e.swTempBodySelectOptionNone)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

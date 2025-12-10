@@ -1,0 +1,115 @@
+<html>
+
+<head>
+<title>Get BOM Balloon Properties Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,balloons">
+<meta name=MS-HKWD content="VB.NET examples,bill of materials">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get BOM Balloon Properties Example (VB.NET)</h1>
+<p>This example shows how to get the properties of a BOM balloon.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color: green">'----------------------------------------------------------</span>
+<span style="color: green">'&nbsp;Preconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;assembly&nbsp;document&nbsp;to&nbsp;open</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;exists.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'</span>
+<span style="color: green">'&nbsp;Postconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;assembly&nbsp;document.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Inserts&nbsp;a&nbsp;BOM&nbsp;table.</span>
+<span style="color: green">'&nbsp;3.&nbsp;Inserts&nbsp;a&nbsp;BOM&nbsp;balloon.</span>
+<span style="color: green">'&nbsp;4.&nbsp;Gets&nbsp;and sets the&nbsp;BOM&nbsp;balloon's&nbsp;properties.</span>
+<span style="color: green">'&nbsp;5.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'</span>
+<span style="color: green">'&nbsp;NOTE:&nbsp;Because&nbsp;this&nbsp;assembly&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save</span>
+<span style="color: green">'&nbsp;changes.</span>
+<span style="color: green">'-----------------------------------------------------------</span>
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color: blue">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color: blue">Imports</span>&nbsp;System
+<span style="color: blue">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color: blue">Partial</span>&nbsp;<span style="color: blue">Class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;<span style="color: blue">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModel&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color: blue">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSelectionMgr&nbsp;<span style="color: blue">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swNote&nbsp;<span style="color: blue">As</span>&nbsp;Note
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swAnnotation&nbsp;<span style="color: blue">As</span>&nbsp;Annotation
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;attachedEntityArray()&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;attachedEntityTypeArray()&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swEntity&nbsp;<span style="color: blue">As</span>&nbsp;Entity
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swComponent&nbsp;<span style="color: blue">As</span>&nbsp;Component2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swComponentModel&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swBomTableAnnotation&nbsp;<span style="color: blue">As</span>&nbsp;BomTableAnnotation
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swBomBalloonParams&nbsp;<span style="color: blue">As</span>&nbsp;BalloonOptions
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;i&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;fileName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;status&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;errors&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;warnings&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Open&nbsp;assembly,&nbsp;create&nbsp;BOM&nbsp;table,&nbsp;and&nbsp;select&nbsp;BOM&nbsp;balloon</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color: #a31515">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\advdrawings\bladed&nbsp;shaft.sldasm&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocASSEMBLY,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color: #a31515">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBomTableAnnotation&nbsp;=&nbsp;swModelDocExt.<b>InsertBomTable3</b>(&quot;C:\Program Files\SolidWorks Corp\SolidWorks\lang\english\bom-standard.sldbomtbt&quot;, 618, 568, swBomType_e.swBomType_TopLevelOnly, &quot;&quot;, <font color="#0000FF">False</font>, swNumberingType_e.swNumberingType_None, <font color="#0000FF">False</font>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;&quot;</span>,&nbsp;<span style="color: #a31515">&quot;FACE&quot;</span>,&nbsp;0.0139294427590926,&nbsp;0.059464184169542,&nbsp;0.0082768338148469,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBomBalloonParams&nbsp;=&nbsp;swModelDocExt.<b>CreateBalloonOptions</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBomBalloonParams.<b>Style</b>&nbsp;=&nbsp;<font SIZE="2">swBalloonStyle_e.swBS_SplitCirc</font>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBomBalloonParams.<b>Size</b>&nbsp;=&nbsp;<font SIZE="2">swBalloonFit_e.swBF_Tightest</font>&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swNote&nbsp;=&nbsp;swModelDocExt.<b>InsertBOMBalloon2</b>(swBomBalloonParams)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;DetailItem2@Annotations&quot;</span>,&nbsp;<span style="color: #a31515">&quot;NOTE&quot;</span>,&nbsp;0.00431152692774954,&nbsp;0.0699703491909496,&nbsp;0.0033561420724473,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+
+        <font color="#008000">'Get and set balloon properties</font>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swNote&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAnnotation&nbsp;=&nbsp;swNote.<b>GetAnnotation</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;attachedEntityArray&nbsp;=&nbsp;swAnnotation.<b>GetAttachedEntities2</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;attachedEntityTypeArray&nbsp;=&nbsp;swAnnotation.<b>GetAttachedEntityTypes</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;File&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swModel.<b>GetPathName</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Name&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swAnnotation.<b>GetName</b>)<font SIZE="2">
+        swNote.<b>SetBomBalloonText</b>(swDetailingNoteTextContent_e.swDetailingNoteTextCustom, </font><font SIZE="2" COLOR="#a31515">&quot;ABC&quot;</font><font SIZE="2">, swDetailingNoteTextContent_e.swDetailingNoteTextCustom, </font><font SIZE="2" COLOR="#a31515">&quot;EFG&quot;</font><font SIZE="2">)</font>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Upper&nbsp;text&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>GetBomBalloonText</b>(<span style="color: blue">True</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;[&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>GetBomBalloonTextStyle</b>(<span style="color: blue">True</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;]&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Lower&nbsp;text&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>GetBomBalloonText</b>(<span style="color: blue">False</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;[&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>GetBomBalloonTextStyle</b>(<span style="color: blue">False</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;]&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Balloon&nbsp;fit&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>GetBalloonSize</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Balloon&nbsp;style&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>GetBalloonStyle</b>)
+<span style="color: #2b91af">	Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Balloon&nbsp;padding&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>GetBalloonPadding</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Is&nbsp;stacked?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>IsStackedBalloon</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Is&nbsp;stacked&nbsp;master?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swNote.<b>IsStackedBalloonMaster</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color: blue">To</span>&nbsp;UBound(attachedEntityArray)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Attached&nbsp;entity&nbsp;type&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;attachedEntityTypeArray(i))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font SIZE="2" COLOR="#0000ff">If</font><font SIZE="2"> (</font><font SIZE="2" COLOR="#0000ff">Not</font><font SIZE="2"> IsNothing(attachedEntityTypeArray)) </font><font SIZE="2" COLOR="#0000ff">Then</font>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEntity&nbsp;=&nbsp;attachedEntityArray(i)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponent&nbsp;=&nbsp;swEntity.<b>GetComponent</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponentModel&nbsp;=&nbsp;swComponent.<b>GetModelDoc</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Attached&nbsp;entity&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swComponent.<b>GetPathName</b>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&lt;&quot;</span>&nbsp;&amp;&nbsp;swComponent.<b>ReferencedConfiguration</b>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&gt;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;--&gt;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swComponentModel.<b>GetPathName</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Next</span>&nbsp;i</pre>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white">	swModel.<b>ViewZoomtoFit2</b>
+	
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;swApp&nbsp;<span style="color: blue">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color: blue">End</span>&nbsp;<span style="color: blue">Class</span></pre>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

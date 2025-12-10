@@ -1,0 +1,113 @@
+<html>
+
+<head>
+<title>Attach Files to MBD 3D PDF Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,3D PDF">
+<meta name=MS-HKWD content="C# examples,MBD">
+<meta name=MS-HKWD content="C# examples,SOLIDWORKS MBD">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Attach Files to MBD 3D PDF Example (C#)</h1>
+<p>This example shows how to attach files to a SOLIDWORKS MBD 3D PDF.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">//---------------------------------------------------------------</span>
+<span style="color:green;">//&nbsp;Preconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF&nbsp;theme,</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;files to attach, and C<b>:\temp</b>&nbsp;exist.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;<i>public_documents</i><b>\samples\tutorial\api\block.sldprt</b>.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;Postconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Gets&nbsp;the&nbsp;MBD3DPdfData&nbsp;object.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Sets&nbsp;the&nbsp;path&nbsp;and&nbsp;file&nbsp;name&nbsp;for&nbsp;the&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Sets&nbsp;the&nbsp;theme&nbsp;for&nbsp;the&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF.</span>
+<span style="color:green;">//&nbsp;4.&nbsp;Sets&nbsp;the&nbsp;standard&nbsp;views&nbsp;for&nbsp;the&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF.</span>
+<span style="color:green;">//&nbsp;5.&nbsp;Sets&nbsp;the&nbsp;level&nbsp;of&nbsp;accuracy&nbsp;for&nbsp;lossy&nbsp;compression,&nbsp;whether&nbsp;to</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;apply&nbsp;lossy&nbsp;compression&nbsp;to&nbsp;polygons&nbsp;in&nbsp;the&nbsp;model,&nbsp;and</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;whether&nbsp;to&nbsp;export&nbsp;SOLIDWORKS&nbsp;parts&nbsp;and&nbsp;assemblies&nbsp;with&nbsp;PMI</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;annotations&nbsp;to&nbsp;STEP&nbsp;242&nbsp;format.</span>
+<span style="color:green;">//&nbsp;6.&nbsp;Sets&nbsp;the&nbsp;files&nbsp;to&nbsp;attach&nbsp;to&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF.</span>
+<span style="color:green;">//&nbsp;7.&nbsp;Creates&nbsp;the&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF.</span>
+<span style="color:green;">//&nbsp;8.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.
+// 9. Open<b>&nbsp;C:\temp\block.PDF</b>&nbsp;and&nbsp;click the&nbsp;paper&nbsp;clip&nbsp;(<b>Attachments:&nbsp;
+</b>// <b>   View&nbsp;file&nbsp;attachments</b>)&nbsp;in&nbsp;the left-side&nbsp;panel.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;part&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save</span>
+<span style="color:green;">//&nbsp;changes.</span>
+<span style="color:green;">//---------------------------------------------------------------</span>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;
+<span style="color:blue;">using</span>&nbsp;System;
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;
+ 
+<span style="color:blue;">namespace</span>&nbsp;Macro1CSharp.csproj
+{
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension&nbsp;swModelDocExt&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDocExtension);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MBD3DPdfData&nbsp;swMBDPdfData&nbsp;=&nbsp;<span style="color:blue;">default</span>(MBD3DPdfData);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>&nbsp;standardViews&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>[]&nbsp;viewIDs&nbsp;=&nbsp;<span style="color:blue;">new</span>&nbsp;<span style="color:blue;">int</span>[3];
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>[]&nbsp;filesToAttach&nbsp;=&nbsp;<span style="color:blue;">new</span>&nbsp;<span style="color:blue;">string</span>[2];
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>&nbsp;attachedFiles&nbsp;=&nbsp;<span style="color:blue;">null</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;status&nbsp;=&nbsp;0;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>ActiveDoc</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;(ModelDocExtension)swModel.<b>Extension</b>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Get&nbsp;MBD3DPdfData&nbsp;object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMBDPdfData&nbsp;=&nbsp;(MBD3DPdfData)swModelDocExt.<b>GetMBD3DPdfData</b>();
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Set&nbsp;path&nbsp;and&nbsp;file&nbsp;name&nbsp;for&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMBDPdfData.<b>FilePath</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\temp\\block.PDF&quot;</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Set&nbsp;standard&nbsp;views&nbsp;for&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;viewIDs[0]&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swStandardViews_e.swFrontView;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;viewIDs[1]&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swStandardViews_e.swTopView;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;viewIDs[2]&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swStandardViews_e.swDimetricView;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;standardViews&nbsp;=&nbsp;viewIDs;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMBDPdfData.<b>SetStandardViews</b>(standardViews);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Set&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF&nbsp;theme</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMBDPdfData.<b>ThemeName</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Program&nbsp;Files\\SolidWorks&nbsp;Corp\\SOLIDWORKS\\data\\themes\\simple&nbsp;part&nbsp;(a4,&nbsp;portrait)\\theme.xml&quot;</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Set&nbsp;the&nbsp;level&nbsp;of&nbsp;accuracy&nbsp;for&nbsp;lossy&nbsp;compression,&nbsp;whether&nbsp;to&nbsp;apply</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//lossy&nbsp;compression&nbsp;to&nbsp;polygons&nbsp;in&nbsp;the&nbsp;model,&nbsp;and&nbsp;whether&nbsp;to&nbsp;export</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//SOLIDWORKS&nbsp;parts&nbsp;and&nbsp;assemblies&nbsp;with&nbsp;PMI&nbsp;annotations&nbsp;to&nbsp;STEP&nbsp;242</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//format</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMBDPdfData.<b>Accuracy</b>&nbsp;=&nbsp;(<span style="color:blue;">int</span>)sw3DPDFAccuracy_e.swLow;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMBDPdfData.<b>CompressLossyTessellation</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMBDPdfData.<b>CreateAttachSTEP242</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Set&nbsp;the&nbsp;files&nbsp;to&nbsp;attach</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filesToAttach[0]&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\2012-sm.slddrw&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filesToAttach[1]&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS&nbsp;2018\\samples\\tutorial\\api\\2012-sm.sldprt&quot;</span>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;attachedFiles&nbsp;=&nbsp;filesToAttach;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMBDPdfData.<b>SetAttachments</b>(attachedFiles);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Publish&nbsp;to&nbsp;PDF</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>PublishTo3DPDF</b>(swMBDPdfData);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Status&nbsp;of&nbsp;publishing&nbsp;part&nbsp;to&nbsp;SOLIDWORKS&nbsp;MBD&nbsp;3D&nbsp;PDF&nbsp;(0&nbsp;=&nbsp;success):&nbsp;&quot;</span>&nbsp;+&nbsp;status);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}</pre>
+
+</body>
+
+</html>

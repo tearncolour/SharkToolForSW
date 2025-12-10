@@ -1,0 +1,290 @@
+<html>
+
+<head>
+<title>Change Color of Component in Specific Display State Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+<style type="text/css">
+.auto-style1 {
+	color: #008000;
+}
+.auto-style2 {
+	color: #008000;
+	font-weight: bold;
+}
+</style>
+</head>
+<meta name=MS-HKWD content="VBA examples,display states">
+<meta name=MS-HKWD content="VBA examples,appearances">
+<meta name=MS-HKWD content="VBA examples,components">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=MS-HKWD content="VBA examples,parts">
+
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Change Color of Component in Specific Display State Example (VBA)</h1>
+<p>This example shows how to change the color of a:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">selected component in a 
+specific display state at the assembly and part levels. </font></li>
+	<li><font face="Verdana" style="font-size: 8pt">component in its part document.</font></li>
+</ul>
+
+<pre><span class="auto-style1">'----------------------------------------------</span>
+<span class="auto-style1">' Postconditions:&nbsp;</span>
+<span class="auto-style1">'  1. Verify that the specified&nbsp;assembly&nbsp;and part exist.</span>
+<span class="auto-style1">'  2. Add the </span><span class="auto-style2">Microsoft Excel Object Library</span><span class="auto-style1"> as a reference </span>
+<span class="auto-style1">'     for the Min and Max functions.</span>
+'
+<span class="auto-style1">' Postconditions:&nbsp;</span>
+<span class="auto-style1">'&nbsp; 1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;assembly&nbsp;document.</span>
+<span class="auto-style1">'&nbsp; 2.&nbsp;Changes&nbsp;the&nbsp;selected&nbsp;component's,&nbsp;</span><span class="auto-style2">USB_cover1</span><span class="auto-style1">,&nbsp;</span>
+<span class="auto-style1">'     assembly-level color from the default red</span>
+<span class="auto-style1">'&nbsp;&nbsp;&nbsp;&nbsp; to&nbsp;gray&nbsp;in&nbsp;the&nbsp;specified&nbsp;display&nbsp;state. This</span>
+<span class="auto-style1">'     is the overriding color level.</span>
+<span class="auto-style1">'&nbsp; 3.&nbsp;To&nbsp;verify,&nbsp;examine&nbsp;the&nbsp;component&nbsp;in&nbsp;the&nbsp;graphics&nbsp;area and</span>
+<span class="auto-style1">'     click </span><span class="auto-style2">Show Display Pane</span><span class="auto-style1"> (&gt;) in the FeatureManager design tree</span>
+<span class="auto-style1">'     and examine the Appearance column to see the level where the</span>
+<span class="auto-style1">'     appearance color was applied.</span>
+<span class="auto-style1">'  4. Press F5 to continue.</span>
+<span class="auto-style1">'  5. Changes the selected component's, </span><span class="auto-style2">USB_cover1</span><span class="auto-style1">, part-level</span>
+<span class="auto-style1">'     color from red to green in the specified display state of</span>
+<span class="auto-style1">'     the component part. This is not the overriding color level.</span>
+<span class="auto-style1">'  6. To&nbsp;verify,&nbsp;examine the Appearance column to see the</span>
+<span class="auto-style1">'     level where the appearance color was applied.</span>
+<span class="auto-style1">'  7. Press F5 to continue.</span>
+<span class="auto-style1">'  8. Closes, but does not save, the assembly document.</span>
+<span class="auto-style1">'  9. Opens the component's part document, </span><span class="auto-style2">USB_cover1.sldprt</span>.
+<span class="auto-style1">' 10. Examine the graphics area.</span>
+<span class="auto-style1">' 11. Press F5 to continue.</span>
+<span class="auto-style1">' 12. Changes the part's color from red to green in the specified</span>
+<span class="auto-style1">'     display state of the part. This is the overriding color</span>
+<span class="auto-style1">'     level.</span>
+<span class="auto-style1">' 13. To verify, examine the graphics area.</span>
+<span class="auto-style1">' 14. Press F5 to continue.</span>
+<span class="auto-style1">' 15. Closes, but does not save, the part document.</span>
+<span class="auto-style1">'-----------------------------------------------</span>
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModelDoc As SldWorks.ModelDoc2
+    Dim swModelDocExt As SldWorks.ModelDocExtension
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swDisplayStateSetting As SldWorks.DisplayStateSetting
+    Dim swComponent As SldWorks.Component2
+    Dim swComponents(0) As SldWorks.Component2
+    Dim swConfig As SldWorks.Configuration
+    Dim displayStateNames(0) As String
+    Dim appearances As Variant
+    Dim swAppearanceSetting As SldWorks.AppearanceSetting
+    Dim swConfigMgr As SldWorks.ConfigurationManager
+    Dim newAppearances(0) As Object
+    Dim status As Boolean
+    Dim errors As Long
+    Dim warnings As Long
+    Dim fileName As String
+    Dim red_rgb As Long
+    Dim green_rgb As Long
+    Dim blue_rgb As Long
+    Dim newColor As Long</pre>
+<pre>    Set swApp = Application.SldWorks    
+</pre>
+<pre>    <span class="auto-style1">'Open assembly document</span>
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2024\samples\tutorial\appearances\usb_flash_drive1.sldasm&quot;
+    Set swModelDoc = swApp.<b>OpenDoc6</b>(fileName, swDocASSEMBLY, swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    </pre>
+<pre>    <span class="auto-style1">'Select component,&nbsp;USB_cover1</span>
+    Set swModelDocExt = swModelDoc.<b>Extension</b>
+    Set swSelMgr = swModelDoc.<b>SelectionManager</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;USB_cover1-1@usb_flash_drive1&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swComponent = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swComponents(0) = swComponent
+    </pre>
+<pre>    swModelDoc.<b>ClearSelection2</b> True
+    </pre>
+<pre>    <span class="auto-style1">'Get display state</span>
+    Set swDisplayStateSetting = swModelDocExt.<b>GetDisplayStateSetting</b>(swAllDisplayState)
+    swDisplayStateSetting.<b>Entities</b> = swComponents
+    swDisplayStateSetting.<b>Option</b> = swSpecifyDisplayState
+    displayStateNames(0) = &quot;Display State-1&quot;
+    swDisplayStateSetting.<b>Names</b> = displayStateNames</pre>
+<pre>
+    'Assembly level is the default
+    swDisplayStateSetting.<b>PartLevel</b> = False
+    </pre>
+<pre>    <span class="auto-style1">'Change&nbsp;the&nbsp;selected&nbsp;component's,&nbsp;USB_cover1,&nbsp;</span>
+<span class="auto-style1">    'assembly-level color from the default red</span>
+<span class="auto-style1">    'to&nbsp;gray&nbsp;in&nbsp;the&nbsp;specified&nbsp;display&nbsp;state; this</span>
+<span class="auto-style1">    'is the overriding color level</span>
+    appearances = swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)
+    Set swAppearanceSetting = appearances(0)
+    red_rgb = 50
+    green_rgb = 50
+    blue_rgb = 50
+    newColor = Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(red_rgb, 255), 0) + Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(green_rgb, 255), 0) * 16 * 16 + Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(blue_rgb, 255), 0) * 16 * 16 * 16 * 16
+    swAppearanceSetting.<b>Color</b> = newColor</pre>
+<p class="MsoNormal">
+<span style="font-size: 10.0pt; line-height: 107%; font-family: &quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Diffuse</strong> = 0.8 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Specular</strong> 
+= 0.5 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>SpecularColor</strong> 
+= newColor <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Luminous</strong> 
+= 0.1 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Transparent</strong> 
+= 0.0</span></p>
+<pre>
+    Set newAppearances(0) = swAppearanceSetting
+    swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting) = newAppearances
+    </pre>
+<pre>    Stop
+    <span class="auto-style1">'Examine the component in the graphics area</span>
+<span class="auto-style1">    'Click Show Display Pane (&gt;) in the FeatureManager</span>
+<span class="auto-style1">    'design tree and examine the Appearance column to see</span>
+<span class="auto-style1">    'the level where the appearance color was applied</span>
+<span class="auto-style1">    'Press F5 to continue</span>
+    </pre>
+<pre>    swModelDoc.<b>ClearSelection2</b> True
+    </pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;USB_cover1-1@usb_flash_drive1&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swComponent = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swComponents(0) = swComponent
+    </pre>
+<pre>    swModelDoc.<b>ClearSelection2</b> True
+    </pre>
+<pre>    <span class="auto-style1">'Get display state</span>
+    Set swDisplayStateSetting = swModelDocExt.<b>GetDisplayStateSetting</b>(swAllDisplayState)
+    swDisplayStateSetting.<b>Entities</b> = swComponents
+    swDisplayStateSetting.<b>Option</b> = swSpecifyDisplayState
+    displayStateNames(0) = &quot;&lt;Default&gt;_Display State 1&quot;
+    swDisplayStateSetting.<b>Names</b> = displayStateNames
+    'Set to part level
+    swDisplayStateSetting.<b>PartLevel</b> = True
+    </pre>
+<pre>    <span class="auto-style1">'Change the selected component's, USB_cover1, part-level</span>
+<span class="auto-style1">    'color from red to green in the specified display state of</span>
+<span class="auto-style1">    'the component part; this is not the overriding color level</span>
+    appearances = swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)
+    Set swAppearanceSetting = appearances(0)
+    red_rgb = 0
+    green_rgb = 255
+    blue_rgb = 0
+    newColor = Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(red_rgb, 255), 0) + Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(green_rgb, 255), 0) * 16 * 16 + Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(blue_rgb, 255), 0) * 16 * 16 * 16 * 16
+    swAppearanceSetting.<b>Color</b> = newColor</pre>
+<p class="MsoNormal">
+<span style="font-size: 10.0pt; line-height: 107%; font-family: &quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Diffuse</strong> = 0.8 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Specular</strong> 
+= 0.5 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>SpecularColor</strong> 
+= newColor <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Luminous</strong> 
+= 0.1 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Transparent</strong> 
+= 0.0</span></p>
+<pre>
+    Set newAppearances(0) = swAppearanceSetting
+    swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting) = newAppearances
+    </pre>
+<pre>    Stop
+    <span class="auto-style1">'Examine the Appearance column to see the level</span>
+<span class="auto-style1">    'where the appearance color was applied</span>
+<span class="auto-style1">    'Press F5 to continue</span>
+    </pre>
+<pre>    <span class="auto-style1">'Close the assembly document without saving</span>
+<span class="auto-style1">    'changes</span>
+    swApp.<b>CloseDoc</b> &quot;usb_flash_drive1&quot;
+    </pre>
+<pre>    <span class="auto-style1">'Open the assembly component USB_cover1 as a part document</span>
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2024\samples\tutorial\appearances\usb_cover1.sldprt&quot;
+    Set swModelDoc = swApp.<b>OpenDoc6</b>(fileName, swDocPART, swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    </pre>
+<pre>    Set swModelDocExt = swModelDoc.<b>Extension</b>
+    Set swSelMgr = swModelDoc.<b>SelectionManager</b>
+    Set swConfigMgr = swModelDoc.<b>ConfigurationManager</b>
+    Set swConfig = swConfigMgr.<b>ActiveConfiguration</b>
+    </pre>
+<pre>    Set swComponents(0) = Nothing
+    Set swComponents(0) = swConfig.<b>GetRootComponent3</b>(True)
+    </pre>
+<pre>    swModelDoc.<b>ClearSelection2</b> True
+    </pre>
+<pre>    <span class="auto-style1">'Get display state</span>
+    Set swDisplayStateSetting = Nothing
+    Set swDisplayStateSetting = swModelDocExt.<b>GetDisplayStateSetting</b>(swAllDisplayState)
+    swDisplayStateSetting.<b>Entities</b> = swComponents
+    swDisplayStateSetting.<b>Option</b> = swSpecifyDisplayState
+    displayStateNames(0) = &quot;&lt;Default&gt;_Display State 1&quot;
+    swDisplayStateSetting.<b>Names</b> = displayStateNames
+    </pre>
+<pre>    Stop
+    <span class="auto-style1">'Examine the graphics area</span>
+<span class="auto-style1">    'Press F5 to continue</span>
+    </pre>
+<pre>    <span class="auto-style1">'Change color of selected component in specified display state</span>
+<span class="auto-style1">    'from default red to green; this is the overriding color</span>
+    appearances = swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting)
+    Set swAppearanceSetting = Nothing
+    Set swAppearanceSetting = appearances(0)
+    red_rgb = 0
+    green_rgb = 255
+    blue_rgb = 0
+    newColor = Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(red_rgb, 255), 0) + Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(green_rgb, 255), 0) * 16 * 16 + Excel.WorksheetFunction.Max(Excel.WorksheetFunction.Min(blue_rgb, 255), 0) * 16 * 16 * 16 * 16
+    swAppearanceSetting.<b>Color</b> = newColor</pre>
+<p class="MsoNormal">
+<span style="font-size: 10.0pt; line-height: 107%; font-family: &quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; 
+swAppearanceSetting.<strong>Diffuse</strong> = 0.8 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Specular</strong> 
+= 0.5 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>SpecularColor</strong> 
+= newColor <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Luminous</strong> 
+= 0.1 <o:p></o:p></span></p>
+<p class="MsoNormal">
+<span style="font-size:10.0pt;line-height:107%;font-family:
+&quot;Courier New&quot;">&nbsp;&nbsp;&nbsp; swAppearanceSetting.<strong>Transparent</strong> 
+= 0.0</span></p>
+<pre>
+    Set newAppearances(0) = swAppearanceSetting
+    swModelDocExt.<b>DisplayStateSpecMaterialPropertyValues</b>(swDisplayStateSetting) = newAppearances
+    </pre>
+<pre>    Stop
+    <span class="auto-style1">'Examine the graphics area</span>
+<span class="auto-style1">    'Press F5 to continue</span>
+    </pre>
+<pre>    <span class="auto-style1">'Close the part document without saving</span>
+<span class="auto-style1">    'changes</span>
+    swApp.<b>CloseDoc</b> &quot;usb_cover1&quot;
+    
+</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

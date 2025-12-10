@@ -1,0 +1,399 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Assign Tracking ID Using Macro Feature Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="Tracking IDs">
+<meta name=MS-HKWD content="VBA examples">
+<meta name=MS-HKWD content="VBA examples, tracking IDs">
+<meta name=MS-HKWD content="VBA examples, macro features">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=7868>
+<meta name=layout-width content=852>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Assign Tracking ID Using Macro Feature Example (VBA)</h1>
+
+<p><a name="Top"></a>This example shows how to assign a tracking ID to a face using a macro 
+ feature, which then allows the tracking ID to be persistent across SOLIDWORKS 
+ sessions.</p>
+
+<p>&nbsp;</p>
+
+<p class=APICODE>'----------------------------------------------------------------------------------<br>
+' Preconditions: <br>
+' 1. Click <b>Tools &gt; References</b> <b>&gt;</b> <b>SolidWorks </b><i>version</i><b> 
+exposed type libraries for <br>
+'&nbsp;&nbsp;&nbsp; add-in use</b> &gt; <b>OK</b>.<br>
+' 2. Copy <a href="#Macros">Macros</a> to the main module and rename it <b>
+Macros</b>. (To rename the module, click<br>
+'&nbsp;&nbsp;&nbsp; <b>View &gt; Properties Window</b> and type <b>Macros</b> in <b>
+(Name)</b>.)<br>
+' 3. Click <b>Insert &gt; Module</b> and copy <a href="#PropMgrConst">PropMgrConst</a> 
+to that module and name it <b>PropMgrConst</b>.<br>
+' 4. Click <b>Insert &gt; Class module</b> and copy <a href="#PropMgr">PropMgr</a> 
+to that class module and name it <b>PropMgr</b>.<br>
+' 5. Click <b>Insert &gt; Class module</b> and copy <a href="#PropMgrCmd">
+PropMgrCmd</a> to that class module and name it <b>PropMgrCmd</b>.<br>
+' 6. Click <b>Insert &gt; Class module</b> and copy <a href="#PropMgrHdlr">
+PropMgrHdlr</a> to that class module and name it <b>PropMgrHdlr</b>.<br>
+' 7. Open a part.<br>
+'<br>
+' Postconditions: <br>
+' 1. Select a face.<br>
+' 2. Assigns a tracking 
+ ID of 2 to the selected face via a macro feature.<br>
+' 3. Creates the 
+ macro feature <b>CustomTrackingID1</b>.<br>
+' 4. Examine the FeatureManager design tree.<br>
+'------------------------------------------------------------------------------------</p>
+<p class=APICODE><a name=Macros></a>'Macros</p>
+<p class=APICODE>Option Explicit<br>
+</p>
+<pre>' Handle to Macro feature regeneration
+Function swmMain(swAppIn, partIn, featureIn)
+    Dim featData As MacroFeatureData
+    Set featData = featureIn.<b>GetDefinition</b></pre>
+<pre>    Dim sels, types, selmarks
+    Dim faceSel As Object
+    Call featData.<b>GetSelections</b>(sels, types, selmarks)
+    If IsEmpty(sels) Then
+        swmMain = &quot;Face was not been selected.&quot;
+        Exit Function
+    End If</pre>
+<pre>    Set faceSel = sels(0)
+    Dim TrackingID As Long
+    Call featData.<b>GetIntegerByName</b>(&quot;TrackingID&quot;, TrackingID)    </pre>
+<pre>    If Not faceSel Is Nothing Then
+        Dim Cookies As Long
+	Cookies = swAppIn.<b>RegisterTrackingDefinition</b>(&quot;API_TrackingIDUsingMacroFeature&quot;)
+        faceSel.<b>setTrackingID</b> Cookies, TrackingID
+    End If
+End Function
+</pre>
+<pre>' Handle to Macro feature edit definition
+Sub swmPM(swAppIn, partIn, featureIn)
+    Dim swPage As New PropMgr
+    swPage.<b>Init</b> swAppIn, partIn, featureIn, swCmdEdit, swAppIn.GetCurrentMacroPathName
+    swPage.<b>Show</b>
+End Sub
+</pre>
+<pre>'Run this procedure to insert macro feature with customized Property Manager Page
+Public Sub swmInsertCustomizedMacroFeature()
+    Dim swAppIn, partIn, featureIn
+    Set swAppIn = Application.SldWorks
+    Set partIn = swAppIn.<b>ActiveDoc</b>    </pre>
+<pre>    Dim swPage As New PropMgr
+    swPage.Init swAppIn, partIn, featureIn, swCmdCreate, swAppIn.GetCurrentMacroPathName
+    swPage.Show
+
+End Sub</pre>
+<p class=APICODE align="center"><font face="Verdana" style="font-size: 8pt">
+<a href="#Top">Back to top</a></font></p>
+
+<p style="font-weight: bold;"><font face="Courier New" size="2"><a name=PropMgrConst></a>
+<span style="font-weight: 400">'PropMgrConst</span></font></p>
+
+<pre>Public Enum swPageCmdState
+    swCmdCreate = 1
+    swCmdEdit = 2
+End Enum
+</pre>
+<pre>Public Const ID_GROUP = 1
+Public Const ID_SELECTION = 2
+Public Const ID_NUMBER = 3</pre>
+<p class=APICODE align="center"><font face="Verdana" style="font-size: 8pt">
+<a href="#Top">Back to top</a></font></p>
+
+<p style="font-weight: bold;"><font face="Courier New" size="2"><a name=PropMgr></a>
+'<span style="font-weight: 400">PropMgr</span></font></p>
+<pre><font face="Courier New">Option Explicit</font>
+
+Private m_swApp As SldWorks.SldWorks
+Private m_Part As SldWorks.ModelDoc2
+Private m_feature As SldWorks.feature
+Private m_Page As PropertyManagerPage2
+Private m_Group As PropertyManagerPageGroup
+Private m_Selection As PropertyManagerPageSelectionbox
+Private m_Number As PropertyManagerPageNumberbox
+Private m_swPageCmd As New PropMgrCmd
+Private m_cmdState As swPageCmdState
+Private m_pageHdlr As New PropMgrHdlr
+</pre>
+<pre>Private Sub Layout()
+    Dim swPage As PropertyManagerPage2
+    Dim swControl As PropertyManagerPageControl
+    Dim title As String
+    Dim buttonTypes As Long
+    Dim message As String
+    Dim ID As Long
+    Dim controlType As Integer
+    Dim caption As String
+    Dim alignment As Integer
+    Dim options As Long
+    Dim tip As String
+    Dim filterArray(0 To 0) As Long    </pre>
+<pre>    m_pageHdlr.<b>Init</b> Me    </pre>
+<pre>    If m_cmdState = swCmdCreate Then
+        title = &quot;Cutomized Macro&quot;
+    Else
+        title = m_feature.<b>Name</b>
+    End If
+    buttonTypes = swPropertyManagerOptions_OkayButton + swPropertyManagerOptions_CancelButton + swPropertyManagerOptions_LockedPage
+    Dim errorh As Long
+    Set m_Page = m_swApp.<b>CreatePropertyManagerPage</b>(title, buttonTypes, m_pageHdlr, errorh)
+    If Not m_Page Is Nothing Then        </pre>
+<pre>        'Initial set up of the dialog.
+        message = &quot;Customized Macro Feature.&quot;
+        m_Page.<b>SetMessage</b> message, swImportantMessageBox</pre>
+<pre>        'Begin adding the required controls to the dialog.
+</pre>
+<pre>        'GROUP BOX ------------------------------------------------------------------
+        ID = ID_GROUP
+        caption = &quot;Face Tracking ID&quot;
+        options = swGroupBoxOptions_Visible + swGroupBoxOptions_Expanded '+ swGroupBoxOptions_Checked
+        Set m_Group = m_Page.<b>AddGroupBox</b>(ID, caption, options)
+        If Not m_Group Is Nothing Then
+</pre>
+<pre>            'CONTROL Selection box  ------------------------------------------------------------------
+            ID = ID_SELECTION
+            controlType = swControlType_Selectionbox
+            caption = &quot;Sample selection box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Select face&quot;
+            Set swControl = m_Group.<b>AddControl</b>(ID, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Selection = swControl
+                filterArray(0) = swSelFACES
+                m_Selection.<b>SingleEntityOnly</b> = True
+                m_Selection.<b>Height</b> = 50
+                m_Selection.<b>SetSelectionFilters</b> (filterArray)
+                m_Selection.<b>SetStandardPictureLabel</b> swBitmapLabel_SelectFaceSurface
+            End If
+</pre>
+<pre>            'CONTROL Number box  ------------------------------------------------------------------
+            ID = ID_NUMBER
+            controlType = swControlType_Numberbox
+            caption = &quot;Sample number box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Face Tracking ID&quot;
+            Set swControl = m_Group.<b>AddControl</b>(ID, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Number = swControl
+                m_Number.<b>SetRange</b> swNumberBox_UnitlessInteger, 1#, 1000000#, 1, True</pre>
+<pre>                m_Number.<b>Value</b> = m_swPageCmd.getUserTrackingID()
+                'm_Number.<b>SetStandardPictureLabel</b>
+            End If
+        End If
+    End If
+End Sub
+</pre>
+<pre>Public Sub Show()
+    m_Page.<b>Show</b>
+End Sub
+</pre>
+<pre>Sub Init(swApp, part, feature, cmdState As swPageCmdState, macroPath As String)
+    Set m_swApp = swApp
+    Set m_Part = part
+    If Not IsEmpty(feature) Then
+        Set m_feature = feature
+    End If
+    m_cmdState = cmdState
+    m_Part.<b>ClearSelection</b>
+    m_swPageCmd.<b>Init</b> swApp, part, feature, cmdState, macroPath
+    Layout
+End Sub
+</pre>
+<pre>Public Function GetCmd() As PropMgrCmd
+    Set GetCmd = m_swPageCmd
+End Function</pre>
+<p align="center"><a href="#Top">Back to top</a></p>
+
+<p style="font-weight: bold;"><a name=PropMgrCmd></a>
+<span style="font-weight: 400">'<font face="Courier New" size="2">PropMgrCmd</font></span></p>
+<pre>Option Explicit
+
+Private m_swApp As SldWorks.SldWorks
+Private m_Part As SldWorks.ModelDoc2
+Private m_feature As SldWorks.feature
+Private m_faceSel As Object
+Private m_TrackingID As Long
+Private m_featData As SldWorks.MacroFeatureData
+Private m_modelComp As SldWorks.Component2
+Private m_cmdState As swPageCmdState
+Private m_macroPath As String
+</pre>
+<pre>Public Sub Init(swApp, part, feature, cmdState As swPageCmdState, macroPath As String)
+    Set m_swApp = swApp
+    Set m_Part = part
+    m_macroPath = macroPath
+    If Not IsEmpty(feature) Then
+        Set m_feature = feature
+    End If
+    If cmdState = swCmdEdit Then ' On Edit Definition
+        Dim ret As Boolean
+        Set m_featData = m_feature.<b>GetDefinition</b>
+        Set m_modelComp = m_feature.<b>GetComponent</b>
+        m_cmdState = cmdState
+        ret = m_featData.<b>AccessSelections</b>(m_Part, m_modelComp)
+        Dim sels, types, selmarks
+        Call m_featData.<b>GetSelections</b>(sels, types, selmarks)
+        If Not IsEmpty(sels) Then
+            Set m_faceSel = sels(0)
+            Call m_faceSel.<b>Select2</b>(True, selmarks(0))
+        End If
+        Call m_featData.<b>GetIntegerByName</b>(&quot;TrackingID&quot;, m_TrackingID)
+    Else ' On Insert Feature
+        m_TrackingID = 2
+    End If
+End Sub
+</pre>
+<pre>Public Sub OnOk()    </pre>
+<pre>    If m_cmdState = swCmdEdit Then ' On Edit Definition
+        Dim sels, types, selmarks
+        Call m_featData.<b>GetSelections</b>(sels, types, selmarks)
+        Dim newSels(0 To 0) As Object
+        Dim newSelMarks(0 To 0) As Long
+        Set newSels(0) = m_faceSel
+        newSelMarks(0) = 0
+        sels = newSels
+        selmarks = newSelMarks
+        Call m_featData.<b>SetSelections</b>(sels, selmarks)
+        Call m_featData.<b>SetIntegerByName</b>(&quot;TrackingID&quot;, m_TrackingID)
+        Call m_feature.<b>ModifyDefinition</b>(m_featData, m_Part, m_modelComp)
+    Else ' On Insert feature
+        Dim paramNames, paramTypes, paramValues
+        Dim paramNameArray(0 To 0) As String
+        Dim paramTypeArray(0 To 0) As Long
+        Dim paramValueArray(0 To 0) As String
+        paramNameArray(0) = &quot;TrackingID&quot;
+        paramTypeArray(0) = swMacroFeatureParamTypeInteger
+        paramValueArray(0) = Str(m_TrackingID)
+        paramNames = paramNameArray
+        paramTypes = paramTypeArray
+        paramValues = paramValueArray
+                Dim methods(0 To 8) As String
+        methods(0) = m_macroPath
+        methods(1) = &quot;Macros&quot;
+        methods(2) = &quot;swmMain&quot;
+        methods(3) = m_macroPath
+        methods(4) = &quot;Macros&quot;
+        methods(5) = &quot;swmPM&quot;
+        methods(6) = &quot;&quot;
+        methods(7) = &quot;&quot;
+        methods(8) = &quot;&quot;
+        Dim feat As Object
+        Set feat = m_Part.FeatureManager.<b>InsertMacroFeature</b>(&quot;CustumTrackingID&quot;, &quot;&quot;, methods, (paramNames), (paramTypes), (paramValues), Nothing, swMacroFeatureByDefault)
+    End If
+End Sub
+</pre>
+<pre>Public Sub OnCancel()
+    If m_cmdState = swCmdEdit Then
+        m_featData.<b>ReleaseSelectionAccess</b>
+    End If
+End Sub
+</pre>
+<pre>Public Sub OnFaceSelect()
+    Dim selM
+    Set selM = m_Part.<b>SelectionManager</b>
+    Set m_faceSel = Nothing
+    Set m_faceSel = selM.<b>GetSelectedObject3</b>(1)
+End Sub
+</pre>
+<pre>Public Function getUserTrackingID() As Integer
+    getUserTrackingID = m_TrackingID
+End Function
+</pre>
+<pre>Public Sub setUserTrackingID(TrackingID As Integer)
+    m_TrackingID = TrackingID
+End Sub</pre>
+<p align="center"><a href="#Top">Back to top</a></p>
+
+<p style="font-weight: bold;"><a name=PropMgrHdlr></a>
+<font face="Courier New" size="2">'<span style="font-weight: 400">PropMgrHdlr</span></font></p>
+<pre>Option Explicit
+Implements PropertyManagerPage2Handler</pre>
+<pre>Dim m_pageObj As PropMgr</pre>
+<pre>Public Sub Init(pageObj As PropMgr)
+    Set m_pageObj = pageObj
+End Sub</pre>
+<pre>Private Function PropertyManagerPage2Handler_<b>ConnectToSW</b>(ByVal ThisSW As Object, ByVal Cookie As Long) As Boolean</pre>
+<pre>End Function</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnButtonPress</b>(ByVal ID As Long)</pre>
+<pre>End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnClose</b>(ByVal reason As Long)
+    If reason = swPropertyManagerPageClose_Okay Then
+        m_pageObj.<b>GetCmd</b>().<b>OnOk</b>
+    ElseIf reason = swPropertyManagerPageClose_Cancel Then
+        m_pageObj.<b>GetCmd</b>().<b>OnCancel</b>
+    End If
+End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnCheckboxCheck</b>(ByVal ID As Long, ByVal Checked As Boolean)</pre>
+<pre>End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnComboboxSelectionChanged</b>(ByVal ID As Long, ByVal Item As Long)</pre>
+<pre>End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnGroupCheck</b>(ByVal ID As Long, ByVal Checked As Boolean)</pre>
+<pre>End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnGroupExpand</b>(ByVal ID As Long, ByVal Expanded As Boolean)</pre>
+<pre>End Sub</pre>
+<pre>Private Function PropertyManagerPage2Handler_<b>OnHelp</b>() As Boolean</pre>
+<pre>End Function</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnListboxSelectionChanged</b>(ByVal ID As Long, ByVal Item As Long)</pre>
+<pre>End Sub
+
+</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>AfterClose</b>()
+    Set m_pageObj = Nothing
+End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnNumberboxChanged</b>(ByVal ID As Long, ByVal Value As Double)
+    m_pageObj.GetCmd().setUserTrackingID (Value)
+End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnOptionCheck</b>(ByVal ID As Long)</pre>
+<pre>End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnSelectionboxFocusChanged</b>(ByVal ID As Long)</pre>
+<pre>End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnTextboxChanged</b>(ByVal ID As Long, ByVal Text As String)</pre>
+<pre>End Sub</pre>
+<pre>Private Sub PropertyManagerPage2Handler_<b>OnSelectionBoxListChanged</b>(ByVal ID As Long, ByVal Text As Long)
+    m_pageObj.GetCmd().OnFaceSelect
+End Sub</pre>
+<p align="center"><a href="#Top">Back to top</a></p>
+
+<p style="font-weight: bold;">&nbsp;</p>
+
+</body>
+
+</html>

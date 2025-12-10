@@ -1,0 +1,356 @@
+<html>
+
+<head>
+<title>Calculate Environmental Impact of an Assembly Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,Sustainability analysis">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Calculate Environmental Impact of an Assembly Example (VB.NET)</h1>
+<p>This example shows how to calculate the environmental impact of an assembly.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	'----------------------------------------------------------------------------<br>
+	' Preconditions:<br>
+	' 1. Add the SOLIDWORKS Sustainability primary interop assembly as <br>
+	' &nbsp;&nbsp;&nbsp;a reference (in the IDE's Project Explorer, right-click<br>
+	' &nbsp;&nbsp;&nbsp;the project name, select <b>Add Reference</b>, click the <b>Browse</b> 
+	tab,<br>
+	' &nbsp;&nbsp;&nbsp;navigate to the <i>install_dir</i><b>\api\redist</b> folder and<br>
+	' &nbsp;&nbsp;&nbsp;select <b>SolidWorks.Interop.sustainability.dll</b>).<br>
+	' 2. Open:<br>
+	'&nbsp;&nbsp;&nbsp;&nbsp;<i>public_documents</i><b>\samples\tutorial\api\ZZM7005.sldasm</b><br>
+	' 3. Open an Immediate window.<br>
+	' 4. Run to the breakpoint and wait for the environmental impact results to<br>
+	'&nbsp;&nbsp;&nbsp;&nbsp;finish updating in the Sustainability Task Pane.<br>
+	' 5. Press F5 to finish.<br>
+	'<br>
+	' Postconditions: Inspect the Immediate window.<br>
+	'<br>
+	' NOTE: Because the model is used elsewhere,<br>
+	' do not save changes when closing it.<br>
+	' 
+	---------------------------------------------------------------------------<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sustainability<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Runtime.InteropServices<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Diagnostics<br>
+	<br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black">
+	</span><span style="color:Blue">Class</span><span style="color:Black"> 
+	SolidWorksMacro<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	asmDoc </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	sustain </span><span style="color:Blue">As</span><span style="color:Black"> 
+	swgsustainabilityApp<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	materialInfo </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SustainabilityMaterial<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	assemblyProcess </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SustainabilityAssemblyProcess<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	assemblyUse </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SustainabilityAssemblyUse<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	transInfo </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SustainabilityTransportation<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	eolInfo </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SustainabilityEndOfLife<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	environmentalImpactInfo </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SustainabilityEnvironmentalImpact<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	componentList </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	arrayComponent(2) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	missingComponentList </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	materialclass </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	materialname </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	assemblyEnergy </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	assemblyProcessAmt </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	arrayComponent1(1) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	BuildToLast </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	energylifespan </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	assemblyUseAmt </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	arrayComponent2(5) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	CarbonContent </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	CarbonValues </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	WaterContent </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	WaterValues </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	AirContent </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	AirValues </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	EnergyContent </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	EnergyValues </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	main()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;asmDoc = swApp.<b>ActiveDoc</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sustain = asmDoc.<b>Extension</b>.<b>GetSustainability</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Assign material to assembly 
+	components<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Assign 
+	material to assembly components:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialInfo = sustain.<b>GetSustainabilityMaterial</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent(0) = </span><span style="color:#a31515">&quot;ZZM7005 End 
+	Plate (Default)&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent(1) = </span>
+	<span style="color:#a31515">&quot;ZZM7005 Silencer (04)&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent(2) = </span>
+	<span style="color:#a31515">&quot;ZZM7005 Silencer (-)&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;componentList = arrayComponent<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialInfo.<b>ExcludeComponent</b>(arrayComponent(0).ToString())<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Number of 
+	components missing materials: &quot;</span><span style="color:Black"> &amp; 
+	materialInfo.<b>GetMissingMaterialComponentCount</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialInfo.<b>IncludeComponent</b>(arrayComponent(0).ToString())<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;missingComponentList = materialInfo.<b>GetMissingMaterialComponentList</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialInfo.<b>SetPropertiesForComponent</b>(missingComponentList)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialclass = </span><span style="color:#a31515">&quot;Steel&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialInfo.<b>materialclass</b> = 
+	materialclass<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Material class: &quot;</span><span style="color:Black"> 
+	&amp; materialclass)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialname = </span><span style="color:#a31515">&quot;AISI 1020&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialInfo.<b>materialname</b> = 
+	materialname<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Material name: &quot;</span><span style="color:Black"> 
+	&amp; materialname)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialInfo.<b>ViewResults</b>()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Assembly Process<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Assembly 
+	Process:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyProcess = sustain.<b>GetSustainabilityAssemblyProcess</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyProcess.<b>EnergyForAssemblyProcess</b> = </span>
+	<span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyEnergy = assemblyProcess.<b>EnergyForAssemblyProcess</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent1(0) = 10.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent1(1) = 20.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyProcessAmt = arrayComponent1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyProcess.<b>AssemblyProcessAmount</b> = assemblyProcessAmt<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Region of assembly 
+	as defined in swSustainabilityRegionName_e: &quot;</span><span style="color:Black"> 
+	&amp; assemblyProcess.<b>region</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BuildToLast = 21.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyProcess.<b>BuiltToLast</b> = BuildToLast<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Built to last: &quot;</span><span style="color:Black"> 
+	&amp; assemblyProcess.<b>BuiltToLast</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Units of time as 
+	defined in swSustainabilityDurationType_e: &quot;</span><span style="color:Black"> 
+	&amp; assemblyProcess.<b>durationType</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Assembly Use<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Assembly 
+	Use:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyUse = sustain.<b>GetSustainabilityAssemblyUse</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyUse.<b>energyOverlifeSpan</b> = </span>
+	<span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;energylifespan = assemblyUse.<b>energyOverlifeSpan</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent2(0) = 10.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent2(1) = 20.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent2(2) = 30.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent2(3) = 40.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent2(4) = 50.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arrayComponent2(5) = 60.0#<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyUseAmt = arrayComponent2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyUse.<b>AssemblyUseAmount</b> = assemblyUseAmt<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Per units of time 
+	as defined in swSustainabilityDurationType_e: &quot;</span><span style="color:Black"> 
+	&amp; assemblyUse.<b>durationType</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Assembly use 
+	region as defined in swSustainabilityRegionName_e: &quot;</span><span style="color:Black"> 
+	&amp; assemblyUse.<b>AssemblyRegion</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Transportation<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Transportation 
+	(in km):&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transInfo = sustain.<b>GetSustainabilityTransportation</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;By train: &quot;</span><span style="color:Black"> 
+	&amp; transInfo.<b>Train</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;By truck: &quot;</span><span style="color:Black"> 
+	&amp; transInfo.<b>Truck</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;By boat: &quot;</span><span style="color:Black"> 
+	&amp; transInfo.<b>Boat</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;By plane: &quot;</span><span style="color:Black"> 
+	&amp; transInfo.<b>Plane</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' End of Life<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Disposal 
+	at end of life:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eolInfo = sustain.<b>GetSustainabilityEndOfLife</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;% recycled: &quot;</span><span style="color:Black"> 
+	&amp; eolInfo.<b>recycled</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;% incinerated: &quot;</span><span style="color:Black"> 
+	&amp; eolInfo.<b>incinerated</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;% landfill: &quot;</span><span style="color:Black"> 
+	&amp; eolInfo.<b>landfill</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Environmental Impact<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Calculated 
+	Environmental Impact:&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;environmentalImpactInfo = sustain.<b>GetSustainabilityEnvironmentalImpact</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot; Time over which to 
+	evaluate environmental impact: &quot;</span><span style="color:Black"> &amp; 
+	environmentalImpactInfo.<b>durationofuse</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot; Units of time over 
+	which to evaluate as defined in swSustainabilityDurationType_e: &quot;</span><span style="color:Black"> 
+	&amp; environmentalImpactInfo.<b>durationType</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;environmentalImpactInfo.<b>UpdateResults</b>()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CarbonValues = 
+	environmentalImpactInfo.<b>GetCurrentCarbonFootPrint</b>(CarbonContent)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot; Carbon footprint&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Material: &quot;</span><span style="color:Black"> 
+	&amp; CarbonContent(0))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Use: &quot;</span><span style="color:Black"> 
+	&amp; CarbonContent(1))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Transportation: &quot;</span><span style="color:Black"> 
+	&amp; CarbonContent(2))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Manufacturing: &quot;</span><span style="color:Black"> 
+	&amp; CarbonContent(3))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;End of Life: &quot;</span><span style="color:Black"> 
+	&amp; CarbonContent(4))<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WaterValues = environmentalImpactInfo.<b>GetWaterEutrophication</b>(WaterContent)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot; Water 
+	eutrophication&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Material: &quot;</span><span style="color:Black"> 
+	&amp; WaterContent(0))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Use: &quot;</span><span style="color:Black"> 
+	&amp; WaterContent(1))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Transportation: &quot;</span><span style="color:Black"> 
+	&amp; WaterContent(2))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Manufacturing: &quot;</span><span style="color:Black"> 
+	&amp; WaterContent(3))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;End of Life: &quot;</span><span style="color:Black"> 
+	&amp; WaterContent(4))<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AirValues = environmentalImpactInfo.<b>GetAirAcidification</b>(AirContent)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot; Air acidification&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Material: &quot;</span><span style="color:Black"> 
+	&amp; AirContent(0))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Use: &quot;</span><span style="color:Black"> 
+	&amp; AirContent(1))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Transportation: &quot;</span><span style="color:Black"> 
+	&amp; AirContent(2))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Manufacturing: &quot;</span><span style="color:Black"> 
+	&amp; AirContent(3))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;End of Life: &quot;</span><span style="color:Black"> 
+	&amp; AirContent(4))<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EnergyValues = environmentalImpactInfo.<b>GetEnergyConsumption</b>(EnergyContent)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot; Energy consumption&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Material: &quot;</span><span style="color:Black"> 
+	&amp; EnergyContent(0))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Use: &quot;</span><span style="color:Black"> 
+	&amp; EnergyContent(1))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Transportation: &quot;</span><span style="color:Black"> 
+	&amp; EnergyContent(2))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;Manufacturing: &quot;</span><span style="color:Black"> 
+	&amp; EnergyContent(3))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&nbsp;&nbsp;End of Life: &quot;</span><span style="color:Black"> 
+	&amp; EnergyContent(4))<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp; <br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	<br>
+	<br>
+	</span><span style="color:Blue">End</span><span style="color:Black"> </span>
+	<span style="color:Blue">Class</span>
+</div>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

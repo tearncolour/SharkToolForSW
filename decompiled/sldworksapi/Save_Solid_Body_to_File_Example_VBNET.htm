@@ -1,0 +1,276 @@
+<html>
+
+<head>
+<title>Save Solid Body to File Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,save to file">
+<meta name=MS-HKWD content="VB.NET examples,cut lists">
+<meta name=MS-HKWD content="VB.NET examples,files">
+<meta name=MS-HKWD content="VB.NET examples,weldments">
+<meta name=MS-HKWD content="VB.NET examples,weldment cut lists">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Save Solid Body to File Example (VB.NET)</h1>
+<p>This example shows how to save a weldment member to another 
+part document.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><font color="#008000">'----------------------------------------------------------------------------<br>
+	' Preconditions: Open <i>public_documents</i><b>\samples\tutorial\api\weldment_box3.sldprt</b>.<br>
+	'<br>
+	' Postconditions:<br>
+	' 1. Updates the cut list in the weldment part.<br>
+	' 2. Saves the first weldment member in the FeatureManager design tree to<br>
+	'&nbsp;&nbsp;&nbsp;    <b>RefWeldment1.sldprt</b>, and saves the cut list properties in the parent part<br>
+	'&nbsp;&nbsp;&nbsp; to the cut list of the new part.<br>
+	' 3. Opens <b>RefWeldment1.sldprt</b> and updates its cut list. (This step could<br>
+	'&nbsp;&nbsp;&nbsp; take a few minutes to complete.)<br>
+	' 4. At Stop, press F5.<br>
+	' 5. Closes <b>RefWeldment1.sldprt</b>.<br>
+	' 6. To verify steps 2 and 3, open and inspect <b>RefWeldment1.sldprt</b>, which resides<br>
+	'&nbsp;&nbsp;&nbsp; in the same folder as this macro.<br>
+	'<br>
+	' NOTE: Because <b>weldment_box3.sldprt</b> is used elsewhere, do not save changes.<br>
+	'---------------------------------------------------------------------------</font><span style="color:Green"><br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Runtime.InteropServices<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System<br>
+	<br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black">
+	</span><span style="color:Blue">Class</span><span style="color:Black"> 
+	SolidWorksMacro<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swFeat </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swBodyFolder </span><span style="color:Blue">As</span><span style="color:Black"> 
+	BodyFolder<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	updateBoolstatus </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	boolstatus </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	longstatus </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	longWarnings </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	currentModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	modelType </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	modelTitle </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black"><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	main()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;currentModel = swApp.<b>ActiveDoc</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelTitle = currentModel.<b>GetTitle</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelType = currentModel.<b>GetType</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = currentModel.<b>FirstFeature</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swFeat </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to get first 
+	feature&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Do</span><span style="color:Black">
+	</span><span style="color:Blue">While</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> swFeat
+	</span><span style="color:Blue">Is</span><span style="color:Black"> </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swFeat.<b>GetTypeName2</b> = </span><span style="color:#a31515">&quot;SolidBodyFolder&quot;</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBodyFolder = swFeat.<b>GetSpecificFeature2</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swBodyFolder </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to get body 
+	folder&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swBodyFolder.<b>SetAutomaticCutList</b>(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swBodyFolder.<b>UpdateCutList</b>()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Do<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = swFeat.<b>GetNextFeature</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Loop<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;updateBoolstatus = </span>
+	<span style="color:Blue">False<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = currentModel.<b>FirstFeature</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swFeat </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to get first 
+	feature&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Do</span><span style="color:Black">
+	</span><span style="color:Blue">While</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> swFeat
+	</span><span style="color:Blue">Is</span><span style="color:Black"> </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swFeat.<b>GetTypeName2</b> = </span><span style="color:#a31515">&quot;WeldMemberFeat&quot;</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swFeat.<b>Select2</b>(</span><span style="color:Blue">False</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	boolstatus = </span><span style="color:Blue">False</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to select 
+	feature&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Save the selected solid 
+	body weldment member to another part,<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	transferring the solid body's cut list properties to the new part's cut 
+	list;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	automatically creates a weldment and cut list folder<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = currentModel.<b>SaveToFile3</b>(swApp.<b>GetCurrentMacroPathFolder</b> 
+	+ </span><span style="color:#a31515">&quot;\RefWeldment1&quot;</span><span style="color:Black"> 
+	+ </span><span style="color:#a31515">&quot;.sldprt&quot;</span><span style="color:Black">, 
+	1, swCutListTransferOptions_e.swCutListTransferOptions_CutListProperties, </span><span style="color:Blue">False</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 
+	longstatus, longWarnings)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	boolstatus = </span><span style="color:Blue">False</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to insert 
+	weldment member into new part&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = swApp.<b>ActiveDoc</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to set open model 
+	as active document&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;updateBoolstatus = </span><span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Do<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = swFeat.<b>GetNextFeature</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Loop<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	updateBoolstatus = </span><span style="color:Blue">True</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = currentModel.<b>FirstFeature</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swFeat </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to get first 
+	feature&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Do</span><span style="color:Black">
+	</span><span style="color:Blue">While</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> swFeat
+	</span><span style="color:Blue">Is</span><span style="color:Black"> </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swFeat.<b>GetTypeName2</b> = </span><span style="color:#a31515">&quot;SolidBodyFolder&quot;</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBodyFolder = swFeat.<b>GetSpecificFeature2</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swBodyFolder </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to get body 
+	folder&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swBodyFolder.<b>SetAutomaticCutList</b>(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	boolstatus = </span><span style="color:Blue">False</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to set cut list 
+	to automatic&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swBodyFolder.<b>UpdateCutList</b>()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	boolstatus = </span><span style="color:Blue">False</span><span style="color:Black">
+	</span><span style="color:Blue">Then</span><span style="color:Black"> 
+	ErrorMsg(swApp, </span><span style="color:#a31515">&quot;Failed to update cut 
+	list&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>CloseDoc</b>(swModel.GetTitle)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Do<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = swFeat.<b>GetNextFeature</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Loop<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	ErrorMsg(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	Swapp </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object</span><span style="color:Black">,
+	</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	Message </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Swapp.<b>SendMsgToUser2</b>(Message, 0, 0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Swapp.<b>RecordLine</b>(</span><span style="color:#a31515">&quot;'*** 
+	WARNING - General&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Swapp.<b>RecordLine</b>(</span><span style="color:#a31515">&quot;'*** &quot;</span><span style="color:Black"> 
+	&amp; Message)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Swapp.<b>RecordLine</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	<br>
+	<br>
+	</span><span style="color:Blue">End</span><span style="color:Black"> </span>
+	<span style="color:Blue">Class<br>
+&nbsp;</span></div>
+<p class=APICODE>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

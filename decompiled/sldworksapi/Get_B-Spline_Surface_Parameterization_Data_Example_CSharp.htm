@@ -1,0 +1,201 @@
+<html>
+
+<head>
+<title>Get B-Spline Surface Parameterization Data Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,splines">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get B-Spline Surface Parameterization Data Example (C#)</h1>
+<p>This example shows how to get B-spline parameterization data for a selected 
+face or surface.</p>
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<pre><font color="#008000">//----------------------------------------------------------------------------
+// Preconditions:
+// 1.  Open <i>public_documents</i><b>\samples\tutorial\molds\telephone.sldprt</b>.
+// 2.  Select a face.
+// 3.  Open the Immediate Window.
+//
+// Postconditions: Examine the Immediate window.
+//----------------------------------------------------------------------------</font></pre>
+	<p class="APICODE"><span style="color:Green"><br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Diagnostics;<br>
+	</span><span style="color:Blue">namespace</span><span style="color:Black"> 
+	MacroBSurf_CSharp.csproj<br>
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">partial</span><span style="color:Black">
+	</span><span style="color:Blue">class</span><span style="color:Black">
+	</span><span style="color:#2b91af">SolidWorksMacro<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> Main()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black"> 
+	swModel = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black"> 
+	swSelMgr = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Face2</span><span style="color:Black"> 
+	swFace = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">Face2</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Surface</span><span style="color:Black"> 
+	swSurf = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">Surface</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">SurfaceParameterizationData</span><span style="color:Black"> 
+	swSurfParam = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">SurfaceParameterizationData</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">BSurfParamData</span><span style="color:Black"> 
+	swBSurfParam = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">BSurfParamData</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">bool</span><span style="color:Black"> 
+	sense = </span><span style="color:Blue">false</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	UKnots = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	VKnots = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	vCtrlPts = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	i = 0;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = (</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">)swApp.<b>ActiveDoc</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr = (</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black">)swModel.<b>SelectionManager</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace = (</span><span style="color:#2b91af">Face2</span><span style="color:Black">)swSelMgr.<b>GetSelectedObject5</b>(1);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSurf = (</span><span style="color:#2b91af">Surface</span><span style="color:Black">)swFace.<b>GetSurface</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSurfParam = (</span><span style="color:#2b91af">SurfaceParameterizationData</span><span style="color:Black">)swSurf.<b>Parameterization2</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;File 
+	= &quot;</span><span style="color:Black"> + swModel.<b>GetPathName</b>());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	Surface:&quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	U minimum is: &quot;</span><span style="color:Black"> + swSurfParam.<b>UMin</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	U minimum bound type is: &quot;</span><span style="color:Black"> + swSurfParam.<b>UMinBoundType</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	U maximum is: &quot;</span><span style="color:Black"> + swSurfParam.<b>UMax</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	U maximum bound type is: &quot;</span><span style="color:Black"> + swSurfParam.<b>UMaxBoundType</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	U property count is: &quot;</span><span style="color:Black"> + swSurfParam.<b>UPropertyNumber</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	varUProperties = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black">[] 
+	uProperties;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varUProperties = swSurfParam.<b>UProperties</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uProperties = (</span><span style="color:Blue">int</span><span style="color:Black">[])varUProperties;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	U properties: &quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">for</span><span style="color:Black"> 
+	(i = 0; i &lt;= uProperties.GetUpperBound(0); i++)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	&quot;</span><span style="color:Black"> + uProperties[i]);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	V minimum is: &quot;</span><span style="color:Black"> + swSurfParam.<b>VMin</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	V minimum bound type is: &quot;</span><span style="color:Black"> + swSurfParam.<b>VMinBoundType</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	V maximum is: &quot;</span><span style="color:Black"> + swSurfParam.<b>VMax</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	V maximum bound type is: &quot;</span><span style="color:Black"> + swSurfParam.<b>VMaxBoundType</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	V property count is: &quot;</span><span style="color:Black"> + swSurfParam.<b>VPropertyNumber</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	varVProperties = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black">[] 
+	vProperties;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varVProperties = swSurfParam.<b>VProperties</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vProperties = (</span><span style="color:Blue">int</span><span style="color:Black">[])varVProperties;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	V properties: &quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">for</span><span style="color:Black"> 
+	(i = 0; i &lt;= vProperties.GetUpperBound(0); i++)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	&quot;</span><span style="color:Black"> + vProperties[i]);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBSurfParam = (</span><span style="color:#2b91af">BSurfParamData</span><span style="color:Black">)swSurf.<b>GetBSurfParams3</b>(</span><span style="color:Blue">false</span><span style="color:Black">,
+	</span><span style="color:Blue">false</span><span style="color:Black">, 
+	swSurfParam, 0.01, </span><span style="color:Blue">out</span><span style="color:Black"> 
+	sense);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;U 
+	order is: &quot;</span><span style="color:Black"> + swBSurfParam.<b>UOrder</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;V 
+	order is: &quot;</span><span style="color:Black"> + swBSurfParam.<b>VOrder</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	Control point column count is: &quot;</span><span style="color:Black"> + 
+	swBSurfParam.<b>ControlPointColumnCount</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	Control point row count is: &quot;</span><span style="color:Black"> + 
+	swBSurfParam.<b>ControlPointRowCount</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	Control point dimension is: &quot;</span><span style="color:Black"> + 
+	swBSurfParam.<b>ControlPointDimension</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	U periodicity is: &quot;</span><span style="color:Black"> + swBSurfParam.<b>UPeriodicity</b>);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot; 
+	V periodicity is: &quot;</span><span style="color:Black"> + swBSurfParam.<b>VPeriodicity</b>);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;UKnots = swBSurfParam.<b>UKnots</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">double</span><span style="color:Black">[] 
+	uknots;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;uknots = (</span><span style="color:Blue">double</span><span style="color:Black">[])UKnots;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Knot 
+	vector in the U direction: &quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">for</span><span style="color:Black"> 
+	(i = 0; i &lt;= uknots.GetUpperBound(0); i++)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(uknots[i].ToString());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;VKnots = swBSurfParam.<b>VKnots</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">double</span><span style="color:Black">[] 
+	vknots;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vknots = (</span><span style="color:Blue">double</span><span style="color:Black">[])VKnots;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Knot 
+	vector in the V direction: &quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">for</span><span style="color:Black"> 
+	(i = 0; i &lt;= vknots.GetUpperBound(0); i++)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(vknots[i].ToString());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Get control points in row = 
+	2, column = 3 of the control point matrix <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vCtrlPts = swBSurfParam.<b>GetControlPoints</b>(2, 
+	3);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">double</span><span style="color:Black">[] 
+	ctrlpts;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ctrlpts = (</span><span style="color:Blue">double</span><span style="color:Black">[])vCtrlPts;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Control 
+	point at row=2 and column=3: &quot;</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">for</span><span style="color:Black"> 
+	(i = 0; i &lt;= ctrlpts.GetUpperBound(0); i++)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(ctrlpts[i].ToString());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:#2b91af">SldWorks</span><span style="color:Black"> 
+	swApp;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	}</span>
+</div>
+
+</body>
+
+</html>

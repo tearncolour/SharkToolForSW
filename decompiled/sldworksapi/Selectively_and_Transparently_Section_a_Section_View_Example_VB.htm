@@ -1,0 +1,112 @@
+<html>
+
+<head>
+<title>Selectively and Transparently Section a Section View Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,section views">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Selectively and Transparently Section a Section View Example (VBA)</h1>
+<p>This example shows how to selectively and transparently section a section 
+view. </p>
+
+<pre>'-------------------------------------------------------------------------
+' Preconditions: Verify that the assembly to open exists.
+'
+' Postconditions:
+' 1. Opens the assembly.
+' 2. Selects the component for selective sectioning.
+' 3. Selects the components for transparent sectioning.
+' 4. Selects the planes for sectioning.
+' 5. Creates the SectionViewData object.
+'    a. Sets the section method to zonal.
+'    b. Sets to cap the sections.
+'    c. Sets to generate a graphics-only section view.
+'    d. Enables selective sectioning.
+'       1. Sets the component selected in step 2 for selective
+'          sectioning.
+'       2. Sets the intersection zone.
+'       3. Sets to exclude the component set in step 5.d.1 from
+'          selective sectioning.
+'    e. Enables transparent sectioning.
+'       1. Sets the components selected in step 3
+'          for transparent sectioning.
+'       2. Sets to include the sectioned components set in step 5.e.1
+'          in transparent sectioning.
+'       3. Sets the level of transparency.
+' 6. Creates the section view.
+' 7. Examine the graphics area.
+' 8. Click Section View twice in the Heads-Up View toolbar and
+'    examine the Section View PropertyManager page.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'------------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim selectiveArray(0) As SldWorks.Component2
+Dim selComponent As SldWorks.Component2
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim transparentArray(1) As SldWorks.Component2
+Dim transComponent As SldWorks.Component2
+Dim transComponent2 As SldWorks.Component2
+Dim swSectionViewData As SldWorks.SectionViewData
+Dim swModelViewManager as SldWorks.ModelViewManager
+Dim transArray As Variant
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long
+Dim fileName As String
+Dim selArray As Variant</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\floxpress\ball valve\ball_valve.sldasm&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocASSEMBLY, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModelDocExt = swModel.<b>Extension</b>   </pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;Ball-1@ball_valve&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 8, Nothing, 0)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set selComponent = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set selectiveArray(0) = selComponent
+    selArray = selectiveArray       </pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;Side-1@ball_valve&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 32, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Side-2@ball_valve&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 32, Nothing, 0)
+    Set transComponent = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set transComponent2 = swSelMgr.<b>GetSelectedObject6</b>(2, -1)
+    Set transparentArray(0) = transComponent
+    Set transparentArray(1) = transComponent2
+    transArray = transparentArray    </pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;Plane1&quot;, &quot;PLANE&quot;, 0, 0, 0, True, 1, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Plane2&quot;, &quot;PLANE&quot;, 0, 0, 0, True, 2, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Plane3&quot;, &quot;PLANE&quot;, 0, 0, 0, True, 4, Nothing, 0)
+
+    Set swModelViewManager = swModel.<b>ModelViewManager</b>
+    Set swSectionViewData = swModelViewManager.<b>CreateSectionViewData</b>()    </pre>
+<pre>    swSectionViewData.<b>FirstColor</b> = 16711680
+    swSectionViewData.<b>SecondColor</b> = 65280
+    swSectionViewData.<b>ThirdColor</b> = 255
+    swSectionViewData.<b>ShowSectionCap</b> = True
+    swSectionViewData.<b>KeepCapColor</b> = True
+    swSectionViewData.<b>GraphicsOnlySection</b> = True    </pre>
+<pre>    swSectionViewData.<b>ZonalSection</b> = True    </pre>
+<pre>    swSectionViewData.<b>SelectiveSection</b> = True
+    swSectionViewData.<b>SelectiveSectioningList</b> = selArray
+    swSectionViewData.<b>SectionedZones</b> = 16 'swZonalSectionViewZones_e.swZonalSectionViewZones_swZonalSectionViewZone_5
+    swSectionViewData.<b>ExcludeSelectedItems</b> = True
+    </pre>
+<pre>    swSectionViewData.<b>TransparentSection</b> = True
+    swSectionViewData.<b>TransparencyList</b> = transArray
+    swSectionViewData.<b>SectionTransparentItemsTransparent</b> = True
+    swSectionViewData.<b>TransparencyValue</b> = 0.9    </pre>
+<pre>    status = swModelViewManager.<b>CreateSectionView</b>(swSectionViewData)    </pre>
+<pre>    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

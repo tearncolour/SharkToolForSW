@@ -1,0 +1,117 @@
+<html>
+
+<head>
+<title>Get Appearance File Name Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,appearances">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Appearance File Name Example (VB.NET)</h1>
+<p>This example shows how to get the file name of the first appearance applied 
+ to a model.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color: green">'----------------------------------------------------------------</span>
+<span style="color: green">'&nbsp;Preconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;model&nbsp;document&nbsp;exists.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;materials&nbsp;file&nbsp;exists.</span>
+<span style="color: green">'&nbsp;3.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'</span>
+<span style="color: green">'&nbsp;Postconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;model&nbsp;document.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Applies&nbsp;the&nbsp;specified&nbsp;appearance&nbsp;to&nbsp;the&nbsp;selected&nbsp;face.</span>
+<span style="color: green">'&nbsp;3.&nbsp;Gets&nbsp;the&nbsp;material&nbsp;IDs.
+' 4. Gets the file name of the first appearance applied to the model.</span>
+<span style="color: green">'&nbsp;5.&nbsp;Examine&nbsp;the&nbsp;graphics&nbsp;area&nbsp;and&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'</span>
+<span style="color: green">'&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;model&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span>
+<span style="color: green">'----------------------------------------------------------------</span>
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color: blue">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color: blue">Imports</span>&nbsp;System
+<span style="color: blue">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color: blue">Partial</span>&nbsp;<span style="color: blue">Class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;<span style="color: blue">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModel&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color: blue">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSelectionMgr&nbsp;<span style="color: blue">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swFace&nbsp;<span style="color: blue">As</span>&nbsp;Face2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swConfiguration&nbsp;<span style="color: blue">As</span>&nbsp;Configuration
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swRenderMaterial&nbsp;<span style="color: blue">As</span>&nbsp;RenderMaterial
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;nbrRenderMaterials&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;fileName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;warnings&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;errors&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;status&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;materialName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;displayStateNames()&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;materialID1&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;materialID2&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Open&nbsp;model&nbsp;document</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color: #a31515">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\cover_plate.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color: #a31515">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Create&nbsp;material&nbsp;for&nbsp;the&nbsp;appearance</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialName&nbsp;=&nbsp;<span style="color: #a31515">&quot;C:\Program&nbsp;Files\SolidWorks&nbsp;Corp\SolidWorks\data\graphics\Materials\plastic\low&nbsp;gloss\blue&nbsp;low&nbsp;gloss&nbsp;plastic.p2m&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRenderMaterial&nbsp;=&nbsp;swModelDocExt.<b>CreateRenderMaterial</b>(materialName)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Verify&nbsp;that&nbsp;RealView&nbsp;Graphics is&nbsp;set</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;RealView&nbsp;Graphics&nbsp;set?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swModelDocExt.<b>ViewDisplayRealView</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Select&nbsp;a&nbsp;face&nbsp;and&nbsp;add&nbsp;an&nbsp;appearance</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;&quot;</span>,&nbsp;<span style="color: #a31515">&quot;FACE&quot;</span>,&nbsp;0.0417924256550464,&nbsp;0.0796803314056547,&nbsp;0,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swRenderMaterial.<b>AddEntity</b>(swFace)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Appearance&nbsp;added&nbsp;to&nbsp;selected&nbsp;face?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;status)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Get&nbsp;the&nbsp;names&nbsp;of&nbsp;display&nbsp;states</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Add&nbsp;the&nbsp;appearance&nbsp;to&nbsp;all&nbsp;display&nbsp;states</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfiguration&nbsp;=&nbsp;swModel.<b>GetActiveConfiguration</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;displayStateNames&nbsp;=&nbsp;swConfiguration.<b>GetDisplayStates</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>AddDisplayStateSpecificRenderMaterial</b>(swRenderMaterial,&nbsp;swDisplayStateOpts_e.swAllDisplayState,&nbsp;displayStateNames,&nbsp;materialID1,&nbsp;materialID2)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Material&nbsp;IDs&nbsp;returned&nbsp;by&nbsp;IModelDocExtension::AddDisplayStateSpecificRenderMaterial:&nbsp;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;ID1:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;materialID1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;ID2:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;materialID2)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Get&nbsp;the&nbsp;number&nbsp;of&nbsp;appearances</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrRenderMaterials&nbsp;=&nbsp;swModelDocExt.<b>GetRenderMaterialsCount2</b>(swDisplayStateOpts_e.swAllDisplayState,&nbsp;displayStateNames)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'If&nbsp;one&nbsp;or&nbsp;more&nbsp;appearances&nbsp;are&nbsp;applied&nbsp;to&nbsp;the&nbsp;model,</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'then&nbsp;get&nbsp;the&nbsp;file&nbsp;name&nbsp;of&nbsp;the&nbsp;first&nbsp;appearance&nbsp;applied</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">If</span>&nbsp;nbrRenderMaterials&nbsp;&gt;&nbsp;0&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRenderMaterial.<b>GetMaterialIds</b>(materialID1,&nbsp;materialID2)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Material&nbsp;IDs&nbsp;returned&nbsp;by&nbsp;IModelDocExtension::GetMaterialIds:&nbsp;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;ID1:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;materialID1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;ID2:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;materialID2)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;First&nbsp;appearance's&nbsp;file&nbsp;name:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRenderMaterial.<b>FileName</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;No&nbsp;appearances&nbsp;applied&nbsp;to&nbsp;this&nbsp;model.&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">If</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;swApp&nbsp;<span style="color: blue">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color: blue">End</span>&nbsp;<span style="color: blue">Class</span></pre>
+
+</body>
+
+</html>

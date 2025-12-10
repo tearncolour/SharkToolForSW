@@ -1,0 +1,116 @@
+<html>
+
+<head>
+<title>Delete and Insert Instances in Variable Pattern Feature Example (VBA) </title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,patterns">
+<meta name=MS-HKWD content="VBA examples,variable patterns">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Delete and Insert Instances in Variable Pattern Feature Example (VBA)</h1>
+<p>This example shows how to delete and insert instances in a variable pattern feature.</p>
+
+<pre>'--------------------------------------------------------------
+' Preconditions:
+' 1. Open <i>public_documents</i><b>\samples\tutorial\api\bottle.sldprt</b>.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Selects the variable pattern feature.
+' 2. Rolls back and accesses the variable pattern feature.
+'    a. Deletes the last instance of the variable pattern in the table.
+'    b. Deletes a dimension in the table.
+'    c. Gets the names of the controlling dimensions.
+'    d. Inserts a new instance in the table.
+'    e. Rolls forward the variable pattern feature.
+'       NOTE: It can take several minutes for this step to complete.
+' 3. Selects the variable pattern again.
+'    a. Rolls back and accesses the variable pattern feature.
+'    b. Sets new values for the new instance.
+'    c. Rolls forward the variable pattern feature.
+' 4. Examine the Immediate window and graphics area.
+'
+' NOTE: Because the part is used elsewhere, do not save change.
+'---------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swFeature As SldWorks.Feature
+Dim swDimensionDrivenTablePatternFeat As SldWorks.DimPatternFeatureData
+Dim status As Boolean
+Dim DimensionName As String
+Dim errorString As String
+Dim i As Long</pre>
+<pre>Sub main()
+    Set swApp = Application.SldWorks    </pre>
+<pre>    Set swModel = swApp.<b>ActiveDoc</b>  
+    Set swModelDocExt = swModel.<b>Extension</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;VarPattern1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swFeature = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swDimensionDrivenTablePatternFeat = swFeature.<b>GetDefinition</b>    </pre>
+<pre>    'Roll back and access the variable pattern feature
+    status = swDimensionDrivenTablePatternFeat.<b>AccessSelections</b>(swModel, Nothing)    </pre>
+<pre>    'Delete the last instance of the variable pattern in the table
+    status = swDimensionDrivenTablePatternFeat.<b>DeleteInstanceAt</b>(-1)
+    Debug.Print &quot;Last instance of variable pattern deleted from table? &quot; &amp; status   </pre>
+<pre>    'Delete a dimension in the table
+    DimensionName = &quot;D3@Fillet1&quot;
+    status = swDimensionDrivenTablePatternFeat.<b>DeleteDimension</b>(DimensionName)
+    Debug.Print &quot;D3@Fillet1 dimension deleted from table? &quot; &amp; status    </pre>
+<pre>    'Get the names of the controlling dimensions
+    Dim nbr As Long
+    Dim dimNbr As Long
+    Dim controllingDimNames() As String
+    Dim controllingDimName As String
+    nbr = swDimensionDrivenTablePatternFeat.<b>GetInstanceCount</b>
+    Debug.Print (&quot;Number of pattern instances: &quot; &amp; nbr)
+    Debug.Print (&quot;  Controlling dimension names: &quot;)
+    dimNbr = swDimensionDrivenTablePatternFeat.<b>GetControllingDimensionCount</b>
+    ReDim Preserve controllingDimNames(dimNbr)
+    For i = 0 To dimNbr - 1
+       controllingDimNames(i) = swDimensionDrivenTablePatternFeat.<b>GetControllingDimensionName</b>(i)
+       controllingDimName = controllingDimNames(i)
+       Debug.Print (&quot;     &quot; &amp; controllingDimName)
+    Next i    </pre>
+<pre>    'Insert instance in table
+    status = swDimensionDrivenTablePatternFeat.<b>AddInstanceAt</b>(False, -1)
+    Debug.Print &quot;Instance added to table? &quot; &amp; status
+    nbr = swDimensionDrivenTablePatternFeat.<b>GetInstanceCount</b>
+    Debug.Print (&quot;Number of pattern instances: &quot; &amp; nbr)    </pre>
+<pre>    'Roll forward the variable pattern feature
+    'NOTE: It can several minutes for this step to complete.
+    swFeature.<b>ModifyDefinition</b> swDimensionDrivenTablePatternFeat, swModel, Nothing    </pre>
+<pre>    'Select the variable pattern again
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;VarPattern1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swFeature = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swDimensionDrivenTablePatternFeat = swFeature.<b>GetDefinition</b></pre>
+<pre>    'Roll back and access the variable pattern feature
+    status = swDimensionDrivenTablePatternFeat.<b>AccessSelections</b>(swModel, Nothing)    </pre>
+<pre>    'Set new values for the new instance
+    errorString = swDimensionDrivenTablePatternFeat.<b>SetInstanceDimensionValue</b>(nbr, &quot;D3@Sketch2@bottle.moPart_c&quot;, 0.15)
+    If errorString = &quot;&quot; Then
+        Debug.Print &quot;Set new value for new instance[&quot; &amp; nbr &amp; &quot;] D3@Sketch2 dimension? True&quot;
+    Else
+        Debug.Print &quot;Set new value for new instance[&quot; &amp; nbr &amp; &quot;] D3@Sketch2 dimension? &quot; &amp; errorString
+    End If
+    errorString = swDimensionDrivenTablePatternFeat.<b>SetInstanceDimensionValue</b>(nbr, &quot;D1@Fillet1@bottle.moPart_c&quot;, 0.01)
+    If errorString = &quot;&quot; Then
+        Debug.Print &quot;Set new value for new instance[&quot; &amp; nbr &amp; &quot;] D2Fillet2 dimension? True&quot;
+    Else
+        Debug.Print &quot;Set new value for new instance[&quot; &amp; nbr &amp; &quot;] D2Fillet2 dimension? &quot; &amp; errorString
+    End If    </pre>
+<pre>    'Roll forward the variable pattern feature
+    swFeature.<b>ModifyDefinition</b> swDimensionDrivenTablePatternFeat, swModel, Nothing    </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

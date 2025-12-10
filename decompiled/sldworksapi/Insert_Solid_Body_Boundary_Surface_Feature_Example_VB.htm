@@ -1,0 +1,83 @@
+<html>
+
+<head>
+<title>Insert Solid Body Boundary Surface Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,boundary surface feature">
+<meta name=MS-HKWD content="VBA examples,features">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Solid Body Boundary Surface Feature Example (VBA)</h1>
+<p>This example shows how to insert a solid body boundary surface feature.</p>
+
+<pre>'-------------------------------------------------------------
+' Preconditions: Verify that the specified part template
+' exists.
+'
+' Postconditions:
+' 1. Opens a new part.
+' 2. Inserts a sketch of a rectangle, <b>Sketch1</b>, on <b>Front Plane</b>.
+' 3. Creates <b>Surface-Plane1</b> using <b>Sketch1</b>.
+' 4. Creates <b>Plane1</b>.
+' 5. Creates a sketch of a circle, <b>Sketch2</b>, on <b>Plane1</b>.
+' 6. Creates <b>Surface-Plane2</b> using <b>Sketch2</b>.
+' 7. Inserts a solid body boundary surface feature, <b>Boundary-Surface1</b>,
+'    using <b>Surface-Plane1</b> and <b>Surface-Plane2</b>.
+' 8. Examine the graphics area and expand <b>Solid Bodies(1)</b> in the
+'    FeatureManager design tree to verify step 7.
+'--------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFeatureMgr As SldWorks.FeatureManager
+Dim swSketchMgr As SldWorks.SketchManager
+Dim swRefPlane As SldWorks.RefPlane
+Dim swSketchSegment As SldWorks.SketchSegment
+Dim swFeature As SldWorks.Feature
+Dim sketchSegments As Variant
+Dim status As Boolean</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SOLIDWORKS 2016\templates\part.prtdot&quot;, 0, 0, 0)
+    Set swModelDocExt = swModel.<b>Extension</b>
+    Set swSketchMgr = swModel.<b>SketchManager</b>
+    Set swFeatureMgr = swModel.<b>FeatureManager</b>    </pre>
+<pre>    'Create Surface-Plane1
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, -6.87189668956523E-02, 5.93633502290038E-02, 9.36526409663904E-03, False, 0, Nothing, 0)
+    status = swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstToRectEntity, swUserPreferenceOption_e.swDetailingNoOptionSpecified, False)
+    status = swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstLineDiagonalType, swUserPreferenceOption_e.swDetailingNoOptionSpecified, True)
+    sketchSegments = swSketchMgr.<b>CreateCornerRectangle</b>(-3.99911197344551E-02, 0.02969400507229, 0, 5.02882343966202E-02, -2.99334728551311E-02, 0)
+    swSketchMgr.<b>InsertSketch</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModel.<b>InsertPlanarRefSurface</b>()    </pre>
+<pre>    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Create Plane1
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    Set swRefPlane = swFeatureMgr.<b>InsertRefPlane</b>(swRefPlaneReferenceConstraints_e.swRefPlaneReferenceConstraint_Distance, 0.15, 0, 0, 0, 0)</pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    'Create Surface-Plane2
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Plane1&quot;, &quot;PLANE&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    Set swSketchSegment = swSketchMgr.<b>CreateCircle</b>(0.003592, 0.003353, 0#, 0.035202, -0.057233, 0#)
+    swSketchMgr.<b>InsertSketch</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 1, Nothing, 0)
+    status = swModel.<b>InsertPlanarRefSurface</b>()    </pre>
+<pre>    swModel.<b>ClearSelection2</b> True
+    swModel.<b>ViewZoomtofit2</b>    </pre>
+<pre>    'Insert a solid body boundary surface feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Surface-Plane1&quot;, &quot;SURFACEBODY&quot;, -3.99911197344551E-02, 0.02969400507229, 0, False, 8193, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Surface-Plane2&quot;, &quot;SURFACEBODY&quot;, -4.63651179854531E-02, -4.32741101197696E-02, 0.15, True, 16385, Nothing, 0)
+    Set swFeature = swFeatureMgr.<b>SetNetBlendCurveData</b>(0, 0, swTangencyType_e.swTangencyNone, 0, 1, True)
+    Set swFeature = swFeatureMgr.<b>SetNetBlendCurveData</b>(0, 1, swTangencyType_e.swTangencyNone, 0, 1, True)
+    Set swFeature = swFeatureMgr.<b>SetNetBlendDirectionData</b>(0, 32, 0, False, False)
+    Set swFeature = swFeatureMgr.<b>SetNetBlendDirectionData</b>(1, 32, 0, False, False)
+    Set swFeature = swFeatureMgr.<b>InsertNetBlend2</b>(2, 2, 0, False, 0.0001, False, True, True, True, False, -1, -1, False, -1, False, False, -1, False, -1, True, True)</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

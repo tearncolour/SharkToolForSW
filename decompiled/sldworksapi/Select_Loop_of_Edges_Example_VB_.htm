@@ -1,0 +1,116 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Select Loop of Edges Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2409>
+<meta name=layout-width content=786>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+ <META NAME="MS-HKWD" CONTENT="VBA examples,loops">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Select Loop of Edges Example (VBA) </h1>
+
+<p>This example shows how to use various geometry- and topology-related 
+ methods to select a set of edges that form a closed loop around a face.</p>
+<pre>'--------------------------------------------------------
+' Preconditions:
+' 1. Open a part or assembly.
+' 2. Hold down the Ctrl key and select an edge and a
+'    face adjacent to that edge.
+'
+' Postconditions:
+' 1. Selects a loop of edges on the face.
+' 2. Examine the graphics area.
+'--------------------------------------------------------
+Option Explicit</pre>
+<pre>Sub SelectLoop(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swLoop As SldWorks.Loop2, swSelData As SldWorks.SelectData)
+    Dim vEdgeArr As Variant
+    Dim vEdge As Variant
+    Dim swEdge As SldWorks.Edge
+    Dim swEnt As SldWorks.Entity
+    Dim bRet As Boolean</pre>
+<pre>    vEdgeArr = swLoop.<b>GetEdges</b>
+    Debug.Assert Not IsEmpty(vEdgeArr)
+    For Each vEdge In vEdgeArr
+        Set swEdge = vEdge
+        Set swEnt = swEdge
+        bRet = swEnt.<b>Select4</b>(True, swSelData)
+    Next
+End Sub</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swEdge As SldWorks.Edge
+    Dim swFace As SldWorks.Face2
+    Dim swSelData As SldWorks.SelectData
+    Dim vCoEdgeArr As Variant
+    Dim vCoEdge As Variant
+    Dim swCoEdge As SldWorks.CoEdge
+    Dim swLoop As SldWorks.Loop2</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swEdge = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swSelData = swSelMgr.<b>CreateSelectData</b>
+    Set swFace = swSelMgr.<b>GetSelectedObject6</b>(2, -1)
+    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    vCoEdgeArr = swEdge.<b>GetCoEdges</b>
+    </pre>
+<pre>    ' 1 or 2: Coedges for an edge on a surface body
+    ' 2: Coedges for an edge on a solid body
+    Debug.Assert UBound(vCoEdgeArr) &gt;= 0</pre>
+<pre>    If 0 = UBound(vCoEdgeArr) Then
+        Set swCoEdge = vCoEdgeArr(0)
+        ' No ambiguity, so select
+        Set swLoop = swCoEdge.<b>GetLoop</b>
+        SelectLoop swApp, swModel, swLoop, swSelData
+        Exit Sub
+    End If
+    </pre>
+<pre>    ' 2: Coedges, so must have face to resolve ambiguity
+    Debug.Assert Not swFace Is Nothing</pre>
+<pre>    For Each vCoEdge In vCoEdgeArr
+    Set swCoEdge = vCoEdge
+        If swEdge Is swCoEdge.<b>GetEdge</b> Then
+            Set swLoop = swCoEdge.<b>GetLoop</b>
+            If swFace Is swLoop.<b>GetFace</b> Then
+                SelectLoop swApp, swModel, swLoop, swSelData
+            End If
+        End If
+    Next</pre>
+<pre>End Sub</pre>
+<pre> </pre>
+
+</body>
+
+</html>

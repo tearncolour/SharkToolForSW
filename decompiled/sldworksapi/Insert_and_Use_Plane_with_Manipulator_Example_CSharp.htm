@@ -1,0 +1,413 @@
+<html>
+
+<head>
+<title>Insert and Use Plane with Manipulator Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,planes">
+<meta name=MS-HKWD content="C# examples,manipulators">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert and Use Plane with Manipulator Example (C#)</h1>
+<p><a name="top"></a>This example shows how to insert a plane with a manipulator.</p>
+
+<p><font size="-1" face="Courier New" color="Green">
+//--------------------------------------------------------------<br>
+// Preconditions:<br>
+// 1. In the IDE:<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;a. Click <b>Project &gt; Add Reference &gt; SolidWorks.Interop.swpublished<br>
+</b>//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; on the .NET tab.<b><br>
+</b>//&nbsp;&nbsp;&nbsp;&nbsp;b. Click <b>Project &gt; Add Reference &gt; Microsoft.VisualBasic<br>
+</b>//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; on the .NET tab.<b><br>
+</b>//&nbsp;&nbsp;&nbsp; c. Copy the code in <a href="#solidworksmacro.cs">
+SolidWorksMacro.cs</a> to your project<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; and create a class and copy the code in
+<a href="#class1.cs">Class1.cs</a><br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; to that class.<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;d. Open the Immediate window.<br>
+// 2. Verify that the specified part exists.<br>
+//<br>
+// Postconditions:<br>
+// 1. Opens the part.<br>
+// 2. Displays a plane with manipulator.<br>
+// 3. Gets the distance, angles, height, and width of the plane.<br>
+// 4. Examine the Immediate window.<br>
+// 5. Hold down the left-mouse button and drag the<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;plane up and down using the manipulator, which calls the 
+<br>
+//&nbsp;&nbsp;&nbsp; handler. Gets the handle&nbsp;index at each drag.<br>
+// 6. Click an edge of the plane and hold down the left-mouse button <br>
+//&nbsp;&nbsp;&nbsp;&nbsp;and rotate the plane, which calls the handler. Gets 
+the handle <br>
+//&nbsp;&nbsp;&nbsp; index at each rotation.<br>
+// 7. Examine the Immediate window.<br>
+//<br>
+// NOTE: Because the part document is used elsewhere, do not<br>
+// save changes.<br>
+//---------------------------------------------------------------<br>
+&nbsp;</font></p>
+<p><font face="Courier New" size="-1" color="#008000">//
+<a name="solidworksmacro.cs"></a>SolidWorksMacro.cs</font></p>
+<p><font size="-1" face="Courier New"><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.sldworks;<br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.swconst;<br>
+</font><font color="Blue">using</font><font color="Black"> System;<br>
+</font><font color="Blue">using</font><font color="Black"> System.Diagnostics;<br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.swpublished;<br>
+</font><font color="Blue">using</font><font color="Black"> Microsoft.VisualBasic;<br>
+<br>
+</font><font color="Blue">namespace</font><font color="Black"> 
+PlaneManipulatorCSharp.csproj<br>
+{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">partial</font><font color="Black"> </font>
+<font color="Blue">class</font><font color="Black"> </font>
+<font color="#2b91af">SolidWorksMacro<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> Class1 
+swHdlr;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> Manipulator 
+swManipulator;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> 
+PlaneManipulator swPlaneManipulator;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> Main()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2 swModelDoc = </font><font color="Blue">default</font><font color="Black">(ModelDoc2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelViewManager swModelViewMgr = </font><font color="Blue">default</font><font color="Black">(ModelViewManager);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">string</font><font color="Black"> fileName 
+= </font><font color="Blue">null</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">int</font><font color="Black"> errors = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">int</font><font color="Black"> warnings = 
+0;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swHdlr = </font><font color="Blue">new</font><font color="Black"> 
+Class1();<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName = </font><font color="#a31515">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 
+2018\\samples\\tutorial\\fillets\\knob.sldprt&quot;</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDoc = (ModelDoc2)swApp.<b>OpenDoc6</b>(fileName, (</font><font color="Blue">int</font><font color="Black">)swDocumentTypes_e.swDocPART, 
+(</font><font color="Blue">int</font><font color="Black">)swOpenDocOptions_e.swOpenDocOptions_Silent,
+</font><font color="#a31515">&quot;&quot;</font><font color="Black">, </font>
+<font color="Blue">ref</font><font color="Black"> errors, </font>
+<font color="Blue">ref</font><font color="Black"> warnings);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Create the plane with a manipulator<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelViewMgr = (ModelViewManager)swModelDoc.<b>ModelViewManager</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swManipulator = (Manipulator)swModelViewMgr.<b>CreateManipulator</b>((</font><font color="Blue">int</font><font color="Black">)swManipulatorType_e.swPlaneManipulator, 
+swHdlr);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator = (PlaneManipulator)swManipulator.<b>GetSpecificManipulator</b>();<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Set the distance of plane<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Distance</b> = 
+0.04;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;Distance 
+= &quot;</font><font color="Black"> + swPlaneManipulator.<b>Distance</b>);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">//Set the angles of plane<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>XAngle</b> = 2 * 
+PiVal() / 180;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;X 
+= &quot;</font><font color="Black"> + swPlaneManipulator.<b>XAngle</b>);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>YAngle</b> = 10 * PiVal() / 180;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;Y 
+= &quot;</font><font color="Black"> + swPlaneManipulator.<b>YAngle</b>);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Set the height and width of plane<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Height</b> = 0.1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;Height 
+= &quot;</font><font color="Black"> + swPlaneManipulator.<b>Height</b>);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Width</b> = 0.075;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;Width 
+= &quot;</font><font color="Black"> + swPlaneManipulator.<b>Width</b>);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Set the color of plane to red<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Color</b> = 
+Information.RGB(255, 0, 0);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Update the plane's properties<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlaneManipulator.<b>Update</b>();<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Show the plane with the manipulator<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swManipulator.<b>Show</b>(swModelDoc);<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">double</font><font color="Black"> PiVal()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Set PI<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> 
+4 * System.</font><font color="#2b91af">Math</font><font color="Black">.Atan(1);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green"> </font>
+<font color="Gray">&lt;summary&gt;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green"> 
+The SldWorks swApp variable is pre-assigned for you.<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green">
+</font><font color="Gray">&lt;/summary&gt;<br>
+<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font></font><font color="Black"><font size="-1" face="Courier New"> 
+SldWorks swApp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+}</font></font></p>
+<p>&nbsp;</p>
+<p align="center"><font face="Verdana"><a href="#top">Back to top</a></font></p>
+<p>&nbsp;</p>
+<p><font color="Green" size="-1" face="Courier New"><a name="class1.cs"></a>//</font><font face="Courier New" size="-1" color="#008000">Class1.cs</font></p>
+
+<p class="APICODE"><font size="-1" face="Courier New"><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.sldworks;<br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.swpublished;<br>
+</font><font color="Blue">using</font><font color="Black"> System;<br>
+</font><font color="Blue">using</font><font color="Black"> System.Diagnostics;<br>
+</font><font color="Blue">using</font><font color="Black"> System.Runtime;<br>
+<br>
+[System.Runtime.InteropServices.</font><font color="#2b91af">ComVisibleAttribute</font><font color="Black">(</font><font color="Blue">true</font><font color="Black">)]<br>
+</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">class</font><font color="Black"> </font>
+<font color="#2b91af">Class1</font><font color="Black"> : SwManipulatorHandler2<br>
+{<br>
+<br>
+<br>
+<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> SwManipulatorHandler2_<b>OnUpdateDrag</b>(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">long</font><font color="Black"> 
+handleIndex, </font><font color="Blue">object</font><font color="Black"> 
+newPosMathPt)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;SwManipulatorHandler2_OnUpdateDrag&quot;</font><font color="Black">);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;&nbsp;&nbsp;HandleIndex&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 
+&quot;</font><font color="Black"> + handleIndex);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PlaneManipulator swRetManip = </font><font color="Blue">default</font><font color="Black">(PlaneManipulator);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRetManip = (PlaneManipulator)pManipulator;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">if</font><font color="Black"> ((handleIndex == 
+8))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">double</font><font color="Black"> retDist 
+= 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retDist = swRetManip.<b>Distance</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">else<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">double</font><font color="Black"> angleX = 
+0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">double</font><font color="Black"> angleY = 
+0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;angleX = swRetManip.<b>XAngle</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;angleY = swRetManip.<b>YAngle</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> 
+SwManipulatorHandler2_OnDelete(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> 
+SwManipulatorHandler2_OnDirectionFlipped(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> 
+SwManipulatorHandler2_OnDoubleValueChanged(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">long</font><font color="Black"> Id,
+</font><font color="Blue">double</font><font color="Black"> Value)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> 
+SwManipulatorHandler2_OnEndNoDrag(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">long</font><font color="Black"> 
+handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> 
+SwManipulatorHandler2_OnHandleRmbSelected(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">long</font><font color="Black"> 
+handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> 
+SwManipulatorHandler2_OnHandleLmbSelected(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> 
+SwManipulatorHandler2_OnHandleSelected(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">long</font><font color="Black"> 
+handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> 
+SwManipulatorHandler2_OnItemSetFocus(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">long</font><font color="Black"> Id)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> 
+SwManipulatorHandler2_OnLmbSelected(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> 
+SwManipulatorHandler2_OnStringValueChanged(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">long</font><font color="Black"> Id,
+</font><font color="Blue">string</font><font color="Black"> Value)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> 
+SwManipulatorHandler2_OnEndDrag(</font><font color="Blue">object</font><font color="Black"> 
+pMani, </font><font color="Blue">long</font><font color="Black"> index)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> OnDelete(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> OnDirectionFlipped(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> OnDoubleValueChanged(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">int</font><font color="Black"> 
+handleIndex, </font><font color="Blue">ref</font><font color="Black"> </font>
+<font color="Blue">double</font><font color="Black"> Value)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> OnEndDrag(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">int</font><font color="Black"> 
+handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> OnEndNoDrag(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">int</font><font color="Black"> 
+handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> OnHandleLmbSelected(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> OnHandleRmbSelected(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">int</font><font color="Black"> 
+handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> OnHandleSelected(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">int</font><font color="Black"> 
+handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> OnItemSetFocus(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">int</font><font color="Black"> 
+handleIndex)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">bool</font><font color="Black"> OnStringValueChanged(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">int</font><font color="Black"> 
+handleIndex, </font><font color="Blue">ref</font><font color="Black"> </font>
+<font color="Blue">string</font><font color="Black"> Value)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> </font>
+<font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> OnUpdateDrag(</font><font color="Blue">object</font><font color="Black"> 
+pManipulator, </font><font color="Blue">int</font><font color="Black"> 
+handleIndex, </font><font color="Blue">object</font></font><font color="Black"><font size="-1" face="Courier New"> 
+newPosMathPt)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+}</font></font></p>
+<p align="center"><font face="Verdana"><a href="#top">Back to top</a></font></p>
+
+</body>
+
+</html>

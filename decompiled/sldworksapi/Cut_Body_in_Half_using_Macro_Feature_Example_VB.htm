@@ -1,0 +1,592 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Cut Body in Half using Macro Feature Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,PropertyManager pages">
+<meta name=MS-HKWD content="VBA examples,macro features">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=11388>
+<meta name=layout-width content=664>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+<style>
+<!--
+a:active     { font-family: Verdana; font-size: 8 }
+-->
+</style>
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1><a name=Top></a>Cut Body in Half using Macro Feature Example (VBA)</h1>
+
+<p>This example shows how to cut a body in a part document in half using a macro 
+feature.</p>
+<pre>'-----------------------------------------------------------------------------------------------
+' Preconditions:
+' 1. Create a VBA macro.
+' 2. Click <b>Tools &gt; References &gt; SolidWorks</b> <i>version</i> <b>exposed type libraries for</b>
+'    <b>add-in use &gt; OK</b>.
+' 3. Copy <a href="#Macros">Macros</a> to the main module and rename it <b>Macros</b>. (To rename the module, click
+'    <b>View &gt; Properties Window</b> and type <b>Macros</b> in <b>(Name)</b>.)
+' 4. Click <b>Insert &gt; Module </b>and copy <a href="#PropMgrConst">PropMgrConst</a> to that module and name it <b>PropMgrConst</b>.
+' 5. Click <b>Insert &gt; Class module</b> and copy <a href="#PropMgr">PropMgr</a> to that class module and name it <b>PropMgr</b>.
+' 6. Click <b>Insert &gt; Class module</b> and copy <a href="#PropMgrCmd">PropMgrCmd</a> to that class module and name it <b>PropMgrCmd</b>.
+' 7. Click <b>Insert &gt; Class module</b> and copy <a href="#PropMgrHdlr">PropMgrHdlr</a> to that class module and name it <b>PropMgrHdlr</b>.
+' 8. Open <i>public_documents</i><b>\samples\tutorial\api\plate.sldprt</b>.</pre>
+<pre>' Postconditions:
+' 1. Click the part in the graphics area, which is then displayed in <b>Surface on Mass Center</b> in the 
+'    PropertyManager page.
+' 2. Click the green check mark in the PropertyManager page to insert the macro feature.
+' 3. Cuts the body in half and adds the <b>AngleSurf1</b> macro feature to the FeatureManager design tree.
+' 4. Right-click <b>AngleSurf1</b> and select <b>Edit Feature</b> on the context-sensitive menu.
+' 5. Change <b>1</b> to <b>2</b> in <b>Select the body to keep</b> in the AngleSurf1 PropertyManager page.
+' 6. Click the green check mark in the PropertyManager page.
+' 7. Displays the opposite side of the body in the graphics area.
+' 8. Examine the graphics area and FeatureManager design tree.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'------------------------------------------------------------------------------------------------
+<a name=Macros></a><span style="font-weight: 400"><font face="Courier New" size="2">'Macros</font></span></pre>
+<blockquote>
+	<pre>Option Explicit
+</pre>
+	<pre>' Macro feature rebuild function
+Function swmMain(swAppIn, partIn, featureIn)
+    Dim featData As SldWorks.MacroFeatureData
+    Dim Config As SldWorks.Configuration
+    Dim ConfigName As String</pre>
+	<pre>    Set featData = featureIn.<b>GetDefinition</b></pre>
+	<pre>    ' Get name of configuration being rebuilt
+    Set Config = featData.<b>CurrentConfiguration</b>
+    ConfigName = Config.<b>Name</b></pre>
+	<pre>    Dim sels, types, selmarks
+    Dim body1 As SldWorks.Body2
+    Call featData.<b>GetSelections3</b>(sels, types, selmarks, Nothing, Nothing)
+    If IsEmpty(sels) Then
+       swmMain = &quot;Body has not been selected!&quot;
+       Exit Function
+    End If</pre>
+	<pre>    If sels(0) Is Nothing Then
+       swmMain = &quot;Body has not been selected!&quot;
+       Exit Function
+    End If</pre>
+	<pre>    Set body1 = sels(0)</pre>
+	<pre>    Dim modeler As SldWorks.modeler
+    Set modeler = swAppIn.<b>GetModeler</b>
+    Dim props As Variant
+    props = body1.<b>GetMassProperties</b>(1)
+    Dim p1(0 To 2) As Double
+    Dim v1(0 To 2) As Double
+    Dim v2(0 To 2) As Double
+    p1(0) = props(0)
+    p1(1) = props(1)
+    p1(2) = props(2)
+    v1(0) = 0
+    v1(1) = 0
+    v1(2) = 1
+    v2(0) = 1
+    v2(1) = 0
+    v2(1) = 0</pre>
+	<pre>    Dim surf As SldWorks.<b>Surface</b>
+    Set surf = modeler.<b>CreatePlanarSurface2</b>(p1, v1, v2)
+    Dim box As Variant
+    box = body1.<b>GetBodyBox</b></pre>
+	<pre>    Dim uvLow, uvHigh As Variant
+    uvLow = surf.<b>GetClosestPointOn</b>(box(0), box(1), box(2))
+    uvHigh = surf.<b>GetClosestPointOn</b>(box(3), box(4), box(5))</pre>
+	<pre>    Dim midPt(0 To 2) As Double
+    Dim i As Integer
+    For i = 0 To 2
+        midPt(i) = (uvLow(i) + uvHigh(i)) / 2
+    Next i</pre>
+	<pre>    For i = 0 To 2
+        uvLow(i) = (uvLow(i) - midPt(i)) * 1.1 + midPt(i)
+        uvHigh(i) = (uvHigh(i) - midPt(i)) * 1.1 + midPt(i)
+    Next i</pre>
+	<pre>    uvLow = surf.<b>GetClosestPointOn</b>(uvLow(0), uvLow(1), uvLow(2))
+    uvHigh = surf.<b>GetClosestPointOn</b>(uvHigh(0), uvHigh(1), uvHigh(2))</pre>
+	<pre>    Dim sheet As SldWorks.Body2
+    Dim uv(0 To 3) As Double
+    uv(0) = uvLow(3)
+    uv(1) = uvHigh(3)
+    uv(2) = uvLow(4)
+    uv(3) = uvHigh(4)
+    Set sheet = modeler.<b>CreateSheetFromSurface</b>(surf, uv)</pre>
+	<pre>    ' Transform with angle
+    Dim mathUtil As SldWorks.MathUtility
+    Set mathUtil = swAppIn.<b>GetMathUtility</b>
+    Dim aXform As SldWorks.MathTransform
+    Dim basePt As SldWorks.MathPoint
+    Dim RetVal As Boolean
+    Set basePt = mathUtil.<b>CreatePoint</b>(midPt)
+    Dim xAxis As MathVector
+    Set xAxis = mathUtil.<b>CreateVector</b>(v2)
+    Set aXform = mathUtil.<b>CreateTransformRotateAxis</b>(basePt, xAxis, 3.1416159 / 2)
+    RetVal = sheet.<b>ApplyTransform</b>(aXform)</pre>
+	<pre>    ' Assign edge ID
+    Dim edges As Variant
+    Dim faces As Variant
+    featData.<b>GetEntitiesNeedUserId</b> sheet, faces, edges
+    edges = sheet.<b>GetEdges</b>
+    For i = 0 To UBound(edges)
+        featData.<b>SetEdgeUserId</b> edges(i), i, 0
+        Dim id1 As Long
+        Dim id2 As Long
+        featData.<b>GetEdgeUserId</b> edges(i), id1, id2
+    Next i</pre>
+	<pre>    Dim editBodies As Variant
+    Dim editBdy As Body2
+    Dim resBody As Body2
+    editBodies = featData.<b>editBodies</b>
+    Set editBdy = editBodies(0)</pre>
+	<pre>    Dim result As Variant
+    Dim err As Long
+    result = editBdy.<b>Operations2</b>(SWBODYCUT, sheet, err)
+    Dim wb As Long
+    featData.<b>GetIntegerByName</b> &quot;WhichBody&quot;, wb
+    Set resBody = result(wb - 1)</pre>
+	<pre>    Set swmMain = resBody
+    resBody.<b>Hide</b> partIn</pre>
+	<pre>End Function</pre>
+	<pre>' Macro feature edit definition function
+Sub swmPM(swAppIn, partIn, featureIn)
+    Dim swPage As New PropMgr
+    swPage.Init swAppIn, partIn, featureIn, swCmdEdit, swAppIn.<b>GetCurrentMacroPathName</b>
+    swPage.<b>Show</b>
+End Sub</pre>
+	<pre>'Inserts macro feature with customized PropertyManager page
+Public Sub swmInsertCustomizedMacroFeature()
+    Dim swAppIn, partIn, featureIn
+    Set swAppIn = Application.SldWorks
+    Set partIn = swAppIn.<b>ActiveDoc</b></pre>
+	<pre>    If partIn.<b>GetType</b>() &lt;&gt; swDocPART Then
+        MsgBox (&quot;Available only from part document!&quot;)
+        Exit Sub
+    End If</pre>
+	<pre>    Dim swPage As New PropMgr
+    swPage.Init swAppIn, partIn, featureIn, swCmdCreate, swAppIn.GetCurrentMacroPathName
+    swPage.Show</pre>
+	<pre>End Sub</pre>
+</blockquote>
+
+<p style="text-align: center;"
+	align=center><a href="#Top">Back to top</a></p>
+<h3 style="text-align: left;"
+	align=left><a name="PropMgrConst"></a><span style="font-weight: 400">
+<font face="Courier New" size="2">'PropMgrConst</font></span></h3>
+<blockquote>
+	<pre>Public Enum swPageCmdState
+    swCmdCreate = 1
+    swCmdEdit = 2
+End Enum</pre>
+	<pre>Public Const ID_GROUP = 1
+Public Const ID_SELECTION = 2
+Public Const ID_NUMBER = 3</pre>
+
+<p style="text-align: center;"
+	align=center><a href="#Top">Back to top</a></p>
+
+	<p style="text-align: left;"
+	align=center>&nbsp;</p>
+</blockquote>
+
+<h3><a name=PropMgr></a>
+<font face="Courier New" size="2"><span style="font-weight: 400">'PropMgr</span></font></h3>
+<blockquote>
+	<pre>Option Explicit</pre>
+	<pre>Private m_swApp As SldWorks.SldWorks
+Private m_Part As SldWorks.ModelDoc2
+Private m_feature As SldWorks.feature
+Private m_Page As PropertyManagerPage2
+Private m_Group As PropertyManagerPageGroup
+Private m_Selection As PropertyManagerPageSelectionbox
+Private m_NumberBox As PropertyManagerPageNumberbox
+Private m_Text As PropertyManagerPageTextbox
+Private m_swPageCmd As New PropMgrCmd
+Private m_cmdState As swPageCmdState
+Private m_pageHdlr As New PropMgrHdlr</pre>
+	<pre>Private Sub Layout()</pre>
+	<pre>    Dim swControl As PropertyManagerPageControl
+    Dim title As String
+    Dim buttonTypes As Long
+    Dim Message As String
+    Dim Id As Long
+    Dim controlType As Integer
+    Dim caption As String
+    Dim alignment As Integer
+    Dim options As Long
+    Dim tip As String
+    Dim filterArray(0 To 1) As Long
+    </pre>
+	<pre>    m_pageHdlr.Init Me</pre>
+	<pre>    If m_cmdState = swCmdCreate Then
+        title = &quot;Cut body macro feature&quot;
+    Else
+        title = m_feature.<b>Name</b>
+    End If</pre>
+	<pre>    buttonTypes = swPropertyManagerOptions_OkayButton + swPropertyManagerOptions_CancelButton + swPropertyManagerOptions_LockedPage
+    Dim errorh As Long
+    Set m_Page = m_swApp.CreatePropertyManagerPage(title, buttonTypes, m_pageHdlr, errorh)
+    If Not m_Page Is Nothing Then</pre>
+	<pre>        'Initial set up of the message in the PropertyManager page
+        Message = &quot;Select body to cut, then select the side of the body to keep.&quot;
+        m_Page.<b>SetMessage</b> Message, swImportantMessageBox</pre>
+	<pre>        'Begin adding the required controls to the PropertyManager</pre>
+	<pre>        'Group box
+        Id = ID_GROUP
+        caption = &quot;Surface on Mass Center&quot;
+        options = swGroupBoxOptions_Visible + swGroupBoxOptions_Expanded '+ swGroupBoxOptions_Checked
+        Set m_Group = m_Page.<b>AddGroupBox</b>(Id, caption, options)
+        If Not m_Group Is Nothing Then
+            'Selection box
+            Id = ID_SELECTION
+            controlType = swControlType_Selectionbox
+            caption = &quot;Selection box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Select body&quot;
+            Set swControl = m_Group.<b>AddControl2</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Selection = swControl
+                filterArray(0) = swSelSOLIDBODIES
+                filterArray(1) = swSelSURFACEBODIES
+                m_Selection.<b>SingleEntityOnly</b> = True
+                m_Selection.<b>Height</b> = 50
+                m_Selection.<b>SingleEntityOnly</b> = True
+                m_Selection.<b>SetSelectionFilters</b> (filterArray)
+                m_Selection.<b>SetStandardPictureLabel</b> swBitmapLabel_SelectFaceSurface
+            End If</pre>
+	<pre>            'Selection box
+            Id = ID_SELECTION
+            controlType = swControlType_Numberbox
+            caption = &quot;Number box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Select the body to keep&quot;
+            Set swControl = m_Group.<b>AddControl2</b>(Id, controlType, caption, alignment, options, tip)</pre>
+	<pre>            If Not swControl Is Nothing Then
+                Set m_NumberBox = swControl
+                m_NumberBox.<b>SetRange</b> swNumberBox_UnitlessInteger, 1, 2, 1, True
+                m_NumberBox.<b>Value</b> = GetCmd().GetNumberValue()
+            End If</pre>
+	<pre>        End If</pre>
+	<pre>    End If</pre>
+	<pre>End Sub</pre>
+	<pre>Public Sub Show()
+    m_Page.<b>Show</b>
+End Sub</pre>
+	<pre>Sub Init(swApp, part, feature, cmdState As swPageCmdState, macroPath As String)
+    Set m_swApp = swApp
+    Set m_Part = part
+    </pre>
+	<pre>    If Not IsEmpty(feature) Then
+        Set m_feature = feature
+    End If</pre>
+	<pre>    m_cmdState = cmdState
+    m_Part.<b>ClearSelection2</b> True
+    m_swPageCmd.<b>Init</b> swApp, part, feature, cmdState, macroPath
+    Layout</pre>
+	<pre>End Sub</pre>
+	<pre>Public Function GetCmd() As PropMgrCmd
+    Set GetCmd = m_swPageCmd
+End Function
+</pre>
+</blockquote>
+<p style="margin-left: 48px;">&nbsp;</p>
+<p style="margin-left: 48px;">&nbsp;</p>
+
+<p style="text-align: center;"
+	align=center><a href="#Top">Back to top</a></p>
+
+<p class=apiCode
+	style="margin-left: 49px;">&nbsp;</p>
+
+<h3><a name=PropMgrCmd></a>
+<font face="Courier New" size="2"><span style="font-weight: 400">'PropMgrCmd</span></font></h3>
+<blockquote>
+	<pre>Option Explicit</pre>
+	<pre>Private m_swApp As SldWorks.SldWorks
+Private m_Part As SldWorks.ModelDoc2
+Private m_feature As SldWorks.feature
+Private m_bodySel As Object
+Private m_whichBody As Long
+Private m_featData As SldWorks.MacroFeatureData
+Private m_modelComp As SldWorks.Component2
+Private m_cmdState As swPageCmdState
+Private m_macroPath As String</pre>
+	<pre>Public Sub Init(swApp, part, feature, cmdState As swPageCmdState, macroPath As String)
+    Set m_swApp = swApp
+    Set m_Part = part
+    m_macroPath = macroPath
+    m_whichBody = 1</pre>
+	<pre>    If Not IsEmpty(feature) Then
+        Set m_feature = feature
+    End If</pre>
+	<pre>    If cmdState = swCmdEdit Then ' On Edit Definition
+   </pre>
+	<pre>        Dim ret As Boolean
+        Set m_featData = m_feature.<b>GetDefinition</b>
+        Set m_modelComp = m_feature.<b>GetComponent</b>
+        m_cmdState = cmdState
+        ret = m_featData.<b>AccessSelections</b>(m_Part, m_modelComp)
+        Dim sels, types, selmarks
+       </pre>
+	<pre>        Call m_featData.<b>GetSelections3</b>(sels, types, selmarks, Nothing, Nothing)
+               </pre>
+	<pre>        If Not IsEmpty(sels) And Not sels(0) Is Nothing Then
+            Set m_bodySel = sels(0)
+            Call m_bodySel.<b>Select</b>(True, selmarks(0))
+        End If</pre>
+	<pre>        m_featData.<b>GetIntegerByName</b> &quot;WhichBody&quot;, m_whichBody</pre>
+	<pre>    End If</pre>
+	<pre>End Sub</pre>
+	<pre>Public Sub OnOk()</pre>
+	<pre>    If m_cmdState = swCmdEdit Then ' On Edit Definition
+   </pre>
+	<pre>        Dim sels, types, selmarks
+             </pre>
+	<pre>        Call m_featData.<b>GetSelections3</b>(sels, types, selmarks, Nothing, Nothing)
+                       </pre>
+	<pre>        Dim newSels(0 To 0) As Body2
+        Dim newSelMarks(0 To 0) As Long
+        </pre>
+	<pre>        Set newSels(0) = m_bodySel
+        newSelMarks(0) = 0
+        sels = newSels
+        selmarks = newSelMarks
+        </pre>
+	<pre>        Dim DrViews(0 To 0) As View
+        Set DrViews(0) = Nothing
+               </pre>
+	<pre>        Call m_featData.<b>SetSelections2</b>(sels, selmarks, DrViews)</pre>
+	<pre>        m_featData.<b>SetIntegerByName</b> &quot;WhichBody&quot;, m_whichBody</pre>
+	<pre>        Call m_feature.<b>ModifyDefinition</b>(m_featData, m_Part, m_modelComp)</pre>
+	<pre>    Else ' On Insert feature</pre>
+	<pre>        Dim paramNames, paramTypes, paramValues
+        Dim pNames(0 To 0) As String
+        Dim pTypes(0 To 0) As Long
+        Dim pValues(0 To 0) As String
+        Dim methods(0 To 8) As String
+        methods(0) = m_macroPath
+        methods(1) = &quot;Macros&quot;
+        methods(2) = &quot;swmMain&quot;
+        methods(3) = m_macroPath
+        methods(4) = &quot;Macros&quot;
+        methods(5) = &quot;swmPM&quot;
+        methods(6) = &quot;&quot;
+        methods(7) = &quot;&quot;
+        methods(8) = &quot;&quot;
+        Dim feat As Object
+        pNames(0) = &quot;WhichBody&quot;
+        pTypes(0) = swMacroFeatureParamTypeInteger
+        pValues(0) = m_whichBody
+        paramNames = pNames
+        paramTypes = pTypes
+        paramValues = pValues
+        Dim selBodies(0 To 0) As Body2
+        Set selBodies(0) = m_bodySel
+        Set feat = m_Part.FeatureManager.<b>InsertMacroFeature3</b>(&quot;AngleSurf&quot;, &quot;&quot;, methods, (paramNames), (paramTypes), (paramValues), Nothing, Nothing, selBodies, Nothing, swMacroFeatureByDefault)</pre>
+	<pre>    End If</pre>
+	<pre>End Sub</pre>
+	<pre> </pre>
+	<pre>Public Sub OnCancel()</pre>
+	<pre>    If m_cmdState = swCmdEdit Then</pre>
+	<pre>        m_featData.<b>ReleaseSelectionAccess</b></pre>
+	<pre>    End If</pre>
+	<pre>End Sub</pre>
+	<pre> </pre>
+	<pre>Public Sub OnBodySelect()</pre>
+	<pre>    Dim selM</pre>
+	<pre>    Set selM = m_Part.<b>SelectionManager</b></pre>
+	<pre>    Set m_bodySel = Nothing</pre>
+	<pre>    Set m_bodySel = selM.<b>GetSelectedObject6</b>(1, -1)</pre>
+	<pre>End Sub
+</pre>
+	<pre>Public Sub OnNumberChanged(Value As Long)</pre>
+	<pre>    m_whichBody = Value</pre>
+	<pre>End Sub
+</pre>
+	<pre>Public Function GetNumberValue()</pre>
+	<pre>    GetNumberValue = m_whichBody</pre>
+	<pre>End Function
+</pre>
+</blockquote>
+<p style="margin-left: 48px;">&nbsp;</p>
+
+<p style="margin-left: 48px; "
+	align=center><a href="#Top">Back to top</a></p>
+
+<h3 ><a name=PropMgrHdlr></a>
+<font face="Courier New" size="2"><span style="font-weight: 400">'PropMgrHdlr</span></font></h3>
+<blockquote>
+	<pre>Option Explicit</pre>
+	<pre>Implements PropertyManagerPage2Handler8
+ 
+</pre>
+	<pre>Dim m_pageObj As PropMgr</pre>
+	<pre>Public Sub Init(pageObj As PropMgr)</pre>
+	<pre>    Set m_pageObj = pageObj</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnListboxRMBUp</b>(ByVal Id As Long, ByVal PosX As Long, ByVal PosY As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Function PropertyManagerPage2Handler8_<b>OnWindowFromHandleControlCreated</b>(ByVal Id As Long, ByVal Status As Boolean) As Long</pre>
+	<pre>End Function</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnLostFocus</b>(ByVal Id As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnGainedFocus</b>(ByVal Id As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnPopupMenuItemUpdat</b>e(ByVal Id As Long, ByRef RetVal As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnPopupMenuItem</b>(ByVal Id As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Function PropertyManagerPage2Handler8_<b>OnKeystroke</b>(ByVal Wparam As Long, ByVal Message As Long, ByVal Lparam As Long, ByVal Id As Long) As Boolean</pre>
+	<pre>End Function</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnSliderTrackingCompleted</b>(ByVal Id As Long, ByVal Value As Double)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnSliderPositionChanged</b>(ByVal Id As Long, ByVal Value As Double)</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Function PropertyManagerPage2Handler8_<b>OnActiveXControlCreated</b>(ByVal Id As Long, ByVal Status As Boolean) As Long</pre>
+	<pre>End Function</pre>
+	<pre>
+Private Function PropertyManagerPage2Handler8_<b>OnSubmitSelection</b>(ByVal Id As Long, ByVal Selection As Object, ByVal SelType As Long, ByRef ItemText As String) As Boolean
+    PropertyManagerPage2Handler8_OnSubmitSelection = True
+End Function</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnSelectionboxCalloutDestroyed</b>(ByVal Id As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnSelectionboxCalloutCreated</b>(ByVal Id As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnComboboxEditChanged</b>(ByVal Id As Long, ByVal Text As String)</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Function PropertyManagerPage2Handler8_<b>OnTabClicked</b>(ByVal Id As Long) As Boolean</pre>
+	<pre>End Function</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnRedo</b>()</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnUndo</b>()</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Sub PropertyManagerPage2Handler8_<b>OnWhatsNew</b>()</pre>
+	<pre>End Sub</pre>
+	<pre>
+Private Function PropertyManagerPage2Handler8_<b>OnPreview</b>() As Boolean</pre>
+	<pre>End Function</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Function PropertyManagerPage2Handler8_<b>OnNextPage</b>() As Boolean</pre>
+	<pre>End Function</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Function PropertyManagerPage2Handler8_<b>OnPreviousPage</b>() As Boolean</pre>
+	<pre>End Function</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>AfterActivation</b>()</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Function PropertyManagerPage2Handler8_<b>ConnectToSW</b>(ByVal ThisSW As Object, ByVal Cookie As Long) As Boolean
+ </pre>
+	<pre>End Function</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnButtonPress</b>(ByVal Id As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnClose</b>(ByVal reason As Long)</pre>
+	<pre>    If reason = swPropertyManagerPageClose_Okay Then</pre>
+	<pre>        m_pageObj.GetCmd().OnOk</pre>
+	<pre>    ElseIf reason = swPropertyManagerPageClose_Cancel Then</pre>
+	<pre>        m_pageObj.GetCmd().OnCancel</pre>
+	<pre>    End If</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnCheckboxCheck</b>(ByVal Id As Long, ByVal Checked As Boolean)</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnComboboxSelectionChanged</b>(ByVal Id As Long, ByVal Item As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>
+ </pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnGroupCheck</b>(ByVal Id As Long, ByVal Checked As Boolean)
+</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnGroupExpand</b>(ByVal Id As Long, ByVal Expanded As Boolean)</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Function PropertyManagerPage2Handler8_<b>OnHelp</b>() As Boolean</pre>
+	<pre>End Function</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnListboxSelectionChanged</b>(ByVal Id As Long, ByVal Item As Long)
+</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnNumberboxChanged</b>(ByVal Id As Long, ByVal Value As Double)</pre>
+	<pre>    m_pageObj.GetCmd().OnNumberChanged Int(Value)</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>AfterClose</b>()</pre>
+	<pre>    Set m_pageObj = Nothing</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnOptionCheck</b>(ByVal Id As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnSelectionboxFocusChanged</b>(ByVal Id As Long)</pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnTextboxChanged</b>(ByVal Id As Long, ByVal Text As String)
+ </pre>
+	<pre>End Sub</pre>
+	<pre>&nbsp;</pre>
+	<pre>Private Sub PropertyManagerPage2Handler8_<b>OnSelectionBoxListChanged</b>(ByVal Id As Long, ByVal Text As Long)</pre>
+	<pre>    m_pageObj.GetCmd().OnBodySelect</pre>
+	<pre>End Sub</pre>
+</blockquote>
+<p style="text-align: center;"
+	align=center><a href="#Top">Back to top</a></p>
+
+</body>
+
+</html>

@@ -1,0 +1,102 @@
+<html>
+
+<head>
+<title>Get Faces Associated with Feature Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,feature">
+<meta name=MS-HKWD content="VB.NET examples,faces">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Faces Associated with Feature Example (VB.NET)</h1>
+
+<p>This example shows how to eliminate multiple feature faces.</p>
+<p><b>NOTE: </b>In SOLIDWORKS, a face is the result of evaluating a feature. A face can be 
+owned by several features.
+IFeature::GetFaces returns all faces owned by a feature. This is different from 
+faces highlighted in the user interface when a feature is selected, because the user 
+interface filters out multiple feature faces. This filter is for display 
+purposes only.
+An application must use IFace::GetFeature to filter out multiple feature faces. 
+This method returns only the oldest feature from a face; that is, the first owning 
+feature in the FeatureManager design tree. </p>
+
+<pre><span style="color:green;">'-----------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Open&nbsp;a&nbsp;part&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Select&nbsp;a&nbsp;feature&nbsp;in&nbsp;the&nbsp;FeatureManager&nbsp;design</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;tree.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Gets&nbsp;the&nbsp;name&nbsp;of&nbsp;the&nbsp;feature&nbsp;and&nbsp;number</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;of&nbsp;faces.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Colors&nbsp;the&nbsp;faces&nbsp;of&nbsp;the&nbsp;feature&nbsp;blue.&nbsp;
+'    NOTE: The faces&nbsp;are&nbsp;the&nbsp;same&nbsp;faces&nbsp;as&nbsp;if&nbsp;
+'    you&nbsp;selected&nbsp;the&nbsp;feature&nbsp;in&nbsp;the&nbsp;user&nbsp;interface.
+' 3. Examine the Immediate window and graphics area.</span>
+<span style="color:green;">'-----------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelData&nbsp;<span style="color:blue;">As</span>&nbsp;SelectData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFaceFeat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;faceArr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;oneFace&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;featColors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFace&nbsp;<span style="color:blue;">As</span>&nbsp;Face2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swEnt&nbsp;<span style="color:blue;">As</span>&nbsp;Entity
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>ActiveDoc</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelData&nbsp;=&nbsp;swSelMgr.<b>CreateSelectData</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Feature&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swFeat.<b>Name</b>&nbsp;+&nbsp;<span style="color:#a31515;">&quot;&nbsp;[&quot;</span>&nbsp;+&nbsp;swFeat.<b>GetTypeName</b>&nbsp;+&nbsp;<span style="color:#a31515;">&quot;]&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Face&nbsp;count&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swFeat.<b>GetFaceCount</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.ClearSelection2(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featColors&nbsp;=&nbsp;swModel.<b>MaterialPropertyValues</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featColors(0)&nbsp;=&nbsp;0&nbsp;&nbsp;<span style="color:green;">'R</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featColors(1)&nbsp;=&nbsp;0&nbsp;&nbsp;<span style="color:green;">'G</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featColors(2)&nbsp;=&nbsp;1&nbsp;&nbsp;<span style="color:green;">'B</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;faceArr&nbsp;=&nbsp;swFeat.<b>GetFaces</b>&nbsp;:&nbsp;<span style="color:blue;">If</span>&nbsp;IsNothing(faceArr)&nbsp;<span style="color:blue;">Then</span>&nbsp;<span style="color:blue;">Exit&nbsp;Sub</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;<span style="color:blue;">Each</span>&nbsp;oneFace&nbsp;<span style="color:blue;">In</span>&nbsp;faceArr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace&nbsp;=&nbsp;oneFace
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt&nbsp;=&nbsp;swFace
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFaceFeat&nbsp;=&nbsp;swFace.<b>GetFeature</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Check&nbsp;to&nbsp;see&nbsp;if&nbsp;face&nbsp;is&nbsp;owned&nbsp;by&nbsp;multiple&nbsp;features</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;swFaceFeat&nbsp;<span style="color:blue;">Is</span>&nbsp;swFeat&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swEnt.<b>Select4</b>(<span style="color:blue;">True</span>,&nbsp;swSelData)&nbsp;:&nbsp;<span style="color:#2b91af;">Debug</span>.Assert(status)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace.<b>MaterialPropertyValues</b>&nbsp;=&nbsp;featColors
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Other&nbsp;feature&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swFaceFeat.<b>Name</b>&nbsp;+&nbsp;<span style="color:#a31515;">&quot;&nbsp;[&quot;</span>&nbsp;+&nbsp;swFaceFeat.<b>GetTypeName</b>&nbsp;+&nbsp;<span style="color:#a31515;">&quot;]&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

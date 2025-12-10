@@ -1,0 +1,132 @@
+<html>
+
+<head>
+<title>Get and Set Table Anchor of Hole Table Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,table anchors">
+<meta name=MS-HKWD content="VBA examples,hole tables">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get and Set Table Anchor of Hole Table Example (VBA)</h1>
+<p>This example shows how to get and set the table anchor of a hole table in a 
+drawing.</p>
+<pre>'-----------------------------------------------------------------
+' Preconditions: Verify that the specified drawing to open exists.
+'
+' Postconditions:
+' 1. Opens the drawing.
+' 2. At Stop, examine the position of the hole table
+'    in the drawing.
+' 3. Click the Continue button in the SOLIDWORKS Microsoft Basic
+'    for Applications IDE.
+' 4. Sets the position of the hole table's anchor 
+'    to the specified location. 
+' 5. Examine the hole table in the drawing.
+'
+' NOTE: If prompted, do not save changes when closing the drawing.
+'------------------------------------------------------------------
+Option Explicit
+</pre>
+<pre>Sub main()
+    Dim swApp As SldWorks.SldWorks
+    Set swApp = Application.SldWorks    </pre>
+<pre>    Dim filename As String
+    filename = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\SimpleHole.slddrw&quot;    </pre>
+<pre>    Dim model As ModelDoc2
+    Dim errors As Long
+    Dim warnings As Long
+    Set model = swApp.<b>OpenDoc6</b>(filename, swDocDRAWING, swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)    </pre>
+<pre>    If model Is Nothing Then Exit Sub    </pre>
+<pre>    Stop   </pre>
+<pre>    Dim swTable As TableAnnotation
+   </pre>
+<pre>    ' If document is a drawing, then continue
+    Select Case model.<b>GetType</b>
+    Case swDocDRAWING
+        Dim drw As DrawingDoc
+        Set drw = model</pre>
+<pre>        ' Get the current sheet
+        Dim drwSheet As Sheet
+        Set drwSheet = drw.<b>GetCurrentSheet</b>        </pre>
+<pre>        ' Select the Sheet2 feature
+        Dim modeldocext As SldWorks.ModelDocExtension
+        Dim status As Boolean
+        Set modeldocext = model.<b>Extension</b>
+        status = modeldocext.<b>SelectByID2</b>(&quot;Sheet2&quot;, &quot;SHEET&quot;, 0, 0, 0, False, 0, Nothing, 0)        </pre>
+<pre>        ' Get the views on Sheet2
+        Dim views As Variant
+        views = drwSheet.<b>GetViews</b></pre>
+<pre>        Dim vView As Variant
+        For Each vView In views
+            Dim drwView As View
+            Set drwView = vView                </pre>
+<pre>            Dim viewFeature As Feature
+            Set viewFeature = drw.<b>FeatureByName</b>(drwView.<b>Name</b>)            </pre>
+<pre>            ' Traverse the features in the view
+            Dim subFeature As Feature
+            Set subFeature = viewFeature.<b>GetFirstSubFeature</b></pre>
+<pre>            ' If the feature is HoleTableFeat, then get the table annotations
+            Do Until subFeature Is Nothing
+                If subFeature.<b>GetTypeName2</b> = &quot;HoleTableFeat&quot; Then
+                    Dim swHoleTable As HoleTable                    </pre>
+<pre>                    Set swHoleTable = subFeature.<b>GetSpecificFeature2</b>
+                    Dim holeTables
+                    holeTables = swHoleTable.<b>GetTableAnnotations</b></pre>
+<pre>                    ' If the annotation is a hole table, then continue
+                    If Not IsEmpty(holeTables) Then
+                        Dim table As Variant
+                        For Each table In holeTables
+                            Set swTable = table                            </pre>
+<pre>                            ' If the hole table is anchored, then continue
+                            If swTable.<b>Type</b> = swTableAnnotation_HoleChart Then
+                                If swTable.<b>Anchored</b> &lt;&gt; False Then
+                                    Dim holeTableAnchor As TableAnchor
+                                    Set holeTableAnchor = drwView.<b>Sheet</b>.<b>TableAnchor</b>(swTableAnnotation_HoleChart)                                    </pre>
+<pre>                                    ' Get the position of the table anchor
+                                    Dim anchorPosition
+                                    anchorPosition = holeTableAnchor.<b>Position</b></pre>
+<pre>                                     ' Determine type of table anchor
+                                    Dim newCorner As swBOMConfigurationAnchorType_e</pre>
+<pre>                                    Dim corner As String
+                                    Select Case swTable.<b>AnchorType</b>
+                                    Case swBOMConfigurationAnchor_BottomLeft
+                                        corner = &quot;  Bottom-left &quot;
+                                        newCorner = swBOMConfigurationAnchor_TopRight
+                                    Case swBOMConfigurationAnchor_BottomRight
+                                        corner = &quot;  Bottom-right &quot;
+                                        newCorner = swBOMConfigurationAnchor_TopLeft
+                                    Case swBOMConfigurationAnchor_TopLeft
+                                        corner = &quot;  Top-left &quot;
+                                        newCorner = swBOMConfigurationAnchor_BottomRight
+                                    Case swBOMConfigurationAnchor_TopRight
+                                        corner = &quot;  Top-right &quot;
+                                        newCorner = swBOMConfigurationAnchor_BottomLeft
+                                    End Select                                    </pre>
+<pre>                                    swTable.<b>AnchorType</b> = newCorner                                    </pre>
+<pre>                                    ' Set the new position of the table anchor
+                                    Dim dNewPosition(0 To 1) As Double
+                                    dNewPosition(0) = 0#
+                                    dNewPosition(1) = 0#                                    </pre>
+<pre>                                    holeTableAnchor.<b>Position</b> = dNewPosition
+                                End If
+                            End If
+                        Next
+                    End If
+                End If                </pre>
+<pre>                Set subFeature = subFeature.<b>GetNextSubFeature</b>
+            Loop    </pre>
+<pre>    
+        Next
+    </pre>
+<pre>    Case swDocASSEMBLY, swDocPART</pre>
+<pre>    End Select    </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

@@ -1,0 +1,530 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Create PropertyManager Page With Many Controls Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="PropertyManager page (see also IPropertyManagerPage2 Interface),controls">
+<meta name=MS-HKWD content="VBA examples,PropertyManager pages">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=10760>
+<meta name=layout-width content=750>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1><a name=Top></a>Create PropertyManager Page With Many Controls Example 
+ (VBA)</h1>
+
+<p>This example shows how to create a PropertyManager page with many controls.</p>
+
+<pre>'-----------------------------------------
+' Preconditions:
+' 1. Copy <a href="#Main">Main</a> into your macro.
+' 2. Click <b>Insert &gt; Class Module</b>, name if <b>PropMgr</b>, and copy <a href="#PropMgr">PropMgr</a>
+'    into the module. (To rename the module, click <b>View &gt;</b>
+'    <b>Properties Window</b> and type <b>PropMgr</b> in <b>(Name)</b>.
+' 3. Click <b>Insert &gt; Class Module</b>, name it <b>PropMgrHdlr</b>, and copy
+'    <a href="#PropMgrHdlr">PropMgrHdlr</a> in the module.
+' 4. Add a reference to <b>SolidWorks</b> &lt;<i>version</i>&gt; <b>exposed </b>
+'    <b>type libraries for add-in use</b>.
+' 5. Open a part or assembly.
+' 6. Open the Immediate window.
+'
+' Postconditions:
+' 1. Creates a PropertyManager page.
+' 2. Click or type text in the different controls and
+'    examine the Immediate window after action.
+' 3. Click <b>OK</b> to close the PropertyManager
+'    page and examine the Immediate window.
+'----------------------------------------
+<a name="Main"></a>'Main</pre>
+<pre>Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swPart As SldWorks.PartDoc</pre>
+<pre>'The application's PropertyManager page
+Dim swPage As PropMgr</pre>
+<pre>Sub main()</pre>
+<pre>    Dim nRetVal As Long
+    Set swApp = CreateObject(&quot;SldWorks.Application&quot;)
+    'Make sure that there is a model to which to
+    'the page; if there is no model, then get rid
+    'of references to any previous pages
+    If swApp.ActiveDoc Is Nothing Then
+        Set swPart = swApp.<b>NewPart</b>
+        Set swPage = Nothing
+    End If</pre>
+<pre>    'If there is no page, create a new one and show it
+    'If there is a page, then show it
+    If swPage Is Nothing Then
+        Set swPage = New PropMgr
+        swPage.<b>Show</b>
+    Else
+        swPage.<b>Show</b>
+    End If
+End Sub</pre>
+<div align="center">
+	<pre><a href="#Top">Back to top</a></pre>
+</div>
+<div align="left">
+	<pre><a name="PropMgr"></a>'PropMgr
+'This class defines the PropertyManager page and its controls</pre>
+	<pre>Option Explicit</pre>
+	<pre>'The PropertyManager page
+Private m_Page As SldWorks.PropertyManagerPage2</pre>
+	<pre>'The two groups that will contain the controls
+Private m_Group1 As SldWorks.PropertyManagerPageGroup
+Private m_Group2 As SldWorks.PropertyManagerPageGroup</pre>
+	<pre>'The controls on the page
+Private m_Text As SldWorks.PropertyManagerPageTextbox
+Private m_Check As SldWorks.PropertyManagerPageCheckbox
+Private m_Option1 As SldWorks.PropertyManagerPageOption
+Private m_Option2 As SldWorks.PropertyManagerPageOption
+Private m_Option3 As SldWorks.PropertyManagerPageOption
+Private m_List As SldWorks.PropertyManagerPageListbox
+Private m_Selection1 As SldWorks.PropertyManagerPageSelectionbox
+Private m_Selection2 As SldWorks.PropertyManagerPageSelectionbox
+Private m_Number As SldWorks.PropertyManagerPageNumberbox
+Private m_Combo As SldWorks.PropertyManagerPageCombobox
+Private m_ClearSelection As SldWorks.PropertyManagerPageCheckbox
+Private m_Button As SldWorks.PropertyManagerPageButton
+Private m_Label As SldWorks.PropertyManagerPageLabel
+Private m_pActiveXControl As SldWorks.PropertyManagerPageActiveX</pre>
+	<pre>'Whether the second group is active
+Private m_bGroup2 As Boolean</pre>
+	<pre>'The IDs for all of the controls
+Const ID_GROUP1 As Long = 1
+Const ID_TEXT As Long = 2
+Const ID_CHECK As Long = 3
+Const ID_OPTION1 As Long = 4
+Const ID_OPTION2 As Long = 5
+Const ID_OPTION3 As Long = 6
+Const ID_LIST As Long = 7
+Const ID_GROUP2 As Long = 8
+Const ID_SELECTION1 As Long = 9
+Const ID_SELECTION2 As Long = 10
+Const ID_NUMBER As Long = 11
+Const ID_COMBO As Long = 12
+Const ID_BUTTON As Long = 13
+Const ID_LABEL As Long = 14
+Const ID_ACTIVEX As Long = 15</pre>
+	<pre>'Create the page and place all of the controls on it
+Private Sub Layout()
+    Dim swApp As SldWorks.SldWorks</pre>
+	<pre>    'Objects needed to create the PropertyManager page
+    Dim pageHdlr As New PropMgrHdlr
+    Dim swPage As SldWorks.PropertyManagerPage2
+    Dim swControl As SldWorks.PropertyManagerPageControl
+    Dim title As String
+    Dim Message As String
+    Dim caption As String
+    Dim tip As String
+    Dim listItems(3) As String
+    Dim buttonTypes As Long
+    Dim Id As Long
+    Dim options As Long
+    Dim filterArray(1) As Long
+    Dim errors As Long
+    Dim controlType As Integer
+    Dim alignment As Integer
+    Dim bRet As Boolean</pre>
+	<pre>    'Access SOLIDWORKS
+    Set swApp = GetObject(, &quot;SldWorks.Application&quot;)</pre>
+	<pre>    'Initialize the page handler
+    'Pass a reference to this PropertyManager page
+    pageHdlr.Init Me</pre>
+	<pre>    'Set some variables for the page
+    title = &quot;Sample PropertyManager&quot;
+    buttonTypes = swPropertyManager_OkayButton + swPropertyManager_CancelButton</pre>
+	<pre>   'Create the PropertyManager page
+    Set m_Page = swApp.<b>CreatePropertyManagerPage</b>(title, buttonTypes, pageHdlr, errors)</pre>
+	<pre>    'Make sure that it was created properly
+    If errors = swPropertyManagerPage_Okay Then</pre>
+	<pre>        'Initial set up of the dialog
+        Message = &quot;Information message that can be displayed as necessary.&quot;
+        m_Page.SetMessage Message, swImportantMessageBox</pre>
+	<pre>        'Begin adding the controls to the PropertyManager page
+        'GROUP BOX ------------------------------------------------------------------
+        Id = ID_GROUP1
+        caption = &quot;Group &amp;1&quot;
+        options = swGroupBoxOptions_Visible + swGroupBoxOptions_Expanded
+        Set m_Group1 = m_Page.<b>AddGroupBox</b>(Id, caption, options)
+        If Not m_Group1 Is Nothing Then
+            'Place these controls in the first group
+            'CONTROL Textbox  --------------------------------------------------------------------
+            Id = ID_TEXT
+            controlType = swControlType_Textbox
+            caption = &quot;Sample text box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Text box&quot;
+            Set swControl = Nothing
+            Set swControl = m_Group1.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Text = swControl
+               'm_Text.<b>Style</b> = swconst.swPropMgrPageTextBoxStyle_e.
+            End If
+            'CONTROL Checkbox  --------------------------------------------------------------------
+            Id = ID_CHECK
+            controlType = swControlType_Checkbox
+            caption = &quot;Sample check box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Check box&quot;
+            Set swControl = m_Group1.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Check = swControl
+                m_Check.<b>Checked</b> = False
+                End If
+            'CONTROL Option  --------------------------------------------------------------------
+            Id = ID_OPTION1
+            controlType = swControlType_Option
+            caption = &quot;Radio button 1&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Option 1&quot;
+            Set swControl = m_Group1.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Option1 = swControl
+                m_Option1.<b>Checked</b> = True
+            End If
+            'CONTROL Option  --------------------------------------------------------------------
+            Id = ID_OPTION2
+            controlType = swControlType_Option
+            caption = &quot;Radio button 2&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Option 2&quot;
+            Set swControl = m_Group1.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Option2 = swControl
+                m_Option2.<b>Checked</b> = False
+            End If
+            'CONTROL Option  --------------------------------------------------------------------
+            Id = ID_OPTION3
+            controlType = swControlType_Option
+            caption = &quot;Radio button 3&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Option 3&quot;
+            Set swControl = m_Group1.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Option3 = swControl
+                m_Option3.<b>Checked</b> = False
+            End If
+            'CONTROL List box  -------------------------------------------------------------------
+            Id = ID_LIST
+            controlType = swControlType_Listbox
+            caption = &quot;Sample list box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;List box&quot;
+            Set swControl = m_Group1.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_List = swControl
+                m_List.<b>Height</b> = 50
+                listItems(0) = &quot;One Fish&quot;
+                listItems(1) = &quot;Two Fish&quot;
+                listItems(2) = &quot;Red Fish&quot;
+                listItems(3) = &quot;Blue Fish&quot;
+                m_List.<b>AddItems</b> (listItems)
+                m_List.<b>CurrentSelection</b> = 2
+            End If
+            'CONTROL Button --------------------------------------------------------------------
+            Id = ID_BUTTON
+            controlType = swControlType_Button
+            caption = &quot;Sample button&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Button&quot;
+            Set swControl = m_Group1.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Button = swControl
+            End If
+        End If
+        'GROUP BOX ------------------------------------------------------------------
+        Id = ID_GROUP2
+        caption = &quot;Group &amp;2&quot;
+        options = swGroupBoxOptions_Visible + swGroupBoxOptions_Checkbox '+ swGroupBoxOptions_Expanded + swGroupBoxOptions_Checked
+        m_bGroup2 = False  'Mark that the second group is disabled
+        Set m_Group2 = m_Page.<b>AddGroupBox</b>(Id, caption, options)
+        If Not m_Group2 Is Nothing Then
+            'Place these controls in the second group
+            'CONTROL Label --------------------------------------------------------------------
+            Id = ID_LABEL
+            controlType = swControlType_Label
+            caption = &quot;Sample label&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Label&quot;
+            Set swControl = m_Group2.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Label = swControl
+            End If
+            'CONTROL Selection box  --------------------------------------------------------------
+            Id = ID_SELECTION1
+            controlType = swControlType_Selectionbox
+            caption = &quot;Sample selection box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Select faces and vertices&quot;
+            Set swControl = m_Group2.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Selection1 = swControl
+                filterArray(0) = swSelFACES
+                filterArray(1) = swSelVERTICES
+                m_Selection1.<b>SetSelectionFilters</b> (filterArray)
+                m_Selection1.<b>SingleEntityOnly</b> = True
+                m_Selection1.<b>Height</b> = 50
+                m_Selection1.<b>Mark</b> = 1
+            End If
+            'CONTROL Selection box  --------------------------------------------------------------
+            Id = ID_SELECTION2
+            controlType = swControlType_Selectionbox
+            caption = &quot;Sample selection box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Select faces and vertices&quot;
+            Set swControl = m_Group2.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Selection2 = swControl
+                filterArray(0) = swSelFACES
+                filterArray(1) = swSelVERTICES
+                m_Selection2.<b>SetSelectionFilters</b> (filterArray)
+                m_Selection2.<b>SingleEntityOnly</b> = True
+                m_Selection2.<b>Height</b> = 50
+                m_Selection2.<b>Mark</b> = 2
+            End If
+            'CONTROL Number box  -----------------------------------------------------------------
+            Id = ID_NUMBER
+            controlType = swControlType_Numberbox
+            caption = &quot;Sample number box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Number box&quot;
+            Set swControl = m_Group2.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+                Set m_Number = swControl
+                m_Number.<b>SetRange2</b> swNumberBox_Length, -0.01, 0.01, True, 0.00001, 0.0001, 0.00005
+                m_Number.Value = 0.01
+                m_Number.Style = swPropMgrPageNumberBoxStyle_e.swPropMgrPageNumberBoxStyle_Thumbwheel
+                Debug.Print m_Number.<b>Style</b>
+            End If
+            'CONTROL Combo box  ------------------------------------------------------------------
+            Id = ID_COMBO
+            controlType = swControlType_Combobox
+            caption = &quot;Sample combo list box&quot;
+            alignment = swControlAlign_Indent
+            options = swControlOptions_Visible + swControlOptions_Enabled
+            tip = &quot;Combo box&quot;
+            Set swControl = m_Group2.<b>AddControl</b>(Id, controlType, caption, alignment, options, tip)
+            If Not swControl Is Nothing Then
+            Set m_Combo = swControl
+            m_Combo.<b>Height</b><b> </b>= 50<b>
+</b>                listItems(0) = &quot;One Fish&quot;
+                listItems(1) = &quot;Two Fish&quot;
+                listItems(2) = &quot;Red Fish&quot;
+                listItems(3) = &quot;Blue Fish&quot;
+                m_Combo.<b>AddItems</b> (listItems)
+                m_Combo.<b>CurrentSelection</b> = 1
+            End If
+        End If
+    Else
+        swApp.<b>SendMsgToUser2</b> &quot;There was an error creating the Property Manager page.&quot;, swMbInformation, swMbOk
+    End If
+End Sub
+'Display the PropertyManager page
+Public Sub Show()
+    Dim nRetVal As Long</pre>
+	<pre>    nRetVal = m_Page.<b>Show</b></pre>
+	<pre>End Sub
+'Generate the PropertyManagre page and its controls
+Private Sub Class_Initialize()
+    Layout
+End Sub</pre>
+	<pre>'Callback called by PropertyManagerPage2Handler5_OnButtonPress
+'in the PropertyManagerPage2Handler5 class
+'This implementation just clears the selections
+Public Sub OnButtonPressed(ByVal Id As Long)
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim nSelCount As Long
+    Dim i As Long
+    </pre>
+	<pre>    If Id = ID_BUTTON Then
+        Set swApp = GetObject(, &quot;SldWorks.Application&quot;)
+        Set swModel = swApp.<b>ActiveDoc</b>
+        Set swSelMgr = swModel.<b>SelectionManager</b>
+        nSelCount = swSelMgr.<b>GetSelectedObjectCount</b>
+        For i = 1 To nSelCount
+            Debug.Print &quot;SelMark(&quot; + Str(i) + &quot;) =&quot; + Str(swSelMgr.<b>GetSelectedObjectMark</b>(i))
+        Next i
+        swModel.<b>ClearSelection2</b> True
+    End If
+End Sub</pre>
+	<div align="center">
+		<pre><a href="#Top">Back to top</a></pre>
+	</div>
+	<pre><a name="PropMgrHdlr"></a>'PropMgrHdlr
+' This file is the implementation of the PropertyManagerPage2Handler5
+' interface
+' Each of these methods is called when its corresponding
+' notification is fired from within SOLIDWORKS
+' It is customary to have notifications use callback
+' functions defined within the main application to perform
+' any desired actions
+Option Explicit
+Implements PropertyManagerPage2Handler5
+' Variable that provides access to the PropertyManager page
+Dim m_PageObj As PropMgr
+' This method is called to initialize the handler
+Public Sub Init(pageObj As PropMgr)
+    Set m_PageObj = pageObj
+End Sub
+Private Sub Class_Initialize()
+    Debug.Print &quot;Class_Initialize&quot;
+End Sub
+Private Sub Class_Terminate()
+    Debug.Print &quot;Class_Terminate&quot;
+End Sub
+'These methods are the implementations of the SOLIDWORKS notifications
+Private Sub PropertyManagerPage2Handler5_<b>AfterClose</b>()
+    Debug.Print &quot;PropertyManagerPage2Handler5_AfterClose&quot;
+End Sub
+Private Function PropertyManagerPage2Handler5_<b>OnActiveXControlCreated</b>(ByVal Id As Long, ByVal Status As Boolean) As Long
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnActiveXControlCreated&quot;
+End Function
+Private Sub PropertyManagerPage2Handler5_<b>OnButtonPress</b>(ByVal Id As Long)
+    m_PageObj.OnButtonPressed (Id)
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnCancel</b>()
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnCancel&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnCheckboxCheck</b>(ByVal Id As Long, ByVal Checked As Boolean)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnCheckboxCheck&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnClose</b>(ByVal Reason As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnClose&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnComboboxEditChanged</b>(ByVal Id As Long, ByVal Text As String)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnComboboxEditChanged&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnComboboxSelectionChanged</b>(ByVal Id As Long, ByVal Item As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnComboboxSelectionChanged&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnGroupCheck</b>(ByVal Id As Long, ByVal Checked As Boolean)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnGroupCheck&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnGroupExpand</b>(ByVal Id As Long, ByVal Expanded As Boolean)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnGroupExpand&quot;
+End Sub
+Private Function PropertyManagerPage2Handler5_<b>OnHelp</b>() As Boolean
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnHelp&quot;
+End Function
+Private Sub PropertyManagerPage2Handler5_<b>OnListboxSelectionChanged</b>(ByVal Id As Long, ByVal Item As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnListboxSelectionChanged&quot;
+End Sub
+Private Function PropertyManagerPage2Handler5_<b>OnNextPage</b>() As Boolean
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnNextPage&quot;
+End Function
+ Private Sub PropertyManagerPage2Handler5_<b>OnNumberboxChanged</b>(ByVal Id As Long, ByVal Value As Double)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnNumberboxChanged&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnOK</b>()
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnOK&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnOptionCheck</b>(ByVal Id As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnOptionCheck&quot;
+End Sub
+Private Function PropertyManagerPage2Handler5_<b>OnPreviousPage</b>() As Boolean
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnPreviousPage&quot;
+End Function
+Private Sub PropertyManagerPage2Handler5_<b>OnSelectionboxCalloutCreated</b>(ByVal Id As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnSelectionboxCalloutCreated&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnSelectionboxCalloutDestroyed</b>(ByVal Id As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnSelectionboxCalloutDestroyed&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnSelectionboxFocusChanged</b>(ByVal Id As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnSelectionboxFocusChanged&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnSelectionboxListChanged</b>(ByVal Id As Long, ByVal Count As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnSelectionboxListChanged&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnTextboxChanged</b>(ByVal Id As Long, ByVal Text As String)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnTextboxChanged&quot;
+End Sub
+Private Function PropertyManagerPage2Handler5_<b>OnPreview</b>() As Boolean
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnPreview&quot;
+End Function
+Private Function PropertyManagerPage2Handler5_<b>OnSubmitSelection</b>(ByVal Id As Long, ByVal Selection As Object, ByVal SelType As Long, ItemText As String) As Boolean
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnSubmitSelection&quot;
+End Function
+Private Function PropertyManagerPage2Handler5_<b>OnTabClicked</b>(ByVal Id As Long) As Boolean
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnTabClicked&quot;
+End Function
+Private Sub PropertyManagerPage2Handler5_<b>OnSliderPositionChanged</b>(ByVal Id As Long, ByVal Value As Double)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnSliderPositionChanged&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnWhatsNew</b>()
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnWhatsNew&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnUndo</b>()
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnUndo&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnSliderTrackingCompleted</b>(ByVal Id As Long, ByVal Value As Double)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnSliderTrackingCompleted&quot;
+End Sub
+Private Function PropertyManagerPage2Handler5_<b>OnKeystroke</b>(ByVal Wparam As Long, ByVal Message As Long, ByVal Lparam As Long, ByVal Id As Long) As Boolean
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnKeystroke&quot;
+End Function
+Private Sub PropertyManagerPage2Handler5_<b>OnPopupMenuItemUpdat</b>e(ByVal Id As Long, retVal As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnPopupMenuItemUpdate&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>OnPopupMenuItem</b>(ByVal Id As Long)
+    Debug.Print &quot;PropertyManagerPage2Handler5_OnPopupMenuItem&quot;
+End Sub
+Private Sub PropertyManagerPage2Handler5_<b>AfterActivatio</b>n()
+    Debug.Print &quot;PropertyManagerPage2Handler5_AfterActivation&quot;
+End Sub</pre>
+	<div align="center">
+		<pre><a href="#Top">Back to top</a></pre>
+	</div>
+	<pre>
+</pre>
+	<pre>
+</pre>
+</div>
+
+</body>
+
+</html>

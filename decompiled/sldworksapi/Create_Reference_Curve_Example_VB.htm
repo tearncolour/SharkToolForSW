@@ -1,0 +1,157 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Create Reference Curve Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=date content="10 14, 2002 1:34:53 PM">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2336>
+<meta name=layout-width content=723>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+<META NAME="MS-HKWD" CONTENT="VBA examples,curves">
+<META NAME="MS-HKWD" CONTENT="VBA examples,edge points">
+<META NAME="MS-HKWD" CONTENT="VBA examples,reference curves">
+<META NAME="MS-HKWD" CONTENT="VBA examples,packing arrays">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Create Reference Curve Example (VBA)</h1>
+
+<p>This example shows how to create a reference curve by first creating 
+ a temporary spline curve.</p>
+<pre>'----------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified part document template exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens a new part document.
+' 2. Adds a reference curve to the part document.
+' 3. Selects an endpoint on the reference curve
+'    and prints to the Immediate window the
+'    endpoint's position and coordinates.
+' 4. Examine the graphics area and Immediate window.
+'----------------------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>'Type definitions
+Type DoubleRec
+    dValue As Double
+End Type</pre>
+<pre>Type Int2Rec
+    iLower As Long      '1 Integer is 4 bytes
+    iUpper As Long
+End Type
+ 
+</pre>
+<pre>'Pack 2 integers to 1 Double
+Function ImportFields(iLower As Integer, iUpper As Integer, dValue As Double)
+    Dim dr As DoubleRec
+    Dim i2r As Int2Rec    </pre>
+<pre>    i2r.iLower = iLower
+    i2r.iUpper = iUpper
+    LSet dr = i2r
+    dValue = dr.dValue    </pre>
+<pre>End Function</pre>
+<pre>Sub main()
+
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swModelDocExt As SldWorks.ModelDocExtension
+    Dim swPart As SldWorks.PartDoc
+    Dim swBody As SldWorks.Body2
+    Dim swCurve(0) As SldWorks.Curve
+    Dim vCurve As Variant
+    Dim swRefCurve As SldWorks.ReferenceCurve
+    Dim swSelObj As Object
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swEdgePoint As SldWorks.EdgePoint
+    Dim bRet As Boolean
+    Dim nRetVal As Long
+    Dim iDim As Integer
+    Dim iOrd As Integer
+    Dim incp As Integer
+    Dim iper As Integer
+    Dim dprops(1) As Double
+    Dim knots(9) As Double
+    Dim cPoints(17) As Double
+    Dim vprops As Variant
+    Dim vknots As Variant
+    Dim vcPoints As Variant
+    Dim selType As Long
+    Dim x As Double
+    Dim y As Double
+    Dim z As Double</pre>
+<pre>    'Open new part document and create a body
+    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SolidWorks 2015\templates\Part.prtdot&quot;, 0, 0, 0)
+    Set swPart = swModel
+    Set swBody = swPart.<b>CreateNewBody</b></pre>
+<pre>    'Create a curve
+    'Set properties
+    iDim = 3: iOrd = 4: incp = 6: iper = 0
+    ImportFields iDim, iOrd, dprops(0)
+    ImportFields incp, iper, dprops(1)
+    vprops = dprops</pre>
+<pre>    'Set knots
+    knots(0) = 0: knots(1) = 0: knots(2) = 0: knots(3) = 0
+    knots(4) = 0.33096: knots(5) = 0.72
+    knots(6) = 1: knots(7) = 1: knots(8) = 1: knots(9) = 1
+    vknots = knots</pre>
+<pre>    'Set control points
+    cPoints(0) = 0: cPoints(1) = 0: cPoints(2) = 0
+    cPoints(3) = 0.008703: cPoints(4) = 0.016501: cPoints(5) = 0
+    cPoints(6) = 0.027636: cPoints(7) = 0.052399: cPoints(8) = 0
+    cPoints(9) = 0.069472: cPoints(10) = -0.011297: cPoints(11) = 0
+    cPoints(12) = 0.090421: cPoints(13) = 0.017622: cPoints(14) = 0
+    cPoints(15) = 0.099188: cPoints(16) = 0.029725: cPoints(17) = 0
+    vcPoints = cPoints</pre>
+<pre>    'Create a spline curve
+    Set swCurve(0) = swBody.<b>AddProfileBspline</b>((vprops), (vknots), (vcPoints))
+    vCurve = swCurve</pre>
+<pre>    'Create a reference curve
+    Set swRefCurve = swModel.<b>FeatureReferenceCurve</b>(1, (vCurve), True, &quot;&quot;, nRetVal)</pre>
+<pre>    'Rebuild to display curve
+    swModel.<b>EditRebuild3</b>    </pre>
+<pre>    'Get endpoint on reference curve
+    Set swModelDocExt = swModel.<b>Extension</b>
+    bRet = swModelDocExt.<b>SelectByID2</b>(&quot;Unknown&quot;, &quot;POINTREF&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    selType = swSelMgr.<b>GetSelectedObjectType3</b>(1, -1)
+    Debug.Print &quot;Type of selection: &quot; &amp; selType
+    If swSelectType_e.swSelPOINTREFS = selType Then
+            Set swSelObj = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+            Set swEdgePoint = swSelObj
+            Debug.Print &quot; Position of the endpoint: &quot; &amp; swEdgePoint.<b>Position</b>
+            swEdgePoint.<b>GetPointCoordinates</b> x, y, z
+            Debug.Print &quot; Endpoint coordinates: &quot; &amp; x &amp; &quot;, &quot; &amp; y &amp; &quot;, and &quot; &amp; z
+    End If</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

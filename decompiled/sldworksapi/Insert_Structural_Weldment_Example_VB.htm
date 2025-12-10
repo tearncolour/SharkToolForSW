@@ -1,0 +1,201 @@
+<html>
+
+<head>
+<title>Insert Structural Weldment Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,weldments">
+<meta name=MS-HKWD content="VBA examples,structural-member group">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Structural Weldment Example (VBA)</h1>
+<p>This example shows how to create structural weldment features using 
+structural member groups.</p>
+<pre>'---------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify the existence of the weldment profile pathname
+'    as specified in both calls to IFeatureManager::InsertStructuralWeldment4.
+' 2. Open an Immediate window.
+'
+' Postconditions:
+' 1. Creates a new part document containing a weldment and structural members.
+' 2. Rotates <b>c channel 3 x 5(1)</b>.
+' 3. Inspect the FeatureManager design tree, graphics area, and
+'    Immediate window.
+'---------------------------------------------------------------------------
+Dim swApp As SldWorks.SldWorks<br>
+Dim Part As ModelDoc2<br>
+Dim boolstatus As Boolean<br>
+Dim FeatMgr As FeatureManager<br>
+Dim SelMgr As SelectionMgr<br>
+Dim swWeldFeat As SldWorks.Feature<br>
+Dim swWeldFeatData As SldWorks.StructuralMemberFeatureData</pre>
+<p class="APICODE">Option Explicit</p>
+<p class="APICODE">Public Sub Main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim MacroFolder As String<br>
+&nbsp;&nbsp;&nbsp; MacroFolder = swApp.<b>GetCurrentMacroPathFolder</b>()<br>
+&nbsp;&nbsp;&nbsp; swApp.<b>SetCurrentWorkingDirectory</b> MacroFolder</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim Template As String<br>
+&nbsp;&nbsp;&nbsp; Template = 
+swApp.<b>GetUserPreferenceStringValue</b>(swDefaultTemplatePart)<br>
+&nbsp;&nbsp;&nbsp; Set Part = swApp.<b>NewDocument</b>(Template, 0, 0, 0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set FeatMgr = Part.<b>FeatureManager</b><br>
+&nbsp;&nbsp;&nbsp; Set SelMgr = Part.<b>SelectionManager</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Part.<b>ClearSelection2</b> True</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vSkLines As Variant<br>
+&nbsp;&nbsp;&nbsp; vSkLines = Part.SketchManager.<b>CreateCornerRectangle</b>(-0.1872393706766, 
+0.1133237194389, 0, -0.07003610048208, 0.009188409684237, 0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Part.<b>ClearSelection2</b> True</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; vSkLines = 
+Part.SketchManager.<b>CreateCornerRectangle</b>(0.06513561531715, 0.03369083550887, 0, 
+0.1807053904567, -0.08106219210316, 0)<br>
+&nbsp;&nbsp;&nbsp; Part.SketchManager.<b>InsertSketch</b> True</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Part.<b>ViewZoomtofit2</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim myFeature As Object<br>
+&nbsp;&nbsp;&nbsp; Set myFeature = Part.<b>FeatureManager</b>.<b>InsertWeldmentFeature</b>()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim Group1 As StructuralMemberGroup<br>
+&nbsp;&nbsp;&nbsp; Set Group1 = FeatMgr.<b>CreateStructuralMemberGroup</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vSeg1 As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim segments1(1) As Object<br>
+&nbsp;&nbsp;&nbsp; Dim vGroups1 As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim GroupArray1(0) As Object</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; boolstatus = 
+Part.<b>Extension</b>.<b>SelectByID2</b>(&quot;Line1@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, 
+-0.1495427140733, 0.1133237194389, 0, False, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; boolstatus = Part.<b>Extension</b>.<b>SelectByID2</b>(&quot;Line2@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, 
+-0.1872393706766, 0.08238014634844, 0, True, 0, Nothing, 0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set segments1(0) = 
+SelMgr.<b>GetSelectedObject6</b>(1, 0)<br>
+&nbsp;&nbsp;&nbsp; Set segments1(1) = SelMgr.<b>GetSelectedObject6</b>(2, 0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; vSeg1 = segments1<br>
+&nbsp;&nbsp;&nbsp; Group1.<b>Segments</b> = (vSeg1)<br>
+&nbsp;&nbsp;&nbsp; Group1.<b>Angle</b> = 0.785714285714286 'radians<br>
+&nbsp;&nbsp;&nbsp; Group1.<b>ApplyCornerTreatment</b> = True<br>
+&nbsp;&nbsp;&nbsp; Group1.<b>CornerTreatmentType</b> = swEndConditionMiter<br>
+&nbsp;&nbsp;&nbsp; Group1.<b>MirrorProfile</b> = True<br>
+&nbsp;&nbsp;&nbsp; Group1.<b>MirrorProfileAxis</b> = 
+swMirrorProfileOrAlignmentAxis_Vertical<br>
+&nbsp;&nbsp;&nbsp; Group1.<b>GapWithinGroup</b> = 0.0127 'meters</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set GroupArray1(0) = Group1<br>
+&nbsp;&nbsp;&nbsp; vGroups1 = GroupArray1</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set myFeature = Part.<b>FeatureManager</b>.<b>InsertStructuralWeldment4</b>(&quot;C:\Program 
+Files\SOLIDWORKS Corp\SOLIDWORKS\lang\english\weldment profiles\ansi inch\c channel\3 x 
+5.sldlfp&quot;, 1, False, (vGroups1))</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Part.<b>ClearSelection2</b> True</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim Group2 As StructuralMemberGroup<br>
+&nbsp;&nbsp;&nbsp; Set Group2 = FeatMgr.<b>CreateStructuralMemberGroup</b><br>
+&nbsp;&nbsp;&nbsp; Dim vSeg2 As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim segments2(1) As Object<br>
+&nbsp;&nbsp;&nbsp; Dim vGroups2 As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim GroupArray2(0) As Object</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; boolstatus = 
+Part.<b>Extension</b>.<b>SelectByID2</b>(&quot;Line5@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, 0.1185825251083, 
+0.03369083550887, 0, False, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; boolstatus = Part.<b>Extension</b>.<b>SelectByID2</b>(&quot;Line6@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, 
+0.06513561531715, -0.02774616865332, 0, True, 0, Nothing, 0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set segments2(0) = 
+SelMgr.<b>GetSelectedObject6</b>(1, 0)<br>
+&nbsp;&nbsp;&nbsp; Set segments2(1) = SelMgr.<b>GetSelectedObject6</b>(2, 0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; vSeg2 = segments2<br>
+&nbsp;&nbsp;&nbsp; Group2.<b>Segments</b> = (vSeg2)<br>
+&nbsp;&nbsp;&nbsp; Group2.<b>AlignAxis</b> = 
+swMirrorProfileOrAlignmentAxis_Vertical</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set GroupArray2(0) = Group2<br>
+&nbsp;&nbsp;&nbsp; vGroups2 = GroupArray2</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set myFeature = Part.<b>FeatureManager</b>.<b>InsertStructuralWeldment4</b>(&quot;C:\Program 
+Files\SOLIDWORKS Corp\SOLIDWORKS\lang\english\weldment profiles\ansi inch\c channel\3 x 
+5.sldlfp&quot;, 1, False, (vGroups2))</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Part.<b>ClearSelection2</b> True</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get Group Information</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim Group As StructuralMemberGroup<br>
+&nbsp;&nbsp;&nbsp; Dim vGroups As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vSegments As Variant</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; boolstatus = 
+Part.<b>Extension</b>.<b>SelectByID2</b>(&quot;c channel 3 x 5(1)&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 
+0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; Set swWeldFeat = SelMgr.<b>GetSelectedObject6</b>(1, 0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swWeldFeatData = 
+swWeldFeat.<b>GetDefinition</b><br>
+&nbsp;&nbsp;&nbsp; swWeldFeatData.<b>AccessSelections</b> Part, Nothing</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Groups Count : &quot; &amp; swWeldFeatData.<b>GetGroupsCount</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot; Feature Name : &quot; &amp; swWeldFeat.<b>Name</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; vGroups = swWeldFeatData.<b>Groups</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim i As Long, j As Long<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For i = LBound(vGroups) To 
+UBound(vGroups)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set Group = 
+vGroups(i)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+Segment Count in Group &quot; &amp; i + 1 &amp; &quot;&nbsp; : &quot; &amp; Group.<b>GetSegmentsCount</b>; 
+&quot;&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+Rotational angle of group: &quot; &amp; Group.<b>Angle</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+ApplyCornerTreatment: &quot; &amp; Group.<b>ApplyCornerTreatment</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+CornerTreatmentType: &quot; &amp; Group.<b>CornerTreatmentType</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+MirrorProfile: &quot; &amp; Group.<b>MirrorProfile</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+MirrorProfileAxis: &quot; &amp; Group.<b>MirrorProfileAxis</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+GapWithinGroup: &quot; &amp; Group.<b>GapWithinGroup</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vSegments = 
+Group.<b>Segments</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For j = 
+LBound(vSegments) To UBound(vSegments)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vSegments(j).<b>Select</b> False<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next j<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next i</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swWeldFeatData.<b>ReleaseSelectionAccess</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; boolstatus = 
+Part.<b>Extension</b>.<b>SelectByID2</b>(&quot;c channel 3 x 5(2)&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 
+0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; Set swWeldFeat = SelMgr.<b>GetSelectedObject6</b>(1, 0)<br>
+&nbsp;&nbsp;&nbsp; Set swWeldFeatData = swWeldFeat.<b>GetDefinition</b><br>
+&nbsp;&nbsp;&nbsp; swWeldFeatData.<b>AccessSelections</b> Part, Nothing</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Groups Count : &quot; &amp; swWeldFeatData.<b>GetGroupsCount</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot; Feature Name : &quot; &amp; swWeldFeat.<b>Name</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; vGroups = swWeldFeatData.<b>Groups</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For i = LBound(vGroups) To 
+UBound(vGroups)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set Group = 
+vGroups(i)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+Segment Count in Group &quot; &amp; i + 1 &amp; &quot;&nbsp; : &quot; &amp; Group.<b>GetSegmentsCount</b>; 
+&quot;&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+Rotational angle of group: &quot; &amp; Group.<b>Angle</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+ApplyCornerTreatment: &quot; &amp; Group.<b>ApplyCornerTreatment</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+CornerTreatmentType: &quot; &amp; Group.<b>CornerTreatmentType</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+MirrorProfile: &quot; &amp; Group.<b>MirrorProfile</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+MirrorProfileAxis: &quot; &amp; Group.<b>MirrorProfileAxis</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; 
+GapWithinGroup: &quot; &amp; Group.<b>GapWithinGroup</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vSegments = 
+Group.<b>Segments</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For j = 
+LBound(vSegments) To UBound(vSegments)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vSegments(j).<b>Select</b> False<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next j<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next i</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swWeldFeatData.<b>ReleaseSelectionAccess</b><br>
+&nbsp;&nbsp;&nbsp; Part.<b>ClearSelection2</b> True</p>
+<p class="APICODE">End Sub</p>
+<p>&nbsp;</p>
+
+</body>
+
+</html>

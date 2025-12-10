@@ -1,0 +1,220 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Curves that Form Outline of Bodies Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,curves">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=4205>
+<meta name=layout-width content=830>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Get Curves that Form Outline of Bodies Example (VBA)</h1>
+
+<p>This example shows how to get the curves that form the outline of a 
+ body and create a 3D sketch using those curves.</p>
+
+<pre>'---------------------------------------------------------------
+' Preconditions:
+' 1. Copy and paste <a href="#Main">Main</a> into your macro.
+' 2. Click <b>Insert &gt; Class Module</b> and copy and paste <a href="#OutlineCurve">OutlineCurve</a>
+'    in the class module.
+'    a. Click <b>View &gt; Project Explorer</b>.
+'    b. Click <b>View &gt; Properties Window</b>.
+'    c. Type <b>OutlineCurve</b> in <b>(Name)</b> in the Properties window.
+' 3. Click <b>Insert &gt; Class Module</b> and copy and paste <b><a href="#Outline">Outline</a></b> in
+'    the class module.
+'    a. Click <b>View &gt; Properties Window</b>.
+'    b. Type <b>Outline</b> in <b>(Name)</b> in the Properties window.
+' 4. Add a reference to the Microsoft Scripting Runtime (click
+'    <b>Tools &gt; References &gt; Microsoft Scripting Runtime &gt; OK</b>).
+' 5. Open a part document containing at least one body.
+'
+' Postconditions:
+' 1. Creates a 3D sketch using the outlines of the curves
+'    in the bodies.
+' 2. Examine the graphics area, FeatureManager design tree,
+'    and the graphics area.
+'----------------------------------------------------------------
+<a name="Main"></a>'Main
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swModel               As SldWorks.ModelDoc2
+    Dim swPart                As SldWorks.PartDoc
+    Dim swModeler             As SldWorks.Modeler
+    Dim swMathUtility         As SldWorks.MathUtility
+    Dim vBodies               As Variant
+    Dim swBody                As SldWorks.Body2
+    Dim aVector(2)            As Double
+    Dim vVector               As Variant
+    Dim swVector              As SldWorks.MathVector
+    Dim dTolerance            As Double
+    Dim vCurves               As Variant
+    Dim vTopologicalEntities  As Variant
+    Dim vIndices              As Variant
+    Dim lNumCurves            As Long
+    Dim oOutlineCurve         As OutlineCurve
+    Dim oOutline              As Outline
+    Dim dictOutLines          As Dictionary
+    Dim lOutLineIdx           As Long
+    Dim lIdx                  As Long
+    Dim vOutline              As Variant
+    Dim vOutlineCurve         As Variant
+    Dim swEntity              As SldWorks.Entity
+    Dim swEdge                As SldWorks.Edge
+    Dim swFace                As SldWorks.Face2
+    Dim bValue                As Boolean
+    Dim swCurve               As SldWorks.Curve
+    Dim dStartParam           As Double
+    Dim dEndParam             As Double
+    Dim bIsClosed             As Boolean
+    Dim bIsPeriodic           As Boolean
+    Dim vStartPoint           As Variant
+    Dim vEndPoint             As Variant
+    Dim vCircleParams         As Variant
+    Dim aCenterPoint(2)       As Double
+    Dim vTessPts              As Variant
+    Dim nChordTol             As Double
+    Dim nLengthTol            As Double
+    Dim swSketchSegment       As SldWorks.SketchSegment
+    Dim swSketchManager       As SldWorks.SketchManager
+    Dim aColours(5)           As Long
+    Dim swObject              As Object
+    Dim nbrTessPoints As Long</pre>
+<pre>    nChordTol = 0.00000001
+    nLengthTol = 0.0000000000001
+    aColours(0) = RGB(255, 0, 0)
+    aColours(1) = RGB(0, 255, 0)
+    aColours(2) = RGB(0, 0, 255)
+    aColours(3) = RGB(255, 255, 0)
+    aColours(4) = RGB(255, 0, 255)
+    aColours(5) = RGB(0, 255, 255)</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModeler = swApp.<b>GetModeler</b>
+    Set swMathUtility = swApp.<b>GetMathUtility</b>
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swPart = swModel
+    Set swSketchManager = swModel.<b>SketchManager</b></pre>
+<pre>    vBodies = swPart.<b>GetBodies2</b>(swBodyType_e.swSolidBody, False)</pre>
+<pre>    ' Look along the z-axis in the negative direction;
+    ' this corresponds to the Front view
+    aVector(0) = 0#
+    aVector(1) = 0#
+    aVector(2) = -1#
+    vVector = aVector
+    Set swVector = swMathUtility.<b>CreateVector</b>((vVector))</pre>
+<pre>    ' Default value
+    dTolerance = 0.00001</pre>
+<pre>    lNumCurves = swModeler.<b>GetBodyOutline2</b>((vBodies), swVector, dTolerance, False, vCurves, vTopologicalEntities, vIndices)
+    If (lNumCurves &gt; 0) Then
+        Debug.Print &quot;#curves = &quot; &amp; lNumCurves
+        Set dictOutLines = New Dictionary
+        lOutLineIdx = -1
+        For lIdx = 0 To (lNumCurves - 1)
+            If (vIndices(lIdx) &lt;&gt; lOutLineIdx) Then
+                lOutLineIdx = vIndices(lIdx)
+                Set oOutline = New Outline
+                oOutline.lIndex = lOutLineIdx
+                dictOutLines.Add lOutLineIdx, oOutline
+            End If
+            Set oOutlineCurve = New OutlineCurve
+            Set oOutlineCurve.swCurve = vCurves(lIdx)
+            Set oOutlineCurve.swEntity = vTopologicalEntities(lIdx)
+            Set swObject = vTopologicalEntities(lIdx)
+            If (TypeOf swObject Is SldWorks.Edge) Then
+                ' HERE: real edge
+                oOutlineCurve.nType = swSelEDGES
+            End If
+            Set swObject = vTopologicalEntities(lIdx)
+            If (TypeOf swObject Is SldWorks.Face2) Then
+                ' HERE: silhouette edge
+                oOutlineCurve.nType = swSelFACES
+            End If
+            oOutline.dictCurves.Add oOutlineCurve, oOutlineCurve
+        Next lIdx</pre>
+<pre>        swModel.<b>SetAddToDB</b> True
+        swModel.<b>SetDisplayWhenAdded</b> False
+        swModel.<b>Insert3DSketch2</b> False        </pre>
+<pre>        For Each vOutline In dictOutLines.Items
+            swModel.<b>ClearSelection2</b> True
+            Set oOutline = vOutline
+            Debug.Print &quot;Outline &quot; &amp; oOutline.lIndex
+            Debug.Print &quot;  #curves = &quot; &amp; oOutline.dictCurves.Count
+            For Each vOutlineCurve In oOutline.dictCurves.Items
+                Set oOutlineCurve = vOutlineCurve
+                Set swCurve = oOutlineCurve.swCurve
+                Debug.Print &quot;    type    = &quot; &amp; swCurve.<b>Identity</b>
+                Debug.Print &quot;    trimmed = &quot; &amp; swCurve.<b>IsTrimmedCurve</b>
+                Set swEntity = oOutlineCurve.swEntity
+                bValue = swEntity.<b>Select4</b>(True, Nothing)                </pre>
+<pre>                ' Draw some of the curves to show where they live in 3D space
+                bValue = swCurve.<b>GetEndParams</b>(dStartParam, dEndParam, bIsClosed, bIsPeriodic)
+                vStartPoint = swCurve.<b>Evaluate</b>(dStartParam)
+                vEndPoint = swCurve.<b>Evaluate</b>(dEndParam)
+                vTessPts = swCurve.<b>GetTessPts</b>(nChordTol, nLengthTol, (vStartPoint), (vEndPoint))
+                For lIdx = 0 To nbrTessPoints Step 3
+                    Set swSketchSegment = swSketchManager.<b>CreateLine</b>(vTessPts(lIdx + 0), vTessPts(lIdx + 1), vTessPts(lIdx + 2), vTessPts(lIdx + 3), vTessPts(lIdx + 4), vTessPts(lIdx + 5))
+                    swSketchSegment.<b>Color</b> = aColours((oOutline.lIndex Mod UBound(aColours)))
+                Next lIdx
+            Next vOutlineCurve
+        Next vOutline
+
+        swModel.<b>Insert3DSketch2</b> True
+        swModel.<b>SetAddToDB</b> False
+        swModel.<b>SetDisplayWhenAdded</b> True
+    End If</pre>
+<pre>End Sub</pre>
+<pre><a name="OutlineCurve"></a>'OutlineCurve
+Option Explicit
+Public swCurve As SldWorks.Curve
+Public nType As SwConst.swSelectType_e
+Public swEntity As SldWorks.Entity
+Private Sub Class_Initialize()
+    Set swCurve = Nothing
+    nType = SwConst.swSelectType_e.swSelNOTHING
+    Set swEntity = Nothing
+End Sub</pre>
+<pre><a name="Outline"></a>'Outline
+Option Explicit
+Public lIndex As Long
+Public dictCurves As Dictionary
+Private Sub Class_Initialize()
+    lIndex = -1
+    Set dictCurves = New Dictionary
+End Sub</pre>
+
+</body>
+
+</html>

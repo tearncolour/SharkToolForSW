@@ -1,0 +1,155 @@
+<html>
+
+<head>
+<title>Change Dimension Tolerance in a Configuration Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,configurations">
+<meta name=MS-HKWD content="VB.NET examples,dimensions">
+<meta name=MS-HKWD content="VB.NET examples,tolerances">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Change Dimension Tolerance in a Configuration Example (VB.NET)</h1>
+<p>This example shows how to change the dimension tolerance in one 
+configuration in a multi-configuration part.</p>
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><span style="color:green;">'--------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Ensure&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;document&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Run&nbsp;the&nbsp;macro.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;specified&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Selects&nbsp;a&nbsp;sketch&nbsp;and&nbsp;a&nbsp;dimension</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;in&nbsp;that&nbsp;sketch.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Changes&nbsp;the&nbsp;tolerance&nbsp;values&nbsp;of&nbsp;the&nbsp;selected</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;dimension&nbsp;in&nbsp;the&nbsp;sketch&nbsp;and&nbsp;prints&nbsp;the&nbsp;values</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Changes&nbsp;configuration.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Selects&nbsp;the&nbsp;same&nbsp;sketch&nbsp;and&nbsp;dimension</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;in&nbsp;the&nbsp;sketch&nbsp;in&nbsp;this&nbsp;configuration.</span>
+<span style="color:green;">'&nbsp;6.&nbsp;Prints&nbsp;the&nbsp;tolerance&nbsp;values&nbsp;of&nbsp;the&nbsp;dimension</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;to&nbsp;verify&nbsp;that</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;the&nbsp;tolerance&nbsp;values&nbsp;of&nbsp;the&nbsp;sketch&nbsp;in&nbsp;the</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;different&nbsp;configurations&nbsp;are&nbsp;different.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;<b>NOTE</b>:&nbsp;Because&nbsp;this&nbsp;part&nbsp;document&nbsp;is&nbsp;used&nbsp;elsewhere,</span>
+<span style="color:green;">'&nbsp;do&nbsp;not&nbsp;save&nbsp;any&nbsp;changes&nbsp;when&nbsp;closing&nbsp;it.</span>
+<span style="color:green;">'---------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swConfigurationMgr&nbsp;<span style="color:blue;">As</span>&nbsp;ConfigurationManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swConfiguration&nbsp;<span style="color:blue;">As</span>&nbsp;Configuration
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDisplayDimension&nbsp;<span style="color:blue;">As</span>&nbsp;DisplayDimension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDimension&nbsp;<span style="color:blue;">As</span>&nbsp;Dimension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDimensionTolerance&nbsp;<span style="color:blue;">As</span>&nbsp;DimensionTolerance
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Open&nbsp;part&nbsp;document&nbsp;with&nbsp;multiple&nbsp;configurations</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\PDMWorks\speaker_frame.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;name&nbsp;of&nbsp;active&nbsp;configuration</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfigurationMgr&nbsp;=&nbsp;swModel.<b>ConfigurationManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfiguration&nbsp;=&nbsp;swConfigurationMgr.<b>ActiveConfiguration</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Configuration&nbsp;name:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swConfiguration.<b>Name</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Select&nbsp;sketch</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Put&nbsp;the&nbsp;sketch&nbsp;in&nbsp;edit&nbsp;mode</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Select&nbsp;a&nbsp;dimension&nbsp;in&nbsp;the&nbsp;sketch</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Sketch8&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditSketch</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;D4@Sketch8@speaker_frame.SLDPRT&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;DIMENSION&quot;</span>,&nbsp;-0.00430195952926557,&nbsp;0.0321813003735837,&nbsp;-0.0155776956607312,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;the&nbsp;selection</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayDimension&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;0)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;If&nbsp;selection&nbsp;is&nbsp;not&nbsp;a&nbsp;display&nbsp;dimension,&nbsp;then&nbsp;exit</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;swSelMgr.<b>GetSelectedObjectType3</b>(1,&nbsp;-1)&nbsp;&lt;&gt;&nbsp;swSelectType_e.swSelDIMENSIONS&nbsp;<span style="color:blue;">Then</span>&nbsp;<span style="color:blue;">Exit&nbsp;Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Selection&nbsp;is&nbsp;a&nbsp;dimension,&nbsp;so&nbsp;get&nbsp;the&nbsp;dimension&nbsp;tolerance</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimension&nbsp;=&nbsp;swDisplayDimension.<b>GetDimension2</b>(0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionTolerance&nbsp;=&nbsp;swDimension.<b>Tolerance</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Set&nbsp;type&nbsp;of&nbsp;tolerance&nbsp;type</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionTolerance.<b>Type</b>&nbsp;=&nbsp;swTolType_e.swTolBASIC
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Set&nbsp;new&nbsp;dimension&nbsp;tolerance&nbsp;values</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swDimensionTolerance.<b>SetValues2</b>(0.01,&nbsp;0.015,&nbsp;swSetValueInConfiguration_e.swSetValue_InThisConfiguration,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Minimum&nbsp;dimension&nbsp;tolerance:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDimensionTolerance.<b>GetMinValue</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Maximum&nbsp;dimension&nbsp;tolerance:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDimensionTolerance.<b>GetMaxValue</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Exit&nbsp;sketch&nbsp;edit&nbsp;mode</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>InsertSketch2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Switch&nbsp;configuration&nbsp;to&nbsp;verify</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;that&nbsp;dimension&nbsp;tolerance&nbsp;changed</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;in&nbsp;other&nbsp;configuration&nbsp;only</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModel.<b>ShowConfiguration2</b>(<span style="color:#a31515;">&quot;Square&nbsp;Cutout&nbsp;Glueable&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Square&nbsp;Cutout&nbsp;Glueable&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;CONFIGURATIONS&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;name&nbsp;of&nbsp;configuration</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swConfiguration&nbsp;=&nbsp;swConfigurationMgr.<b>ActiveConfiguration</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Configuration&nbsp;name:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swConfiguration.<b>Name</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Select&nbsp;sketch</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Select&nbsp;same&nbsp;dimension&nbsp;in&nbsp;sketch&nbsp;as&nbsp;selected</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;in&nbsp;previously&nbsp;active&nbsp;configuration</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Put&nbsp;the&nbsp;sketch&nbsp;in&nbsp;edit&nbsp;mode</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Sketch8&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditSketch</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;D4@Sketch8@speaker_frame.SLDPRT&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;DIMENSION&quot;</span>,&nbsp;-0.00471220094479408,&nbsp;0.032305394835097,&nbsp;-0.0153009205936774,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;the&nbsp;selection</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayDimension&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;0)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;If&nbsp;selection&nbsp;is&nbsp;not&nbsp;a&nbsp;display&nbsp;dimension,&nbsp;then&nbsp;exit</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;swSelMgr.<b>GetSelectedObjectType3</b>(1,&nbsp;-1)&nbsp;&lt;&gt;&nbsp;swSelectType_e.swSelDIMENSIONS&nbsp;<span style="color:blue;">Then</span>&nbsp;<span style="color:blue;">Exit&nbsp;Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Selection&nbsp;is&nbsp;a&nbsp;dimension,&nbsp;so&nbsp;get&nbsp;and&nbsp;print&nbsp;the&nbsp;dimension&nbsp;tolerance</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimension&nbsp;=&nbsp;swDisplayDimension.<b>GetDimension2</b>(0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionTolerance&nbsp;=&nbsp;swDimension.<b>Tolerance</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Minimum&nbsp;dimension&nbsp;tolerance:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDimensionTolerance.<b>GetMinValue</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Maximum&nbsp;dimension&nbsp;tolerance:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDimensionTolerance.<b>GetMaxValue</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Exit&nbsp;sketch&nbsp;edit&nbsp;mode</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>InsertSketch2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span> 
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

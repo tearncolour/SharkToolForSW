@@ -1,0 +1,149 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Delete Faces Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3444>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+ <META NAME="MS-HKWD" CONTENT="VBA examples,faces">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Delete Faces Example (VBA)</h1>
+
+<p>This example shows how to delete faces. </p>
+
+<p><span style="font-weight: bold;">NOTE:</span> You can only delete faces 
+ from a temporary body.</p>
+<pre>'------------------------------------------------
+' Preconditions:
+' 1. Open <i>public_documents</i><b>\samples\tutorial\api\block.sldprt</b>.
+' 2. Select a cylindrical face.
+'
+' Postconditions:
+' 1. Creates a new part, which contains the same body as
+'    the original part but with the selected face removed.
+' 2. Examine the graphics area.
+'
+' NOTE: It might not be possible to remove the
+' selected face. If this is the case, then
+' the new body is the same as the original
+' body.
+'-------------------------------------------------
+Option Explicit</pre>
+<pre>Function GetFacesWithAttribute(swApp As SldWorks.SldWorks, swBody As SldWorks.Body2, swAttDef As SldWorks.AttributeDef) As Variant
+    Dim swFace As SldWorks.Face2
+    Dim swEnt As SldWorks.Entity
+    Dim swAttCopy As SldWorks.Attribute
+    Dim swFaceArr() As SldWorks.Face2</pre>
+<pre>    ' Search for faces on temporary body based on copied attributes
+    ReDim swFaceArr(0)
+    Set swFace = swBody.<b>GetFirstFace</b>
+    Do While Not Nothing Is swFace
+        Set swEnt = swFace
+        Set swAttCopy = Nothing
+        ' Only one instance of attribute on a face should exist
+        Set swAttCopy = swEnt.<b>FindAttribute</b>(swAttDef, 0)
+        If Not swAttCopy Is Nothing Then
+            Set swFaceArr(UBound(swFaceArr)) = swFace
+            ReDim Preserve swFaceArr(UBound(swFaceArr) + 1)
+        End If
+        Set swFace = swFace.<b>GetNextFace</b>
+    Loop
+    ReDim Preserve swFaceArr(UBound(swFaceArr) - 1)
+    GetFacesWithAttribute = swFaceArr
+End Function</pre>
+<pre>Sub main()</pre>
+<pre>    '   1 = invisible
+    '   0 = visible
+    Const CreateVisible As Long = 0</pre>
+<pre>    Const sAttDefName As String = &quot;TDE_temp_attrib&quot;
+    Const sAttRootName As String = &quot;TDE&quot;</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swAttDef As SldWorks.AttributeDef
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swPart As SldWorks.PartDoc
+    Dim swBody As SldWorks.Body2
+    Dim swCopyBody As SldWorks.Body2
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim nSelCount As Long
+    Dim swFace As SldWorks.Face2
+    Dim swEnt As SldWorks.Entity
+    Dim swAtt() As SldWorks.Attribute
+    Dim vFaceArr As Variant
+    Dim swNewPart As SldWorks.PartDoc
+    Dim swNewModel As SldWorks.ModelDoc2
+    Dim swFeat As SldWorks.Feature
+    Dim vBodies As Variant
+    Dim i As Long
+    Dim bLocChk As Boolean
+    Dim nRetval As Long
+    Dim bRet As Boolean</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swAttDef = swApp.<b>DefineAttribute</b>(sAttDefName)
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swPart = swModel</pre>
+<pre>    bRet = swAttDef.<b>Register</b></pre>
+<pre>    ' Add attribute to selected faces
+    nSelCount = swSelMgr.<b>GetSelectedObjectCount</b>
+    ReDim swAtt(nSelCount)
+    For i = 1 To nSelCount
+        Set swFace = swSelMgr.<b>GetSelectedObject6</b>(i, -1)
+        Set swEnt = swFace
+        Set swAtt(i - 1) = swAttDef.<b>CreateInstance5</b>(swModel, swEnt, sAttRootName &amp; i, CreateVisible, swAllConfiguration)
+    Next i</pre>
+<pre>    vBodies = swPart.<b>GetBodies2</b>(swAllBodies, True)
+    Set swBody = vBodies(0)
+    Set swCopyBody = swBody.<b>Copy</b></pre>
+<pre>    ' Remove attribute from faces
+    For i = 1 To nSelCount
+        bRet = swAtt(i - 1).<b>Delete</b>(True)
+    Next i</pre>
+<pre>    vFaceArr = GetFacesWithAttribute(swApp, swCopyBody, swAttDef)</pre>
+<pre>    ' Can only delete faces from a temporary body
+    Debug.Assert swCopyBody.<b>IsTemporaryBody</b></pre>
+<pre>    ' Should not assert because it may fail to delete
+    ' faces or fail local check or both
+    bRet = swCopyBody.<b>DeleteFaces3</b>(vFaceArr, 2, False, bLocChk)    
+</pre>
+<pre>    ' Should not assert because body may be a surface body
+    nRetval = swCopyBody.<b>Check2</b></pre>
+<pre>    Set swNewPart = swApp.NewPart
+    Set swNewModel = swNewPart
+    Set swFeat = swNewPart.<b>CreateFeatureFromBody3</b>(swCopyBody, False, swCreateFeatureBodyCheck)</pre>
+<pre>End Sub
+</pre>
+
+</body>
+
+</html>

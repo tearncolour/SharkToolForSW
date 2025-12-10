@@ -1,0 +1,172 @@
+<html>
+
+<head>
+<title>Insert BOM Table and Stacked Balloon Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,stacked balloons">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert BOM Table and Stacked Balloon Example (C#)</h1>
+<p>This example shows how to insert a bill of materials table and a stacked balloon 
+annotation in 
+ an assembly document.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	//--------------------------------------------------------------------------------<br>
+	// Preconditions: Open <i>public_documents</i><b>\samples\tutorial\floxpress\ball valve\ball_valve.sldasm.</b><br>
+	//<br>
+	// Postconditions:<br>
+	// 1. Inserts a parts-only BOM table.<br>
+	// 2. Inserts a stacked balloon annotation.<br>
+	// 3. Inspect the Immediate Window for the name of the configuration used to 
+	create<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;the table and the name of the annotation.<br>
+	//<br>
+	// NOTE: Because this document is used do not save any changes.<br>
+	//-------------------------------------------------<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	Microsoft.VisualBasic;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Collections;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Collections.Generic;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Data;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Diagnostics;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Runtime.InteropServices;<br>
+	</span><span style="color:Blue">namespace</span><span style="color:Black"> 
+	StackedBalloon_CSharp.csproj<br>
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">partial</span><span style="color:Black">
+	</span><span style="color:Blue">class</span><span style="color:Black">
+	</span><span style="color:#2b91af">SolidWorksMacro<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> Main()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black"> 
+	swModel = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDocExtension</span><span style="color:Black"> 
+	swModelDocExt = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">ModelDocExtension</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">BomTableAnnotation</span><span style="color:Black"> 
+	swBOMAnnotation = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">BomTableAnnotation</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">BomFeature</span><span style="color:Black"> 
+	swBOMFeature = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">BomFeature</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Note</span><span style="color:Black"> 
+	swNote = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">Note</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">StackedBalloonOptions</span><span style="color:Black"> 
+	StackedBalloonParams = </span><span style="color:Blue">default</span><span style="color:Black">(</span><span style="color:#2b91af">StackedBalloonOptions</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">bool</span><span style="color:Black"> 
+	boolstatus = </span><span style="color:Blue">false</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	BomType = 0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	Configuration = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black"> 
+	TemplateName = </span><span style="color:Blue">null</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = (</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">)swApp.<b>ActiveDoc</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt = swModel.<b>Extension</b>;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Insert BOM table<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TemplateName = </span>
+	<span style="color:#a31515">&quot;C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\lang\\english\\bom-standard.sldbomtbt&quot;</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomType = (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swBomType_e</span><span style="color:Black">.swBomType_PartsOnly;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Configuration = </span><span style="color:#a31515">&quot;Default&quot;</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBOMAnnotation = swModelDocExt.<b>InsertBomTable2</b>(TemplateName, 
+	40, 30, BomType, Configuration, </span><span style="color:Blue">false</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBOMFeature = swBOMAnnotation.<b>BomFeature</b>;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Print the name of the 
+	configuration used for the BOM table<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Name 
+	of configuration used for BOM table: &quot;</span><span style="color:Black"> + 
+	swBOMFeature.<b>Configuration</b>);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Select a face on which to 
+	attach the stacked balloons<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swModelDocExt.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;FACE&quot;</span><span style="color:Black">, 
+	-0.02268677135385, 0.0082159933431, 0.01133567172189, </span>
+	<span style="color:Blue">false</span><span style="color:Black">, 0, </span>
+	<span style="color:Blue">null</span><span style="color:Black">, 0);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams = swModel.Extension.<b>CreateStackedBalloonOptions</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>BalloonsPerLine</b> = 10;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>StackDirection</b> = (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swStackedBalloonDirection_e</span><span style="color:Black">.swStackedBalloonDir_Right;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>Style</b> = (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swBalloonStyle_e</span><span style="color:Black">.swBS_Circular;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>Size</b> = (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swBalloonFit_e</span><span style="color:Black">.swBF_5Chars;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>UpperTextContent</b> = (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swBalloonTextContent_e</span><span style="color:Black">.swBalloonTextItemNumber;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>ShowQuantity</b> = </span>
+	<span style="color:Blue">true</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>QuantityPlacement</b> = (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swBalloonQuantityPlacement_e</span><span style="color:Black">.swBalloonQuantityPlacement_Top;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>QuantityDenotationText</b> = </span>
+	<span style="color:#a31515">&quot;PLACES&quot;</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>QuantityOverride</b> = </span>
+	<span style="color:Blue">false</span><span style="color:Black">;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>ItemNumberStart</b> = 1;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>ItemNumberIncrement</b> = 1;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StackedBalloonParams.<b>ItemOrder</b> = (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swBalloonItemNumbersOrder_e</span><span style="color:Black">.swBalloonItemNumbers_DoNotChangeItemNumbers;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swNote = swModel.Extension.<b>InsertStackedBalloon2</b>(StackedBalloonParams);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swModel.Extension.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;FACE&quot;</span><span style="color:Black">, 
+	-0.01632926202666, 0.05356671136803, 0.008058200827065, </span>
+	<span style="color:Blue">false</span><span style="color:Black">, 0, </span>
+	<span style="color:Blue">null</span><span style="color:Black">, 0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swModel.Extension.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;FACE&quot;</span><span style="color:Black">, 
+	0.02199792044968, 0.00911087426303, 0.01062976811426, </span>
+	<span style="color:Blue">false</span><span style="color:Black">, 0, </span>
+	<span style="color:Blue">null</span><span style="color:Black">, 0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swModel.Extension.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;FACE&quot;</span><span style="color:Black">, 
+	-0.01412287126243, 0.003109265420704, -0.003984592306182, </span>
+	<span style="color:Blue">false</span><span style="color:Black">, 0, </span>
+	<span style="color:Blue">null</span><span style="color:Black">, 0);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ViewZoomtofit2</b>();<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Get whether balloon is a 
+	stacked balloon;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// 
+	If so, print the name of the balloon<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	(swNote.<b>IsStackedBalloon</b>())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Name 
+	of stacked balloons note: &quot;</span><span style="color:Black"> + swNote.<b>GetName</b>());<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ForceRebuild3</b>(</span><span style="color:Blue">true</span><span style="color:Black">);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:#2b91af">SldWorks</span><span style="color:Black"> 
+	swApp;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	}</span>
+</div>
+
+</body>
+
+</html>

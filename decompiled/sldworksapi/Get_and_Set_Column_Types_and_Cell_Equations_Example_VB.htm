@@ -1,0 +1,299 @@
+<html>
+<head>
+<title>Get and Set BOM Column Types and Cell Equations Example (VBA)</title>
+<meta content="en-us" http-equiv="Content-Language" />
+<meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
+<meta content="VBA examples,BOM tables" name="MS-HKWD" />
+<link href="ApiHelp.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h1 style="font-weight:normal;font-size:7.5pt">SOLIDWORKS API Help</h1>
+<h1>Get and Set BOM Column Types and Cell Equations Example (VBA)</h1>
+<p>This example shows how to get and set BOM table column types and cell equations.</p>
+<p class="APICODE">'----------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Ensure the specified drawing and BOM template exist.<br>
+' 2. Open the Immediate window.<br>
+'<br>
+' Postconditions:<br>
+' 1. Opens a document and inserts a BOM table annotation.<br>
+' 2. Inserts three rows at the bottom of the table.<br>
+' 3. Populates the first three rows of the Description column with<br>
+'&nbsp;&nbsp;&nbsp; 10, 20, and 30, respectively.<br>
+' 4. Inserts multiple columns of various types.<br>
+' 5. Sets equation, SUM(C1:C3), in cell(4,2), gets it, and evaluates it.<br>
+' 6. Examine the BOM table and the Immediate window.<br>
+'<br>
+' NOTE: Because the model is used elsewhere, do not save changes.<br>
+'---------------------------------------------------------------------------<br>
+Option Explicit</p>
+<p class="APICODE">Dim swApp As SldWorks.SldWorks<br>
+Dim swModel As SldWorks.ModelDoc2<br>
+Dim boolstatus As Boolean<br>
+Dim SelMgr As SldWorks.SelectionMgr<br>
+Dim theTableAnnotation As SldWorks.TableAnnotation<br>
+Dim SelObjType As Long<br>
+Dim TableAnnotationType As Long<br>
+Dim PropData As Variant<br>
+Dim longstatus As Long, longwarnings As Long<br>
+&nbsp;</p>
+<p class="APICODE">Sub main()<br>
+&nbsp;&nbsp;&nbsp; Dim property_string As String<br>
+&nbsp;&nbsp;&nbsp; Dim cellequation As String<br>
+&nbsp;&nbsp;&nbsp; Dim solvedval As String<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>OpenDoc6</b>(&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 
+2019\samples\tutorial\advdrawings\foodprocessor.slddrw&quot;, 3, 0, &quot;&quot;, longstatus, 
+longwarnings)<br>
+&nbsp;&nbsp;&nbsp; Dim swDrawing As SldWorks.DrawingDoc<br>
+&nbsp;&nbsp;&nbsp; Set swDrawing = swModel<br>
+&nbsp;&nbsp;&nbsp; swApp.<b>ActivateDoc2</b> &quot;foodprocessor - Sheet1&quot;, False, 
+longstatus<br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModel.<b>ActivateView</b>(&quot;Drawing View1&quot;)<br>
+&nbsp;&nbsp;&nbsp; Dim swActiveView As SldWorks.View<br>
+&nbsp;&nbsp;&nbsp; Set swActiveView = swModel.<b>ActiveDrawingView</b><br>
+&nbsp;&nbsp;&nbsp; Dim swBOMTableAnno As SldWorks.BomTableAnnotation<br>
+&nbsp;&nbsp;&nbsp; Set swBOMTableAnno = swActiveView.<b>InsertBomTable4</b>(False, 
+0.111517224639408, 0.36564824, 
+swBOMConfigurationAnchorType_e.swBOMConfigurationAnchor_TopLeft, 
+swBomType_e.swBomType_PartsOnly, &quot;Default&quot;, &quot;C:\Program Files\SOLIDWORKS 
+Corp\SOLIDWORKS\lang\english\bom-standard.sldbomtbt&quot;, False, 0, False)<br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModel.<b>EditRebuild3</b>()<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set SelMgr = swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;DetailItem174@Sheet1&quot;, 
+&quot;ANNOTATIONTABLES&quot;, 0.196194597542634, 0.368489762580645, 0, False, 0, Nothing, 
+0)<br>
+&nbsp;&nbsp;&nbsp; SelObjType = SelMgr.<b>GetSelectedObjectType3</b>(1, -1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If SelObjType &lt;&gt; swSelANNOTATIONTABLES 
+Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MsgBox &quot;Select a BOM table in the 
+drawing before running this example.&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set theTableAnnotation = SelMgr.<b>GetSelectedObject6</b>(1, 
+-1)<br>
+&nbsp;&nbsp;&nbsp; TableAnnotationType = theTableAnnotation.<b>Type</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If TableAnnotationType &lt;&gt; 
+swTableAnnotation_BillOfMaterials Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MsgBox &quot;Select a BOM table in the 
+drawing before running this example.&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot; &quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot; --------------------------------&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Table BEFORE inserting a column...&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot; &quot;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Display the table before inserting a 
+column<br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; DisplayTableColumnProps theTableAnnotation<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Insert Custom Property column<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertColumn2</b>(swTableItemInsertPosition_Last, 
+0, &quot;New Col Custom Property&quot;, swInsertColumn_DefaultWidth)<br>
+&nbsp;&nbsp;&nbsp; property_string = &quot;SW-Comments(Comments)&quot;<br>
+&nbsp;&nbsp;&nbsp; PropData = property_string<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetColumnType3</b>(theTableAnnotation.ColumnCount 
+- 1, swBomTableColumnType_CustomProperty, True, PropData)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Insert Unit Of Measure column<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertColumn2</b>(swTableItemInsertPosition_Last, 
+0, &quot;New Col Unit of Measure&quot;, swInsertColumn_DefaultWidth)<br>
+&nbsp;&nbsp;&nbsp; property_string = &quot;SW-Title(Title)&quot;<br>
+&nbsp;&nbsp;&nbsp; PropData = property_string<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetColumnType3</b>(theTableAnnotation.ColumnCount 
+- 1, swBomTableColumnType_UnitOfMeasure, True, PropData)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Insert Equation column<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertColumn2</b>(swTableItemInsertPosition_Last, 
+0, &quot;New Col Equation&quot;, swInsertColumn_DefaultWidth)<br>
+&nbsp;&nbsp;&nbsp; property_string = &quot;=2+2&quot;<br>
+&nbsp;&nbsp;&nbsp; PropData = property_string<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetColumnType3</b>(theTableAnnotation.ColumnCount 
+- 1, swBomTableColumnType_Equation, True, PropData)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Insert Component Reference column<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertColumn2</b>(swTableItemInsertPosition_Last, 
+0, &quot;New Col Component Ref&quot;, swInsertColumn_DefaultWidth)<br>
+&nbsp;&nbsp;&nbsp; Set PropData = Nothing<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetColumnType3</b>(theTableAnnotation.ColumnCount 
+- 1, swBomTableColumnType_ComponentReference, True, PropData)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Insert Toolbox Property column<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertColumn2</b>(swTableItemInsertPosition_Last, 
+0, &quot;New Col toolbox&quot;, swInsertColumn_DefaultWidth)<br>
+&nbsp;&nbsp;&nbsp; PropData = 
+swToolBoxPropertyName_e.swToolBoxPropertyName_Specification<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetColumnType3</b>(theTableAnnotation.ColumnCount 
+- 1, swBomTableColumnType_ToolboxProperty, True, PropData)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Insert Cut List Properties column -- 
+only applicable for sheet metal parts<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertColumn2</b>(swTableItemInsertPosition_Last, 
+0, &quot;New Col Cut List property&quot;, swInsertColumn_DefaultWidth)<br>
+&nbsp;&nbsp;&nbsp; property_string = &quot;Bends&quot;<br>
+&nbsp;&nbsp;&nbsp; PropData = property_string<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetColumnType3</b>(theTableAnnotation.ColumnCount 
+- 1, swBomTableColumnType_CutListProperties, True, PropData)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Insert Item Number column<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertColumn2</b>(swTableItemInsertPosition_Last, 
+0, &quot;New Col Item Number&quot;, swInsertColumn_DefaultWidth)<br>
+&nbsp;&nbsp;&nbsp; PropData = Array(2, 3, True, False)<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetColumnType3</b>(theTableAnnotation.ColumnCount 
+- 1, swBomTableColumnType_ItemNumber, True, PropData)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Insert Part Number column<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertColumn2</b>(swTableItemInsertPosition_Last, 
+0, &quot;New Col Part Number&quot;, swInsertColumn_DefaultWidth)<br>
+&nbsp;&nbsp;&nbsp; PropData = True ' use title summary<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetColumnType3</b>(theTableAnnotation.ColumnCount 
+- 1, swBomTableColumnType_PartNumber, True, PropData)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertRow</b>(4, 
+0)<br>
+&nbsp;&nbsp;&nbsp; theTableAnnotation.<b>Text2</b>(1, 2, True) = 10<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertRow</b>(4, 0)<br>
+&nbsp;&nbsp;&nbsp; theTableAnnotation.<b>Text2</b>(2, 2, True) = 20<br>
+&nbsp;&nbsp;&nbsp; boolstatus = theTableAnnotation.<b>InsertRow</b>(4, 0)<br>
+&nbsp;&nbsp;&nbsp; theTableAnnotation.<b>Text2</b>(3, 2, True) = 30<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot; &quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot; --------------------------------&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Table AFTER inserting a column...&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot; &quot;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Display table after inserting a column<br>
+&nbsp;&nbsp;&nbsp; DisplayTableColumnProps theTableAnnotation<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Set a cell equation<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>SetCellEquation</b>(4, 2, 
+True, &quot;=SUM(C2:C4)&quot;)<br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModel.EditRebuild3()<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get the cell equation<br>
+&nbsp;&nbsp;&nbsp; cellequation = theTableAnnotation.<b>GetCellEquation</b>(4, 
+2, True, solvedval, longstatus)<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot; &quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Equation set in cell(4,2): &quot; &amp; cellequation<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Evaluate the cell equation<br>
+&nbsp;&nbsp;&nbsp; longstatus = theTableAnnotation.<b>EvaluateCellEquation</b>(4, 
+2, True, cellequation, solvedval)<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Solved value: &quot; &amp; solvedval<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;<br>
+End Sub<br>
+Sub DisplayTableColumnProps(theTableAnnotation As TableAnnotation)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim ColCount As Long<br>
+&nbsp;&nbsp;&nbsp; Dim i As Long<br>
+&nbsp;&nbsp;&nbsp; Dim ColType As swTableColumnTypes_e<br>
+&nbsp;&nbsp;&nbsp; Dim ColTitle As String<br>
+&nbsp;&nbsp;&nbsp; Dim status As Long<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim property_string As String<br>
+&nbsp;&nbsp;&nbsp; Dim toolbox_property As Long<br>
+&nbsp;&nbsp;&nbsp; Dim start As Long<br>
+&nbsp;&nbsp;&nbsp; Dim increment As Long<br>
+&nbsp;&nbsp;&nbsp; Dim order_balloons As Boolean<br>
+&nbsp;&nbsp;&nbsp; Dim BOM_items As Boolean<br>
+&nbsp;&nbsp;&nbsp; Dim titlesummary As Boolean<br>
+&nbsp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Col#&quot;; vbTab; &quot;Type&quot;; vbTab; 
+&quot;Title&quot;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ColCount = theTableAnnotation.<b>ColumnCount</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; For i = 0 To ColCount - 1<br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ColType = 
+theTableAnnotation.<b>GetColumnType3</b>(i, True, PropData, status)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ColTitle = theTableAnnotation.<b>GetColumnTitle2</b>(i, 
+True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print i; 
+vbTab; ColType; vbTab; ColTitle; vbTab<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If ColType = 
+swTableColumnTypes_e.swBomTableColumnType_CustomProperty Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+property_string = PropData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Property Name: &quot; &amp; property_string<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf ColType = 
+swTableColumnTypes_e.swBomTableColumnType_UnitOfMeasure Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+property_string = PropData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Property Name: &quot; &amp; property_string<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf ColType = 
+swTableColumnTypes_e.swBomTableColumnType_Equation Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+property_string = PropData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Equation&nbsp;&nbsp;&nbsp;&nbsp; : &quot; &amp; property_string<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf ColType = 
+swTableColumnTypes_e.swBomTableColumnType_ComponentReference Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' PropData 
+should be Nothing since a<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' component 
+reference column does not contain additional property data<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If PropData 
+Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+NULL Property data&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf ColType = 
+swTableColumnTypes_e.swBomTableColumnType_ToolboxProperty Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+toolbox_property = PropData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Toolbox Property: &quot; &amp; toolbox_property<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf ColType = 
+swTableColumnTypes_e.swBomTableColumnType_CutListProperties Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+property_string = PropData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Cut List Property: &quot; &amp; property_string<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf ColType = 
+swTableColumnTypes_e.swBomTableColumnType_ItemNumber Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; start = 
+PropData(0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; increment = 
+PropData(1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+order_balloons = PropData(2)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; BOM_items = 
+PropData(3)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Start&nbsp;&nbsp;&nbsp; : &quot; &amp; start<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Increment: &quot; &amp; increment<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Order balloons and Bill of Materials to follow assembly order: &quot; &amp; 
+order_balloons<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Do not change Bill of Materials item numbers: &quot; &amp; BOM_items<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf ColType = 
+swTableColumnTypes_e.swBomTableColumnType_PartNumber Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; titlesummary 
+= PropData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Use title summary: &quot; &amp; titlesummary<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Next i<br>
+End Sub</p>
+<p style="font-family:'Courier New', Courier, monospace; font-size:10pt">
+&nbsp;</p>
+</body>
+</html>

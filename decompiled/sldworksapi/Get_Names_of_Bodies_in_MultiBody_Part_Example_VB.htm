@@ -1,0 +1,170 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Names of Bodies in Multibody Part Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,bodies">
+<meta name=MS-HKWD content="VBA examples,multibody parts">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3425>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Get Names of Bodies in Multibody Part Example (VBA)</h1>
+
+<p>This example shows how to get the names of the bodies in each multibody part 
+in an assembly.</p>
+<pre>'-------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified files exist:
+'    * assembly document template
+'    * both multibody part documents
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens both multibody parts.
+' 2. Opens a new assembly document.
+' 3. Adds the open multibody parts as components
+'    to the assembly.
+' 4. Traverses the components in the assembly and gets
+'    and prints the names of the bodies in each
+'    component.
+' 5. Examine the Immediate window.
+'
+' NOTE: Because the multibody parts are used
+' elsewhere, do not save changes.
+'--------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swAssembly As SldWorks.AssemblyDoc
+Dim swComponent1 As SldWorks.Component2
+Dim swComponent2 As SldWorks.Component2
+Dim swPart As SldWorks.PartDoc
+Dim multibodyPart1 As String
+Dim multibodyPart2 As String
+Dim errors As Long
+Dim warnings As Long
+Dim vBody As Variant
+Dim i As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Open the multibody parts, new assembly document, and add
+    'the multibody parts as components to the assembly
+    multibodyPart1 = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\multibody\multi_bridge.sldprt&quot;
+    multibodyPart2 = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\multibody\multi_inter.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(multibodyPart1, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModel = swApp.<b>OpenDoc6</b>(multibodyPart2, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SolidWorks 2014\templates\assembly.asmdot&quot;, swDwgPaperSizes_e.swDwgPaperA0size, 0, 0)
+    Set swAssembly = swModel
+    Set swComponent1 = swAssembly.<b>AddComponent5</b>(multibodyPart1, swAddComponentConfigOptions_e.swAddComponentConfigOptions_CurrentSelectedConfig, &quot;&quot;, False, &quot;&quot;, -1.11307660915827E-04, 5.87355354468855E-05, -1)
+    Set swComponent2 = swAssembly.<b>AddComponent5</b>(multibodyPart2, swAddComponentConfigOptions_e.swAddComponentConfigOptions_CurrentSelectedConfig, &quot;&quot;, False, &quot;&quot;, -0.218915538687725, 0.115372315514833, 4.34772581793368E-02)
+    swModel.<b>ViewZoomtofit2</b></pre>
+<pre>    Debug.Print &quot;File = &quot; &amp; swModel.<b>GetPathName</b>    </pre>
+<pre>    'Process assembly
+    Select Case swModel.<b>GetType</b>
+        Case swDocPART
+            Set swPart = swModel
+            'Solid bodies
+            vBody = swPart.<b>GetBodies2</b>(swSolidBody, True)
+            SelectBodies swApp, swModel, vBody, &quot;&quot;
+            'Surface bodies
+            vBody = swPart.<b>GetBodies2</b>(swSheetBody, True)
+            SelectBodies swApp, swModel, vBody, &quot;&quot;
+            'Assembly
+        Case swDocASSEMBLY
+            ProcessAssembly swApp, swModel
+        Case Else
+            Exit Sub
+    End Select    </pre>
+<pre>End Sub</pre>
+<pre>Sub SelectBodies(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, vBody As Variant, sPadStr As String)</pre>
+<pre>    Dim swModExt As SldWorks.ModelDocExtension
+    Dim swBody As SldWorks.Body2
+    Dim sBodySelStr  As String
+    Dim sBodyTypeSelStr As String
+    Dim i As Long
+    Dim status As Boolean</pre>
+<pre>    If IsEmpty(vBody) Then Exit Sub
+    Set swModExt = swModel.<b>Extension</b></pre>
+<pre>    For i = 0 To UBound(vBody)
+        Set swBody = vBody(i)
+        sBodySelStr = swBody.<b>GetSelectionId</b>
+        Debug.Print &quot;  &quot; &amp; sPadStr &amp; sBodySelStr
+        Select Case swBody.<b>GetType</b>
+            Case swSolidBody
+                sBodyTypeSelStr = &quot;SOLIDBODY&quot;
+            Case swSheetBody
+                sBodyTypeSelStr = &quot;SURFACEBODY&quot;
+            Case Else
+                Debug.Assert False
+        End Select
+        status = swModExt.<b>SelectByID2</b>(sBodySelStr, sBodyTypeSelStr, 0#, 0#, 0#, True, 0, Nothing, swSelectOptionDefault)
+    Next i</pre>
+<pre>End Sub</pre>
+<pre>Sub ProcessAssembly(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2)</pre>
+<pre>    Dim swConfigMgr As SldWorks.ConfigurationManager
+    Dim swConf As SldWorks.Configuration
+    Dim swRootComp As SldWorks.Component2</pre>
+<pre>    Set swConfigMgr = swModel.<b>ConfigurationManager</b>
+    Set swConf = swConfigMgr.<b>ActiveConfiguration</b>
+    Set swRootComp = swConf.<b>GetRootComponent</b>
+    ProcessComponent swApp, swModel, swRootComp, 1</pre>
+<pre>End Sub</pre>
+<pre>Sub ProcessComponent(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swComp As SldWorks.Component2, nLevel As Long)</pre>
+<pre>    Dim vChildComp As Variant
+    Dim swChildComp As SldWorks.Component2
+    Dim sPadStr As String
+    Dim vBody As Variant
+    Dim i  As Long</pre>
+<pre>    For i = 0 To nLevel - 1
+        sPadStr = sPadStr + &quot;  &quot;
+    Next i</pre>
+<pre>    Debug.Print sPadStr &amp; swComp.<b>Name2</b> &amp; &quot; &lt;&quot; &amp; swComp.<b>ReferencedConfiguration</b> &amp; &quot;&gt;&quot;</pre>
+<pre>    'Solid bodies
+    vBody = swComp.<b>GetBodies2</b>(swSolidBody)
+    SelectBodies swApp, swModel, vBody, sPadStr</pre>
+<pre>    'Surface bodies
+    vBody = swComp.<b>GetBodies2</b>(swSheetBody)
+    SelectBodies swApp, swModel, vBody, sPadStr</pre>
+<pre>    'Components
+    vChildComp = swComp.<b>GetChildren</b>
+    For i = 0 To UBound(vChildComp)
+        Set swChildComp = vChildComp(i)
+        ProcessComponent swApp, swModel, swChildComp, nLevel + 1
+    Next i</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

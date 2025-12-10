@@ -1,0 +1,103 @@
+<html>
+
+<head>
+<title>Get Cross Break Feature Data in Sheet Metal Part Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,cross break feature">
+<meta name=MS-HKWD content="VBA examples,features">
+<meta name=MS-HKWD content="VBA examples,sheet metal">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Cross Break Feature Data in Sheet Metal Part Example (VBA)</h1>
+<p>This example shows how to get cross break feature data in a sheet metal part.</p>
+
+<pre>'----------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified part document template exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Creates a sheet metal part with a cross break feature.
+' 2. Iterates over all features in the part and gets the 
+'    cross break feature.
+' 3. Names the cross break feature's face.
+' 4. Prints to the Immediate window this cross break
+'    feature data:
+'    * Name of the face
+'    * Whether its direction is reversed
+'    * Radius
+'    * Angle
+' 5. Examine the Immediate window.
+'----------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swPart As SldWorks.PartDoc
+Dim swModel As SldWorks.ModelDoc2
+Dim swSketchManager As SldWorks.SketchManager
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFeatureManager As SldWorks.FeatureManager
+Dim swCustomBendAllowance As SldWorks.CustomBendAllowance
+Dim swFeature As SldWorks.Feature
+Dim swCrossBreakFeatureData As SldWorks.CrossBreakFeatureData
+Dim swFace As SldWorks.Face2
+Dim swEntity As SldWorks.Entity
+Dim sketchLines As Variant
+Dim features As Variant
+Dim faceName As String
+Dim status As Boolean
+Dim i As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Create sheet metal part with cross break feature
+    Set swPart = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SolidWorks 2016\templates\Part.prtdot&quot;, 0, 0, 0)
+    Set swModel = swPart
+    Set swSketchManager = swModel.<b>SketchManager</b>
+    swSketchManager.<b>InsertSketch</b> True
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstToRectEntity, swUserPreferenceOption_e.swDetailingNoOptionSpecified, False)
+    status = swModelDocExt.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swSketchAddConstLineDiagonalType, swUserPreferenceOption_e.swDetailingNoOptionSpecified, True)
+    sketchLines = swSketchManager.<b>CreateCornerRectangle</b>(0, 0, 0, 0.112582864792503, -6.90084337349398E-02, 0)
+    swModel.<b>ClearSelection2</b> True
+    swSketchManager.<b>InsertSketch</b> True
+    swModel.<b>ShowNamedView2</b> &quot;*Trimetric&quot;, 8
+    Set swFeatureManager = swModel.<b>FeatureManager</b>
+    Set swCustomBendAllowance = swFeatureManager.<b>CreateCustomBendAllowance</b>()
+    swCustomBendAllowance.<b>KFactor</b> = 0.5
+    Set swFeature = swFeatureManager.<b>InsertSheetMetalBaseFlange2</b>(0.0007366, False, 0.01905, 0.00508, 0.00254, False, 0, 0, 1, swCustomBendAllowance, False, 0, 0.0001, 0.0001, 0.5, True, False, True, True)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Base-Flange1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 4.40948432654409E-02, -3.02769643316765E-02, 0, True, 0, Nothing, 0)
+    Set swFeature = swFeatureManager.<b>InsertCrossBreak</b>(1.5707963267949, 0.000635)
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Get the cross break feature 
+    'by iterating over all features 
+    features = swFeatureManager.<b>GetFeatures</b>(True)
+    For i = LBound(features) To UBound(features)
+        Set swFeature = features(i)
+        If swFeature.<b>GetTypeName2</b> = &quot;CrossBreak&quot; Then
+            Set swCrossBreakFeatureData = swFeature.<b>GetDefinition</b>()
+            swCrossBreakFeatureData.<b>AccessSelections</b> swModel, Nothing
+                Set swFace = swCrossBreakFeatureData.<b>Face</b>
+                Set swEntity = swFace
+                faceName = &quot;CrossBreakFace&quot;
+                status = swPart.<b>SetEntityName</b>(swEntity, faceName)
+                  faceName = swModel.<b>GetEntityName</b>(swEntity)
+                  Debug.Print &quot;Cross break feature data:&quot;
+                  Debug.Print &quot;  Name of face: &quot; &amp; faceName
+                  Debug.Print &quot;  Reverse direction: &quot; &amp; swCrossBreakFeatureData.<b>ReverseDirection</b>
+                  Debug.Print &quot;  Radius: &quot; &amp; swCrossBreakFeatureData.<b>BreakRadius</b>
+                  Debug.Print &quot;  Angle: &quot; &amp; swCrossBreakFeatureData.<b>BreakAngle</b>
+            swCrossBreakFeatureData.<b>ReleaseSelectionAccess</b>
+        End If
+    Next
+End Sub</pre>
+
+</body>
+
+</html>

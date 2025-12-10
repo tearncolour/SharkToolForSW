@@ -1,0 +1,188 @@
+<html>
+
+<head>
+<title>Fire Events When PropertyManager Page Opened and Canceled Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,PropertyManager pages">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Fire Events When PropertyManager Page Opened and Canceled (C#)</h1>
+<p>This example shows how to get the SOLIDWORKS command ID, PropertyManager 
+title, and whether the user interface is active. Events are fired before the 
+PropertyManager page is opened and when it is canceled.</p>
+<p><font face="Courier New" size="-1" color="Green">
+//------------------------------------------<br>
+// Preconditions:<br>
+// 1. Verify that the part to open exists.<br>
+// 2. Add a reference to <b>SolidWorks.Interop.swcommands.dll</b>.<br>
+// 3. Open the Immediate window.<br>
+// 4. Clear <b>Tools &gt; Options &gt; Stop VSTA debugger on <br>
+</b>//<b>&nbsp;&nbsp;&nbsp;&nbsp;macro exit</b>, if it's selected.<br>
+//<br>
+// Postconditions:<br>
+// 1. Opens the part.<br>
+// 2. Fires the CommandOpenPreNotify event; click <b>OK</b><br>
+//&nbsp;&nbsp;&nbsp; to close the message box.<br>
+// 3. Opens the Fillet PropertyManager page.<br>
+// 4. Gets the title of the PropertyManager page, whether the<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;user interface is active, and whether the command ID<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;is a fillet.<br>
+// 5. Click <b>X</b> on the Fillet PropertyManager page<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;to cancel it.<br>
+// 6. Fires the CommandCloseNotify event; click <b>OK</b> to close<br>
+//&nbsp;&nbsp;&nbsp; the message box.<br>
+// 7. Examine the Immediate window.<br>
+// 8. Click <b>Stop Debugging</b> in the IDE.<br>
+// 9. Select <b>Tools &gt; Options &gt; Stop VSTA debugger on <br>
+</b>//<b>&nbsp;&nbsp;&nbsp;&nbsp;macro exit</b>, if you cleared it in 
+Preconditions<br>
+//&nbsp;&nbsp;&nbsp; step 4.<br>
+//--------------------------------------------</font><font size="-1" face="Courier New"><font color="Green"><br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.sldworks;<br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.swconst;<br>
+</font><font color="Blue">using</font><font color="Black"> System;<br>
+</font><font color="Blue">using</font><font color="Black"> System.Diagnostics;<br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.swcommands;<br>
+</font><font color="Blue">using</font><font color="Black"> System.Windows.Forms;<br>
+<br>
+</font><font color="Blue">namespace</font><font color="Black"> 
+GetRunningCommandInfoSldWorksCSharp.csproj<br>
+{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">partial</font><font color="Black"> </font>
+<font color="Blue">class</font><font color="Black"> </font>
+<font color="#2b91af">SolidWorksMacro<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> SldWorks 
+swAppSW;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> Main()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2 swModel;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension swModelDocExt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">string</font><font color="Black"> 
+modelName = </font><font color="Blue">null</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">int</font><font color="Black"> errors = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">int</font><font color="Black"> warnings = 
+0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">int</font><font color="Black"> commandID = 
+0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">string</font><font color="Black"> pmpTitle 
+= </font><font color="Blue">null</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">bool</font><font color="Black"> isUIActive 
+= </font><font color="Blue">false</font><font color="Black">;<br>
+<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Set up event <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppSW = (SldWorks)swApp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventHandlers();<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Open the model <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelName = </font><font color="#a31515">
+&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\fillets\\knob.sldprt&quot;</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = (ModelDoc2)swApp.<b>OpenDoc6</b>(modelName, (</font><font color="Blue">int</font><font color="Black">)swDocumentTypes_e.swDocPART, 
+(</font><font color="Blue">int</font><font color="Black">)swOpenDocOptions_e.swOpenDocOptions_Silent,
+</font><font color="#a31515">&quot;&quot;</font><font color="Black">, </font>
+<font color="Blue">ref</font><font color="Black"> errors, </font>
+<font color="Blue">ref</font><font color="Black"> warnings);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt = (ModelDocExtension)swModel.<b>Extension</b>;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Open the Fillet PropertyManager Page,
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// which 
+causes the CommandOpenPreNotify event <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// to fire <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>RunCommand</b>((</font><font color="Blue">int</font><font color="Black">)swCommands_e.swCommands_Fillet,
+</font><font color="#a31515">&quot;Fillet&quot;</font><font color="Black">);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Get the command ID if the command is a 
+fillet, <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// get the 
+PropertyManager page title if one is active, <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// and get 
+whether the user interface is active <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>GetRunningCommandInfo</b>(</font><font color="Blue">out</font><font color="Black"> 
+commandID, </font><font color="Blue">out</font><font color="Black"> pmpTitle,
+</font><font color="Blue">out</font><font color="Black"> isUIActive);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">if</font><font color="Black"> (!</font><font color="Blue">string</font><font color="Black">.IsNullOrEmpty(pmpTitle))
+</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;Title 
+of PropertyManager page: &quot;</font><font color="Black"> + pmpTitle);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;Is 
+user interface active? &quot;</font><font color="Black"> + isUIActive);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">if</font><font color="Black"> ((commandID 
+== 9))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;Command 
+ID: &quot;</font><font color="Black"> + </font><font color="#a31515">&quot;swCommands_Fillet&quot;</font><font color="Black">);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">else<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;Command 
+ID: &quot;</font><font color="Black"> + </font><font color="#a31515">&quot;Not a fillet.&quot;</font><font color="Black">);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> AttachEventHandlers()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachSWEvents();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> AttachSWEvents()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppSW.CommandOpenPreNotify += </font><font color="Blue">this</font><font color="Black">.swAppSW_CommandOpenPreNotify;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAppSW.CommandCloseNotify += </font><font color="Blue">this</font><font color="Black">.swAppSW_CommandCloseNotify;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">private</font><font color="Black"> </font>
+<font color="Blue">int</font><font color="Black"> swAppSW_<b>CommandOpenPreNotify</b>(</font><font color="Blue">int</font><font color="Black"> 
+command, </font><font color="Blue">int</font><font color="Black"> userCommand)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">//Send message when the Fillet 
+PropertyManager page is about to open <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">if</font><font color="Black"> 
+((command == (</font><font color="Blue">int</font><font color="Black">)swCommands_e.swCommands_Fillet)) 
+MessageBox.Show(</font><font color="#a31515">&quot;Fillet PropertyManager page is 
+about to open.&quot;</font><font color="Black">);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">private</font><font color="Black"> </font>
+<font color="Blue">int</font><font color="Black"> swAppSW_<b>CommandCloseNotify</b>(</font><font color="Blue">int</font><font color="Black"> 
+command, </font><font color="Blue">int</font><font color="Black"> reason)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">//Send message when the Fillet 
+PropertyManager page is canceled<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MessageBox.Show(</font><font color="#a31515">&quot;Fillet 
+PropertyManager page was canceled.&quot;</font><font color="Black">);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">return</font><font color="Black"> 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green"> </font>
+<font color="Gray">&lt;summary&gt;</font><font color="Green"> <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green"> 
+The SldWorks swApp variable is pre-assigned for you. <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green">
+</font><font color="Gray">&lt;/summary&gt;</font><font color="Green"> <br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font></font><font color="Black"><font size="-1" face="Courier New"> 
+SldWorks swApp;<br>
+<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+}</font></font></p>
+
+</body>
+
+</html>

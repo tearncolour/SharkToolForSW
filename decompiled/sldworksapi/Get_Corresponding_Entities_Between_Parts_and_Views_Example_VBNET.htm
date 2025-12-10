@@ -1,0 +1,203 @@
+<html>
+
+<head>
+<title>Get Corresponding Entities Between Parts and Drawing Views Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,parts">
+<meta name=MS-HKWD content="VB.NET examples,assemblies">
+<meta name=MS-HKWD content="VB.NET examples,entities">
+<meta name=MS-HKWD content="VB.NET examples,objects">
+<meta name=MS-HKWD content="VB.NET examples,drawing views">
+
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Corresponding Entities Between Parts and Drawing Views Example (VB.NET)</h1>
+<p>This example shows how to get corresponding entities or objects between a 
+part and its drawing.</p>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color:green;">
+'----------------------------------------------------------------------------</span><br>
+<span style="color:green;">'&nbsp;Preconditions:</span><br>
+<span style="color:green;">
+'&nbsp;1.&nbsp;Ensure&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;and&nbsp;drawing&nbsp;exist.</span><br>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">
+'&nbsp;3.&nbsp;Uncomment&nbsp;the&nbsp;subroutine&nbsp;you&nbsp;want&nbsp;to&nbsp;run&nbsp;in&nbsp;Main().</span><br>
+<span style="color:green;">
+'&nbsp;4.&nbsp;At&nbsp;the&nbsp;pause,&nbsp;select&nbsp;a&nbsp;face,&nbsp;edge,&nbsp;vertex,&nbsp;feature,&nbsp;annotation,</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;or&nbsp;sketch&nbsp;segment.</span><br>
+<span style="color:green;">'&nbsp;5.&nbsp;Press&nbsp;F5.</span><br>
+<span style="color:green;">'</span><br>
+<span style="color:green;">'&nbsp;Postconditions:</span><br>
+<span style="color:green;">'&nbsp;1.&nbsp;Inspect&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">
+'&nbsp;2.&nbsp;If&nbsp;a&nbsp;corresponding&nbsp;face,&nbsp;edge,&nbsp;or&nbsp;vertex&nbsp;is&nbsp;found,&nbsp;it&nbsp;is&nbsp;selected&nbsp;in&nbsp;the</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;underlying&nbsp;part&nbsp;or&nbsp;drawing.</span><br>
+<span style="color:green;">'</span><br>
+<span style="color:green;">
+'&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;models&nbsp;are&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span><br>
+<span style="color:green;">
+'----------------------------------------------------------------------------</span><br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;docSpec&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DocumentSpecification</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelPart&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDrawing&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDrawing&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DrawingDoc</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swView&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">View</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;lErr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;selMgr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SelectionMgr</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;inputEntity&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Entity</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;outputEntity&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Entity</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bSelected&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;inputObject&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;outputObject&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;drComp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DrawingComponent</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Uncomment&nbsp;the&nbsp;subroutine&nbsp;you&nbsp;want&nbsp;to&nbsp;run;&nbsp;comment&nbsp;the&nbsp;other&nbsp;one</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'ViewToPart()</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PartToView()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;ViewToPart()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docSpec&nbsp;=&nbsp;swApp.<b>GetOpenDocSpec</b>(<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS&nbsp;2018\samples\tutorial\api\clamp1.SLDPRT&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelPart&nbsp;=&nbsp;swApp.<b>OpenDoc7</b>(docSpec)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docSpec&nbsp;=&nbsp;swApp.<b>GetOpenDocSpec</b>(<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS&nbsp;2018\samples\tutorial\api\clamp1.SLDDRW&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDrawing&nbsp;=&nbsp;swApp.<b>OpenDoc7</b>(docSpec)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawing&nbsp;=&nbsp;swModelDrawing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;swDrawing.<b>FeatureByName</b>(<span style="color:#a31515;">&quot;Drawing&nbsp;View1&quot;</span>).<b>GetSpecificFeature</b>()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>ActivateDoc3</b>(swModelPart.<b>GetTitle</b>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:#2b91af;">swRebuildOnActivation_e</span>.swUserDecision,&nbsp;lErr)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selMgr&nbsp;=&nbsp;swModelPart.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelPart.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Stop</span>&nbsp;<span style="color:green;">'&nbsp;Select&nbsp;something&nbsp;in&nbsp;the&nbsp;model&nbsp;and&nbsp;press&nbsp;F5</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Select</span>&nbsp;<span style="color:blue;">Case</span>&nbsp;selMgr.<b>GetSelectedObjectType3</b>(1,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:#2b91af;">swSelectType_e</span>.swSelFACES,&nbsp;<span style="color:#2b91af;">swSelectType_e</span>.swSelEDGES,&nbsp;<span style="color:#2b91af;">swSelectType_e</span>.swSelVERTICES<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inputEntity&nbsp;=&nbsp;selMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Using&nbsp;IView::GetCorrespondingEntity()&quot;</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputEntity&nbsp;=&nbsp;swView.<b>GetCorrespondingEntity</b>(inputEntity)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;outputEntity&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;No&nbsp;corresponding&nbsp;entity&nbsp;found&nbsp;in&nbsp;the&nbsp;drawing&nbsp;view&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Corresponding&nbsp;entity&nbsp;found....selecting&nbsp;in&nbsp;drawing&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>ActivateDoc3</b>(swModelDrawing.<b>GetTitle</b>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:#2b91af;">swRebuildOnActivation_e</span>.swDontRebuildActiveDoc,&nbsp;lErr)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bSelected&nbsp;=&nbsp;outputEntity.<b>Select4</b>(<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">Nothing</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:#2b91af;">swSelectType_e</span>.swSelNOTHING<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:blue;">Else</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inputObject&nbsp;=&nbsp;selMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Using&nbsp;IView::GetCorresponding()&quot;</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputObject&nbsp;=&nbsp;swView.<b>GetCorresponding</b>(inputObject)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;outputObject&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;No&nbsp;corresponding&nbsp;object&nbsp;found&nbsp;in&nbsp;the&nbsp;drawing&nbsp;view&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Corresponding&nbsp;object&nbsp;found&nbsp;in&nbsp;the&nbsp;drawing&nbsp;view&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Select</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;PartToView()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docSpec&nbsp;=&nbsp;swApp.<b>GetOpenDocSpec</b>(<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS&nbsp;2018\samples\tutorial\api\clamp1.SLDPRT&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelPart&nbsp;=&nbsp;swApp.<b>OpenDoc7</b>(docSpec)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docSpec&nbsp;=&nbsp;swApp.<b>GetOpenDocSpec</b>(<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS&nbsp;2018\samples\tutorial\api\clamp1.SLDDRW&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDrawing&nbsp;=&nbsp;swApp.<b>OpenDoc7</b>(docSpec)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawing&nbsp;=&nbsp;swModelDrawing<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>ActivateDoc3</b>(swModelDrawing.<b>GetTitle</b>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:#2b91af;">swRebuildOnActivation_e</span>.swDontRebuildActiveDoc,&nbsp;lErr)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selMgr&nbsp;=&nbsp;swModelDrawing.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDrawing.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Stop</span>&nbsp;<span style="color:green;">'&nbsp;Select&nbsp;something&nbsp;in&nbsp;the&nbsp;drawing&nbsp;and&nbsp;press&nbsp;F5</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;swDrawing.<b>FeatureByName</b>(<span style="color:#a31515;">&quot;Drawing&nbsp;View1&quot;</span>).<b>GetSpecificFeature</b>()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Select</span>&nbsp;<span style="color:blue;">Case</span>&nbsp;selMgr.<b>GetSelectedObjectType3</b>(2,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:#2b91af;">swSelectType_e</span>.swSelFACES,&nbsp;<span style="color:#2b91af;">swSelectType_e</span>.swSelEDGES,&nbsp;<span style="color:#2b91af;">swSelectType_e</span>.swSelVERTICES<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inputEntity&nbsp;=&nbsp;selMgr.<b>GetSelectedObject6</b>(2,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;drComp&nbsp;=&nbsp;selMgr.<b>GetSelectedObjectsComponent4</b>(2,&nbsp;-1)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Using&nbsp;IModelDocExtension::GetCorrespondingEntity2()&quot;</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputEntity&nbsp;=&nbsp;swModelPart.<b>Extension</b>.<b>GetCorrespondingEntity2</b>(inputEntity)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;outputEntity&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;No&nbsp;corresponding&nbsp;entity&nbsp;found&nbsp;in&nbsp;the&nbsp;part&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Corresponding&nbsp;entity&nbsp;found...selecting&nbsp;in&nbsp;part&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>ActivateDoc3</b>(swModelPart.<b>GetTitle</b>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:#2b91af;">swRebuildOnActivation_e</span>.swDontRebuildActiveDoc,&nbsp;lErr)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bSelected&nbsp;=&nbsp;outputEntity.<b>Select4</b>(<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">Nothing</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:#2b91af;">swSelectType_e</span>.swSelNOTHING<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:blue;">Else</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inputObject&nbsp;=&nbsp;selMgr.<b>GetSelectedObject6</b>(2,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;drComp&nbsp;=&nbsp;selMgr.<b>GetSelectedObjectsComponent4</b>(2,&nbsp;-1)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Using&nbsp;IModelDocExtension::GetCorresponding2()&quot;</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;outputObject&nbsp;=&nbsp;swModelPart.<b>Extension</b>.<b>GetCorresponding2</b>(inputObject)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;outputObject&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;No&nbsp;corresponding&nbsp;object&nbsp;found&nbsp;in&nbsp;the&nbsp;part&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Corresponding&nbsp;object&nbsp;found&nbsp;in&nbsp;the&nbsp;part&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Select</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SldWorks</span><br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

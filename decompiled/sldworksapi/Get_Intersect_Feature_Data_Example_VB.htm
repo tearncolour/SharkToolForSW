@@ -1,0 +1,107 @@
+<html>
+
+<head>
+<title>Get Intersect Feature Data Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,intersect features">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Intersect Feature Data Example (VBA)</h1>
+<p>This example shows how to create an intersect feature and get its data.</p>
+
+<p class="APICODE">
+'----------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Open a part that contains the following intersecting features:<br>
+'&nbsp;&nbsp;&nbsp; * <b>Boss-Extrude1</b><br>
+'&nbsp;&nbsp;&nbsp; * <b>Boss-Extrude2</b><br>
+'&nbsp;&nbsp;&nbsp; * <b>Boss-Extrude3</b><br>
+'&nbsp;&nbsp;&nbsp; * <b>Boss-Extrude4</b><br>
+'&nbsp;&nbsp;&nbsp; * <b>Surface-Extrude1</b><br>
+' 2. Open an Immediate window.<br>
+' 3. Multi-select <b>Surface-Extrude1</b>, <b>Boss-Extrude3</b>, and <b>
+Boss-Extrude4</b> in the<br>
+'&nbsp;&nbsp;&nbsp; FeatureManager design tree and press F5.<br>
+'<br>
+' Postconditions:<br>
+' 1. When the macro stops, hide <b>Boss-Extrude3</b> and <b>Boss-Extrude4</b> in 
+the<br>
+'&nbsp;&nbsp;&nbsp; FeatureManager design tree.<br>
+' 2. Press F5.<br>
+' 3. When the macro stops, inspect the blue intersect regions.<br>
+' 4. Press F5.<br>
+' 5. Inspect the Immediate window.<br>
+' 6. Right-click <b>Intersect1</b> in the FeatureManager design tree and click<br>
+'&nbsp;&nbsp;&nbsp; <b>Roll Forward</b>.<br>
+'<br>
+' NOTE: Because the model is used elsewhere, do not save changes.<br>
+' ---------------------------------------------------------------------------</p>
+
+<p class="APICODE">
+&nbsp;</p>
+<p class="APICODE">Option Explicit</p>
+<p class="APICODE">Dim swApp As SldWorks.SldWorks<br>
+Dim swModel As SldWorks.ModelDoc2<br>
+Dim swFeat As SldWorks.Feature<br>
+Dim swFeatMgr As SldWorks.FeatureManager<br>
+Dim featData As SldWorks.IntersectFeatureData<br>
+Dim intStatus As Long</p>
+<p class="APICODE">Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.<b>SldWorks</b><br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; Set swFeatMgr = swModel.<b>FeatureManager</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vResultingBodies As Variant</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; vResultingBodies = swFeatMgr.<b>PreIntersect</b>(False) 
+'Do not cap planar surface openings of intersect feature<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>ClearSelection2</b> True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim i As Integer<br>
+&nbsp;&nbsp;&nbsp; Dim swBody As Body2<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Stop 'Hide Boss-Extrude4 and Boss-Extrude3 
+to expose the intersect regions<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;&quot;<br>
+&nbsp;&nbsp;&nbsp; 'Color the intersect regions blue<br>
+&nbsp;&nbsp;&nbsp; For i = 0 To UBound(vResultingBodies)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swBody = vResultingBodies(i)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Intersect region &quot; &amp; i + 
+1 &amp; &quot; is a temporary body? &quot; &amp; swBody.<b>IsTemporaryBody</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; intStatus = swBody.<b>Display3</b>(swModel, 
+16711680, swTempBodySelectOptionNone)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Intersect region &quot; &amp; i + 
+1 &amp; &quot; is displayed (0 = yes)? &quot; &amp; intStatus<br>
+&nbsp;&nbsp;&nbsp; Next</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Stop 'Observe the intersect regions<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim intToExclude As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim boolArr(3) As Boolean<br>
+&nbsp;&nbsp;&nbsp; boolArr(0) = False<br>
+&nbsp;&nbsp;&nbsp; boolArr(1) = True 'Exclude region, vResultingBodies(2), from 
+the intersect feature<br>
+&nbsp;&nbsp;&nbsp; boolArr(2) = False<br>
+&nbsp;&nbsp;&nbsp; boolArr(3) = False<br>
+&nbsp;&nbsp;&nbsp; intToExclude = boolArr<br>
+&nbsp;&nbsp;&nbsp; Set swFeat = swFeatMgr.<b>PostIntersect</b>(intToExclude, 
+True, False)<br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Feature name = &quot; &amp; swFeat.<b>Name</b><br>
+&nbsp;&nbsp;&nbsp; Set featData = swFeat.<b>GetDefinition</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Merge touching regions into 
+one body? &quot; &amp; featData.<b>Merge</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Consume surfaces? &quot; &amp; featData.<b>Consume</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Cap planar openings on surfaces? &quot; &amp; featData.<b>CapPlanar</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Number of solids, surfaces, 
+or planes used to create the intersect feature: &quot; &amp; featData.<b>GetIntersectionsToolsCount</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Number of intersect regions: &quot; &amp; featData.<b>GetIntersectionsCount</b></p>
+<p class="APICODE">End Sub</p>
+
+</body>
+
+</html>

@@ -1,0 +1,176 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Only Show Selected Components Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,components">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=4232>
+<meta name=layout-width content=786>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Only Show Selected Components Example (VBA)</h1>
+
+<p>This example shows how to only show the selected components in an assembly.</p>
+
+<pre>'----------------------------------------------------
+' Preconditions:
+' 1. Open an assembly.
+' 2. Select one or more components.
+' 3. Open the Immediate window.
+'
+' Postconditions:
+' 1. Hides all components except the selected components.
+' 2. Examine the Immediate window, graphics area, and the
+'    FeatureManager design tree.
+'
+' NOTES:
+' * If a subassembly is selected, then all child components
+'   (parts and sub-subassemblies) are shown.
+' * If a sub-subassembly is selected, all parents are recursively
+'   shown at the top-level assembly.
+'-----------------------------------------------------
+Option Explicit</pre>
+<pre>Function IsCompInSelList(swSelCompArr() As SldWorks.Component2, swComp As SldWorks.Component2) As Boolean</pre>
+<pre>    Dim vSelCompArr As Variant
+    Dim vSelComp As Variant</pre>
+<pre>    vSelCompArr = swSelCompArr
+    For Each vSelComp In vSelCompArr
+        If vSelComp Is swComp Then
+            IsCompInSelList = True
+            Exit Function
+        End If
+    Next vSelComp</pre>
+<pre>    IsCompInSelList = False</pre>
+<pre>End Function</pre>
+<pre>Sub ShowParentComp(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swComp As SldWorks.Component2)</pre>
+<pre>    Dim swParentComp As SldWorks.Component2
+
+    Set swParentComp = swComp.<b>GetParent</b>
+    If Not swParentComp Is Nothing Then
+        ' This is a component in a subassembly, so set
+        ' subassembly to be visible because subassembly's visibility
+        ' overrides component's visibility; that is, show parent
+        swParentComp.<b>Visible</b> = swComponentVisible
+        ' Show grandparent; that is, recurse up assembly tree
+        ShowParentComp swApp, swModel, swParentComp</pre>
+<pre>    End If</pre>
+<pre>End Sub</pre>
+<pre>Sub ShowComp(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swComp As SldWorks.Component2)</pre>
+<pre>    Dim vChildArr As Variant
+    Dim vChild As Variant
+    Dim swChildComp As SldWorks.Component2</pre>
+<pre>    ' Show this component
+    swComp.<b>Visible</b> = swComponentVisible</pre>
+<pre>    vChildArr = swComp.<b>GetChildren</b>
+    For Each vChild In vChildArr
+        Set swChildComp = vChild
+        ' Show all children
+        swChildComp.<b>Visible</b> = swComponentVisible
+        ' Show all grandchildren; that is, recurse down assembly tree
+        ShowComp swApp, swModel, swChildComp
+    Next vChild</pre>
+<pre>End Sub</pre>
+<pre>Sub HideAllComp(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swComp As SldWorks.Component2)</pre>
+<pre>    Dim vChildArr As Variant
+    Dim vChild As Variant
+    Dim swChildComp As SldWorks.Component2</pre>
+<pre>    ' Hide this component
+    swComp.<b>Visible</b> = swComponentHidden</pre>
+<pre>    vChildArr = swComp.<b>GetChildren</b>
+    For Each vChild In vChildArr
+        Set swChildComp = vChild
+        ' Hide each child component; that is, recurse down assembly tree
+        HideAllComp swApp, swModel, swChildComp
+    Next vChild</pre>
+<pre>End Sub</pre>
+<pre>Function GetSelCompList(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2) As SldWorks.Component2()</pre>
+<pre>    Dim swSelCompArr() As SldWorks.Component2
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swComp As SldWorks.Component2
+    Dim nSelCount As Long
+    Dim i As Long</pre>
+<pre>    ReDim swSelCompArr(0)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    nSelCount = swSelMgr.<b>GetSelectedObjectCount2</b>(-1): Debug.Assert nSelCount &gt;= 1
+    For i = 1 To nSelCount
+        Set swComp = swSelMgr.<b>GetSelectedObjectsComponent4</b>(i, -1)
+        If Not swComp Is Nothing Then
+            Set swSelCompArr(UBound(swSelCompArr)) = swComp
+            ReDim Preserve swSelCompArr(UBound(swSelCompArr) + 1)
+        End If
+    Next i</pre>
+<pre>    Debug.Assert UBound(swSelCompArr) &gt; 0
+    ReDim Preserve swSelCompArr(UBound(swSelCompArr) - 1)</pre>
+<pre>    GetSelCompList = swSelCompArr</pre>
+<pre>End Function</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swDocExt As SldWorks.ModelDocExtension
+    Dim swFeatMgr As SldWorks.FeatureManager
+    Dim swAssy As SldWorks.AssemblyDoc
+    Dim swConfigMgr As SldWorks.ConfigurationManager
+    Dim swConfig As SldWorks.Configuration
+    Dim swRootComp As SldWorks.Component2
+    Dim swSelCompArr() As SldWorks.Component2
+    Dim vSelCompArr As Variant
+    Dim vSelComp As Variant
+    Dim swSelComp As SldWorks.Component2
+    Dim nSelCount As Long</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swDocExt = swModel.<b>Extension</b>
+    Set swFeatMgr = swModel.<b>FeatureManager</b>
+    Set swAssy = swModel
+    Set swConfigMgr = swModel.<b>ConfigurationManager</b>
+    Set swConfig = swConfigMgr.<b>ActiveConfiguration</b>
+    Set swRootComp = swConfig.<b>GetRootComponent3</b>(True)</pre>
+<pre>    ' Temporarily disable FeatureManager design tree updates to increase performance
+    swFeatMgr.<b>EnableFeatureTree</b> = False</pre>
+<pre>    swSelCompArr = GetSelCompList(swApp, swModel)
+    vSelCompArr = swSelCompArr</pre>
+<pre>    HideAllComp swApp, swModel, swRootComp</pre>
+<pre>    For Each vSelComp In vSelCompArr
+        Set swSelComp = vSelComp
+        ShowComp swApp, swModel, swSelComp
+        ShowParentComp swApp, swModel, swSelComp
+    Next vSelComp</pre>
+<pre>    ' Restore selected components
+    nSelCount = swDocExt.<b>MultiSelect2</b>(vSelCompArr, True, Nothing): Debug.Assert UBound(vSelCompArr) + 1 = nSelCount</pre>
+<pre>    swFeatMgr.<b>EnableFeatureTree</b> = True</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

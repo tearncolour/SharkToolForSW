@@ -1,0 +1,167 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Set and Get Sheet Metal Part's Persistent Reference IDs Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,sheet metal">
+<meta name=MS-HKWD content="VBA examples,persistent reference IDs">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3023>
+<meta name=layout-width content=931>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Set and Get Sheet Metal Part's Persistent Reference IDs Example (VBA)</h1>
+
+<p>This example shows how to set and get persistent reference IDs (PIDs) on a 
+ sheet metal part.</p>
+
+<p>The entities in flattened and unflattened (folded) states of sheet metal 
+ in SOLIDWORKS do not have the same properties, making it difficult to 
+ track entities across states of sheet metal.</p>
+
+<ul style="list-style: disc;"
+	type=disc>
+	
+	<li class=kadov-p><p><a href="SolidWorks.Interop.sldworks~SolidWorks.Interop.sldworks.IModelDocExtension~GetFlattenSheetMetalPersistReference.html">IModelDocExtension::GetFlattenSheetMetalPersistReference</a> 
+ returns a PID array for an entity in the flattened 
+ state of the sheet metal part.</p></li>
+	
+	<li class=kadov-p><p><a href="SolidWorks.Interop.sldworks~SolidWorks.Interop.sldworks.IModelDocExtension~GetSheetMetalObjectsByPersistReference.html">IModelDocExtension::GetSheetmetalObjectsByPersistReference</a> 
+ uses the PID byte array to retrieve an array of objects 
+ that comprise the previously selected entity in the folded state of the part.</p></li>
+</ul>
+
+<p>Together these methods provide a way to track entities across sheet 
+ metal states.</p>
+
+<pre>'------------------------------------------
+' Preconditions:
+' 1. Verify that specified part exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens specified part document.
+' 2. Unsuppresses the <b>Flat-Pattern1 </b>feature.
+' 3. Gets the PIDs of the selected face on the
+'    <b>Flat-Pattern1</b> feature.
+' 4. Suppresses the <b>Flat-Pattern1</b> feature.
+' 5. Uses the PIDs to retrieve and highlight the 
+'    array of objects that comprise the previously 
+'    selected face in the folded state of the part.
+' 6. Examine the Immediate window, graphics area, and
+'    FeatureManager design tree.
+'
+' NOTE: Because the part is used elsewhere,
+' do not save changes.
+'--------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swModelDocExt As SldWorks.ModelDocExtension
+    Dim swSelectionMgr As SldWorks.SelectionMgr
+    Dim swFace As SldWorks.Face2
+    Dim swSelectData As SldWorks.SelectData
+    Dim pid As Variant
+    Dim selObj As Object
+    Dim swObjList As Variant
+    Dim errors As Long
+    Dim warnings As Long
+    Dim boolstatus As Boolean
+    Dim i As Long
+    Dim j As Long
+ 
+</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks</pre>
+<pre>    ' Open part document
+    Set swModel = swApp.<b>OpenDoc6</b>(&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\2012-sm.sldprt&quot;, swDocPART, swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    </pre>
+<pre>    ' Get flat-pattern feature
+    Set swModelDocExt = swModel.<b>Extension</b>
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Flat-Pattern1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, swSelectOptionDefault)
+  </pre>
+<pre>    ' Unsuppress (unfold) flat-pattern feature
+    boolstatus = swModel.<b>EditUnsuppress2</b></pre>
+<pre>    ' Select the top face on the flattened sheet metal part
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, -3.46526388559596E-02, 0, 0.011695220708134, False, 0, Nothing, 0)
+    Set swSelectionMgr = swModel.<b>SelectionManager</b>
+    Set swFace = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)</pre>
+<pre>    ' Get the persistent reference IDs for the
+    ' the selected face on the flattened sheet
+    ' metal part
+    pid = swModelDocExt.<b>GetFlattenSheetMetalPersistReference</b>(swFace)
+    </pre>
+<pre>    ' Print the PID values to the Immediate window
+    j = 0
+    For j = LBound(pid) To UBound(pid)
+        Debug.Print (&quot;PID = &quot; &amp; pid(j))
+    Next j
+   
+</pre>
+<pre>    ' Suppress (fold) flat-pattern feature
+    boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;Flat-Pattern1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, swSelectOptionDefault)
+    swModel.<b>EditSuppress2</b>
+    
+</pre>
+<pre>    ' Use the persistent reference IDs to
+    ' retrieve and highlight an array of objects 
+    ' that comprise the previously selected entity in 
+    ' the folded state of the part
+    swObjList = swModelDocExt.<b>GetSheetMetalObjectsByPersistReference</b>((pid), errors)</pre>
+<pre>    If Not (IsEmpty(swObjList)) Then
+        swModel.<b>ClearSelection2</b> (True)
+        For i = LBound(swObjList) To UBound(swObjList)
+            Set selObj = swObjList(i)
+            If selObj Is Nothing Then
+                Debug.Print &quot;PID conversion error.&quot;
+                Exit Sub
+            Else
+                SelectObject selObj, True
+            End If
+        Next i
+    End If</pre>
+<pre>    Debug.Print &quot;The entities that comprise the previously selected entity in the folded state are selected.&quot;</pre>
+<pre>End Sub</pre>
+<pre>    Private Sub SelectObject(selObj As Object, append As Boolean)
+        If TypeOf selObj Is SldWorks.Entity Then
+            Set swSelectData = swSelectionMgr.<b>CreateSelectData</b>
+            selObj.<b>Select4</b> append, swSelectData
+        Else
+            Debug.Print (&quot;Need selection handle.&quot;)
+        End If</pre>
+<pre>    End Sub</pre>
+
+</body>
+
+</html>

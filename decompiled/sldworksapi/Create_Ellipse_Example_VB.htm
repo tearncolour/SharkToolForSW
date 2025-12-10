@@ -1,0 +1,284 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Create Ellipse Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HAID content=EXCreateEllipse>
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=5664>
+<meta name=layout-width content=777>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./ApiHelp.css">
+
+
+
+</head>
+<meta name=MS-HKWD content="VBA examples,ellipses">
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+<h1><a name=Top></a>Create Ellipse Example (VBA)</h1>
+
+<p>This example shows how to create an ellipse circumscribing two sketch points.</p>
+
+<pre>'---------------------------------------------------------------------------
+' Preconditions: Open a part document that contains
+' an active sketch that has two sketch points.
+'
+' Postconditions:
+' 1. Creates an ellipse circumscribing the two sketch points.
+' 2. Inspect Immediate window for ellipse point data, theta, and equation.
+'---------------------------------------------------------------------------
+Option Explicit</pre>
+<p class="APICODE">Sub main()</p>
+<blockquote>
+	<p class="APICODE">Dim swApp As SldWorks.SldWorks<br>
+	Dim swModel As SldWorks.ModelDoc2<br>
+	Dim swMath As SldWorks.MathUtility</p>
+	<p class="APICODE">Set swApp = Application.<b>SldWorks</b><br>
+	Set swModel = swApp.<b>ActiveDoc</b><br>
+	Set swMath = swApp.<b>GetMathUtility</b></p>
+	<p class="APICODE">' Check whether document is active<br>
+	If swModel Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp; swApp.<b>SendMsgToUser2</b> &quot;A part document must be 
+	active.&quot;, swMbWarning, swMbOk<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If</p>
+	<p class="APICODE">' Check whether document is a part<br>
+	Dim modelType As Long<br>
+	modelType = swModel.<b>GetType</b></p>
+	<p class="APICODE">If modelType &lt;&gt; SwConst.swDocPART Then<br>
+&nbsp;&nbsp;&nbsp; swApp.<b>SendMsgToUser2</b> &quot;A part document must be 
+	active.&quot;, swMbWarning, swMbOk<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If</p>
+	<p class="APICODE">' Select a plane on which to sketch<br>
+	If SelectPlane(swModel) = False Then<br>
+&nbsp;&nbsp;&nbsp; MsgBox &quot;Could not select plane.&quot;<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If<br>
+	</p>
+	<p class="APICODE">Dim swSkMgr As SldWorks.SketchManager<br>
+	Set swSkMgr = swModel.<b>SketchManager</b></p>
+	<p class="APICODE">Dim swSketch As Sketch<br>
+	Set swSketch = swSkMgr.<b>ActiveSketch</b></p>
+	<p class="APICODE">' Check whether a sketch is active<br>
+	If swSketch Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp; MsgBox &quot;Please sketch a point for the center point, sketch 
+	another point to define the major axis, and run the macro again.&quot;<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If</p>
+	<p class="APICODE">Const pi As Double = 3.1415926</p>
+	<p class="APICODE">' Get data from the points<br>
+	Dim CtrPt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	As SldWorks.SketchPoint<br>
+	Dim MajPt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	As SldWorks.SketchPoint</p>
+	<p class="APICODE">Set swSkMgr = swModel.<b>SketchManager</b><br>
+	Set swSketch = swSkMgr.<b>ActiveSketch</b></p>
+	<p class="APICODE">Dim vPoint As Variant</p>
+	<p class="APICODE">Dim i As Long<br>
+&nbsp;</p>
+	<p class="APICODE">' Make sure the sketch is active<br>
+	If swSketch Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp; MsgBox &quot;Please sketch a point for the center point, sketch 
+	another point to define the&nbsp; major axis, and run the macro again.&quot;<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If</p>
+	<p class="APICODE">' Make sure that at least two sketch points exist to 
+	define the position of the ellipse and its major axis<br>
+	vPoint = swSketch.<b>GetSketchPoints2</b><br>
+	If UBound(vPoint) = 0 Then<br>
+&nbsp;&nbsp;&nbsp; MsgBox &quot;Please sketch a point for the center point, sketch 
+	another point to define the major axis, and run the macro again.&quot;<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If</p>
+	<p class="APICODE">For i = 0 To UBound(vPoint)<br>
+&nbsp;&nbsp;&nbsp; If i = 0 Then<br>
+&nbsp;&nbsp;&nbsp; Set CtrPt = vPoint(i)<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+	<p class="APICODE">&nbsp;&nbsp;&nbsp; If i = 1 Then<br>
+&nbsp;&nbsp;&nbsp; Set MajPt = vPoint(i)<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+	Next i<br>
+&nbsp;&nbsp;&nbsp; </p>
+	<p class="APICODE">Dim MajVec As MathVector<br>
+	Dim dirArr(2) As Double</p>
+	<p class="APICODE">dirArr(0) = MajPt.<b>X</b> - CtrPt.<b>X</b><br>
+	dirArr(1) = MajPt.<b>Y</b> - CtrPt.<b>Y</b><br>
+	dirArr(2) = 0</p>
+	<p class="APICODE">Set MajVec = swMath.<b>CreateVector</b>((dirArr))<br>
+	Dim MajVecunit As MathVector</p>
+	<p class="APICODE">Set MajVecunit = MajVec.<b>Normalise</b><br>
+	Dim normVec As MathVector</p>
+	<p class="APICODE">dirArr(0) = 0<br>
+	dirArr(1) = 0<br>
+	dirArr(2) = 1</p>
+	<p class="APICODE">Set normVec = swMath.<b>CreateVector</b>((dirArr))</p>
+	<p class="APICODE">Dim MinVecunit As MathVector<br>
+	Dim MinVec As MathVector<br>
+	Dim u As Double</p>
+	<p class="APICODE">Set MinVecunit = normVec.<b>Cross</b>(MajVecunit)</p>
+	<p class="APICODE">Dim minlength As Long<br>
+	minlength = 50<br>
+	u = minlength / 1000</p>
+	<p class="APICODE">Set MinVec = MinVecunit.<b>Scale</b>(u)</p>
+	<p class="APICODE">' Ensure that the minor axis is less than the major axis 
+	so that<br>
+	' the equation returned is correct<br>
+	If MajVec.<b>GetLength</b> &lt; MinVec.<b>GetLength</b> Then<br>
+&nbsp;&nbsp;&nbsp; MsgBox &quot;The length of the minor axis must be less than that 
+	of the major axis.&quot;<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If</p>
+	<p class="APICODE">If Not CtrPt.<b>Z</b> = 0 Or Not MajPt.<b>Z</b> = 0 Or 
+	Not MinVec.ArrayData(2) = 0 Then<br>
+&nbsp;&nbsp;&nbsp; MsgBox &quot;2D sketch only.&quot;<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If</p>
+	<p class="APICODE">' Sketch the ellipse<br>
+	Dim SkEllipse As SketchEllipse<br>
+	Set SkEllipse = swModel.<b>SketchManager</b>.<b>CreateEllipse</b>(CtrPt.<b>X</b>, 
+	CtrPt.<b>Y</b>, 0, MajPt.<b>X</b>, MajPt.<b>Y</b>, 0, CtrPt.<b>X</b> + 
+	MinVec.ArrayData(0), CtrPt.<b>Y</b> + MinVec.ArrayData(1), 0)</p>
+	<p class="APICODE">swModel.<b>ViewZoomtofit2</b></p>
+	<p class="APICODE">' Check that the sketch is an ellipse<br>
+	Dim vEllipse As Variant<br>
+	vEllipse = swSketch.<b>GetEllipses3</b></p>
+	<p class="APICODE">If swSketch.<b>GetEllipseCount</b> = 0 Then<br>
+&nbsp;&nbsp;&nbsp; MsgBox &quot;An ellipse was not created. Please make sure that the 
+	sketch contains at least one ellipse.&quot;<br>
+&nbsp;&nbsp;&nbsp; Exit Sub<br>
+	End If</p>
+	<p class="APICODE">' Extract information about the ellipse<br>
+	Dim swStartPt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	As SldWorks.SketchPoint<br>
+	Dim swEndPt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	As SldWorks.SketchPoint<br>
+	Dim swCtrPt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	As SldWorks.SketchPoint<br>
+	Dim swMajPt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	As SldWorks.SketchPoint<br>
+	Dim swMinPt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+	As SldWorks.SketchPoint</p>
+	<p class="APICODE">Set swStartPt = SkEllipse.<b>GetStartPoint2</b><br>
+	Set swEndPt = SkEllipse.<b>GetEndPoint2</b><br>
+	Set swCtrPt = SkEllipse.<b>GetCenterPoint2</b><br>
+	Set swMajPt = SkEllipse.<b>GetMajorPoint2</b><br>
+	Set swMinPt = SkEllipse.<b>GetMinorPoint2</b></p>
+	<p class="APICODE">Debug.print &quot;Sketch points&quot;<br>
+	Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Start Point&nbsp;&nbsp; 
+	= (&quot; &amp; swStartPt.<b>X</b> * 1000# &amp; &quot;, &quot; &amp; swStartPt.<b>Y</b> * 1000# &amp; &quot;, &quot; 
+	&amp; swStartPt.<b>Z</b> * 1000# &amp; &quot;) mm&quot;<br>
+	Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End&nbsp;Point&nbsp; &nbsp;&nbsp; 
+	= (&quot; &amp; swEndPt.<b>X</b> * 1000# &amp; &quot;, &quot; &amp; swEndPt.<b>Y</b> * 1000# &amp; &quot;, &quot; &amp; 
+	swEndPt.<b>Z</b> * 1000# &amp; &quot;) mm&quot;<br>
+	Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Center Point&nbsp; = (&quot; &amp; 
+	swCtrPt.<b>X</b> * 1000# &amp; &quot;, &quot; &amp; swCtrPt.<b>Y</b> * 1000# &amp; &quot;, &quot; &amp; swCtrPt.<b>Z</b> 
+	* 1000# &amp; &quot;) mm&quot;<br>
+	Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Major Point&nbsp;&nbsp; = (&quot; &amp; 
+	swMajPt.<b>X</b> * 1000# &amp; &quot;, &quot; &amp; swMajPt.<b>Y</b> * 1000# &amp; &quot;, &quot; &amp; swMajPt.<b>Z</b> 
+	* 1000# &amp; &quot;) mm&quot;<br>
+	Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Minor Point&nbsp;&nbsp; = (&quot; &amp; 
+	swMinPt.<b>X</b> * 1000# &amp; &quot;, &quot; &amp; swMinPt.<b>Y</b> * 1000# &amp; &quot;, &quot; &amp; swMinPt.<b>Z</b> 
+	* 1000# &amp; &quot;) mm&quot;</p>
+	<p class="APICODE">' Algebraic equation for the ellipse<br>
+	Dim h As Double<br>
+	Dim k As Double<br>
+	Dim a As Double<br>
+	Dim b As Double<br>
+	Dim theta As Double</p>
+	<p class="APICODE">h = swCtrPt.<b>X</b><br>
+	k = swCtrPt.<b>Y</b><br>
+	a = 1 / ((swMajPt.<b>X</b> - swCtrPt.<b>X</b>) ^ 2 + (swMajPt.<b>Y</b> - 
+	swCtrPt.<b>Y</b>) ^ 2)<br>
+	b = 1 / ((swMinPt.<b>X</b> - swCtrPt.<b>X</b>) ^ 2 + (swMinPt.<b>Y</b> - 
+	swCtrPt.<b>Y</b>) ^ 2)</p>
+	<p class="APICODE">' Never divide by 0 and return the tipping angle<br>
+	If swMajPt.<b>X</b> &lt;&gt; swCtrPt.<b>X</b> Then<br>
+&nbsp;&nbsp;&nbsp; theta = Atn((swMajPt.<b>Y</b> - swCtrPt.<b>Y</b>) / (swMajPt.<b>X</b> 
+	- swCtrPt.<b>X</b>))<br>
+	Else<br>
+&nbsp;&nbsp;&nbsp; theta = pi / 2<br>
+	End If</p>
+	<p class="APICODE">Debug.Print &quot;Theta of ellipse: &quot; &amp; theta</p>
+	<p class="APICODE">Dim c1 As Double<br>
+	Dim c2 As Double<br>
+	Dim c3 As Double<br>
+	Dim c4 As Double<br>
+	Dim c5 As Double<br>
+	Dim c6 As Double</p>
+	<p class="APICODE">c1 = Round((a * (Cos(theta)) ^ 2) + (b * (Sin(theta)) ^ 
+	2), 2)<br>
+	c2 = Round((a - b) * Sin(2 * theta), 2)<br>
+	c3 = Round((b * (Cos(theta)) ^ 2) + (a * (Sin(theta)) ^ 2), 2)<br>
+	c4 = Round((-2 * a * h * Cos(theta)) + (2 * b * k * Sin(theta)), 2)<br>
+	c5 = Round((-2 * a * h * Sin(theta)) - (2 * b * k * Cos(theta)), 2)<br>
+	c6 = Round(1 - (b * (k ^ 2)) - (a * (h ^ 2)), 2)</p>
+	<p class="APICODE">Debug.Print &quot;Equation of the ellipse: &quot; &amp; c1 &amp; &quot;x^2 + &quot; &amp; 
+	c2 &amp; &quot;xy + &quot; &amp; c3 &amp; &quot;y^2 + &quot; &amp; c4 &amp; &quot;x + &quot; &amp; c5 &amp; &quot;y = &quot; &amp; c6</p>
+	<p class="APICODE">&nbsp;&nbsp;&nbsp; ' NOTE: The coefficients of x and y in 
+	this<br>
+&nbsp;&nbsp;&nbsp; '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; equation represent a 
+	translation in the x-y plane.<br>
+&nbsp;&nbsp;&nbsp; '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If they are 0, then the 
+	ellipse was not translated.<br>
+&nbsp;&nbsp;&nbsp; '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Similarly the 
+	coefficient of xy represents<br>
+&nbsp;&nbsp;&nbsp; '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; a rotation. If it is 0, 
+	then the ellipse<br>
+&nbsp;&nbsp;&nbsp; '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; was not rotated.<br>
+&nbsp;&nbsp;&nbsp; '<br>
+&nbsp;&nbsp;&nbsp; '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; The units on each axis 
+	are in meters.</p>
+</blockquote>
+<p class="APICODE">End Sub</p>
+<p class="APICODE">Public Function SelectPlane(Plane As SldWorks.ModelDoc2) As 
+Boolean</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim featureTemp As Feature<br>
+&nbsp;&nbsp;&nbsp; Set featureTemp = Plane.<b>FirstFeature</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; While Not featureTemp Is Nothing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Dim sFeatureName As String<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sFeatureName = featureTemp.<b>GetTypeName2</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If sFeatureName = &quot;RefPlane&quot; Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; featureTemp.<b>Select2</b> 
+True, 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; SelectPlane = 
+True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Exit Function<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set featureTemp = 
+featureTemp.<b>GetNextFeature</b><br>
+&nbsp;&nbsp;&nbsp; Wend</p>
+<p class="APICODE">End Function</p>
+
+<p style="text-align: center;"
+	align=center><a href="#Top">Back to top</a></p>
+
+</body>
+
+</html>

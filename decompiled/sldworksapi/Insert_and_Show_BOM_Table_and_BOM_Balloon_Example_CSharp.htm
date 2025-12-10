@@ -1,0 +1,131 @@
+<html>
+
+<head>
+<title>Insert and Show BOM Table and BOM Balloon Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,balloons">
+<meta name=MS-HKWD content="C# examples,BOM tables">
+<meta name=MS-HKWD content="C# examples,drawings">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert and Show BOM Table and BOM Balloon Example (C#)</h1>
+<p>This example shows how to insert a Bill of Materials (BOM) table and balloon in a 
+drawing document. </p>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<font color="#008000">//----------------------------------------------------------------------------<br>
+// Preconditions: <br>
+// 1. Specified file and template exist.<br>
+// 2. Open an Immediate Window.<br>//<br>// Postconditions:<br>// 1. Inserts an indented BOM 
+table.<br>// 2. Inserts a BOM balloon annotation.<br>// 3. Inspect the Immediate 
+Window for the BOM feature properties.<br>//<br>// <b>NOTE</b>: Because the drawing is 
+used elsewhere, do not save any changes.<br>//---------------------------------------------------------------------------</font><br>
+&nbsp;<br>
+ 
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;<br>
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;<br>
+<span style="color:blue;">using</span>&nbsp;System;<br>
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;<br>
+&nbsp;<br>
+ 
+<span style="color:blue;">namespace</span>&nbsp;IViewInsertBomTable4CSharp.csproj<br>
+{<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension&nbsp;swModelDocExt&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDocExtension);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DrawingDoc&nbsp;swDrawing&nbsp;=&nbsp;<span style="color:blue;">default</span>(DrawingDoc);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;View&nbsp;swView&nbsp;=&nbsp;<span style="color:blue;">default</span>(View);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomTableAnnotation&nbsp;swBOMAnnotation&nbsp;=&nbsp;<span style="color:blue;">default</span>(BomTableAnnotation);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomFeature&nbsp;swBOMFeature&nbsp;=&nbsp;<span style="color:blue;">default</span>(BomFeature);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Note&nbsp;swNote&nbsp;=&nbsp;<span style="color:blue;">default</span>(Note);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BalloonOptions&nbsp;BomBalloonParams&nbsp;=&nbsp;<span style="color:blue;">default</span>(BalloonOptions);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;boolstatus&nbsp;=&nbsp;<span style="color:blue;">false</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;AnchorType&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;NbrType&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;BomType&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;nErrors&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;nWarnings&nbsp;=&nbsp;0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;Configuration&nbsp;=&nbsp;<span style="color:blue;">null</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">string</span>&nbsp;TableTemplate&nbsp;=&nbsp;<span style="color:blue;">null</span>;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>OpenDoc6</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\advdrawings\\foodprocessor.slddrw&quot;</span>,&nbsp;(<span style="color:blue;">int</span>)swDocumentTypes_e.swDocDRAWING,&nbsp;(<span style="color:blue;">int</span>)swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;nErrors,&nbsp;<span style="color:blue;">ref</span>&nbsp;nWarnings);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawing&nbsp;=&nbsp;(DrawingDoc)swModel;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;(ModelDocExtension)swModel.<b>Extension</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swDrawing.<b>ActivateView</b>(<span style="color:#a31515;">&quot;Drawing&nbsp;View1&quot;</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;(View)swDrawing.<b>ActiveDrawingView</b>;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Insert&nbsp;indented&nbsp;BOM&nbsp;table</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AnchorType&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swBOMConfigurationAnchorType_e.swBOMConfigurationAnchor_TopLeft;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomType&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swBomType_e.swBomType_Indented;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NbrType&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swNumberingType_e.swNumberingType_Detailed;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TableTemplate&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\Program&nbsp;Files\\SOLIDWORKS&nbsp;Corp\\SOLIDWORKS\\lang\\english\\bom-standard.sldbomtbt&quot;</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Configuration&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&quot;</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBOMAnnotation&nbsp;=&nbsp;(BomTableAnnotation)swView.<b>InsertBomTable5</b>(<span style="color:blue;">false</span>,&nbsp;0.4,&nbsp;0.3,&nbsp;AnchorType,&nbsp;BomType,&nbsp;Configuration,&nbsp;TableTemplate,&nbsp;<span style="color:blue;">false</span>,&nbsp;NbrType,&nbsp;<span style="color:blue;">true, 
+true</span>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swBOMFeature&nbsp;=&nbsp;(BomFeature)swBOMAnnotation.<b>BomFeature</b>;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Type&nbsp;of&nbsp;BOM&nbsp;table&nbsp;as&nbsp;defined&nbsp;in&nbsp;swBomType_e:&nbsp;&quot;</span>&nbsp;+&nbsp;(<span style="color:blue;">int</span>)swBOMFeature.<b>TableType</b>);<span style="color:#2b91af;"><br>
+	&nbsp;&nbsp;
+	   Debug</span>.Print(<span style="color:#a31515;">&quot;Numbering&nbsp;type&nbsp;of&nbsp;BOM&nbsp;table&nbsp;as&nbsp;defined&nbsp;in&nbsp;swNumberingType_e:&nbsp;&quot;</span>&nbsp;+&nbsp;(<span style="color:blue;">int</span>)swBOMFeature.<b>NumberingTypeOnIndentedBOM</b>);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <span style="color:#2b91af;">Debug</span>.Print<span style="background-color: #FFFFFF; background-position: 0% 0%">(</span><font color="#A31515"><span style="background-color: #FFFFFF">&quot;Value to display when a value is 0 as defined in swZeroQuantityDisplay_e: &quot;</span></font> + (<span style="color:blue;">int</span>)swBOMFeature.<b>ZeroQuantityDisplay);</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Name&nbsp;of&nbsp;configuration&nbsp;used&nbsp;for&nbsp;BOM&nbsp;table:&nbsp;&quot;</span>&nbsp;+&nbsp;swBOMFeature.<b>Configuration</b>);<br>
+<span style="color:#2b91af;">	   	&nbsp;&nbsp;	   Debug</span>.Print(<font color="#A31515">&quot;Display as one item? &quot;</font> + swBOMFeature.<b>DisplayAsOneItem</b>);<span style="color:#2b91af;"><br>
+	&nbsp;&nbsp;
+	   Debug</span>.Print(<font color="#A31515">&quot;Sequence start number: &quot;</font> + swBOMFeature.<b>SequenceStartNumber</b>);<span style="color:#2b91af;"><br>
+	&nbsp;&nbsp;
+	   Debug</span>.Print(<font color="#A31515">&quot;Keep missing items? &quot;</font> + swBOMFeature.<b>KeepMissingItems</b>);<span style="color:#2b91af;"><br>
+	   	&nbsp;&nbsp;
+	   Debug</span>.Print(<font color="#A31515">&quot;&nbsp; Strikeout missing items? &quot;</font> + swBOMFeature.<b>StrikeoutMissingItems</b>);<span style="color:#2b91af;"><br>
+	&nbsp;&nbsp; 
+	   Debug</span>.Print(<font color="#A31515">&quot;&nbsp; Replace missing 
+components as defined in swKeepReplacedCompOption_e: &quot;</font> + swBOMFeature.<b>KeepReplacedCompOption</b>);<span style="color:#2b91af;"><br>
+	&nbsp;&nbsp;
+	   Debug</span>.Print(<font color="#A31515">&quot;Keep current item numbers 
+when reordering rows? &quot;</font> + swBOMFeature.<b>KeepCurrentItemNumbers</b>);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;EDGE&quot;</span>,&nbsp;0.1205506330468,&nbsp;0.261655309417,&nbsp;-0.0004000000000133,&nbsp;<span style="color:blue;">false</span>,&nbsp;0,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams&nbsp;=&nbsp;swModelDocExt.<b>CreateBalloonOptions</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>Style</b>&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swBalloonStyle_e.swBS_Circular;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>Size</b>&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swBalloonFit_e.swBF_2Chars;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>UpperTextContent</b>&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swBalloonTextContent_e.swBalloonTextItemNumber;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>ShowQuantity</b>&nbsp;=&nbsp;<span style="color:blue;">true</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>QuantityPlacement</b>&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swBalloonQuantityPlacement_e.swBalloonQuantityPlacement_Right;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>QuantityDenotationText</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;PLACES&quot;</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>QuantityOverride</b>&nbsp;=&nbsp;<span style="color:blue;">false</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>QuantityOverrideValue</b>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&quot;</span>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>ItemNumberStart</b>&nbsp;=&nbsp;1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>ItemNumberIncrement</b>&nbsp;=&nbsp;1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BomBalloonParams.<b>ItemOrder</b>&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swBalloonItemNumbersOrder_e.swBalloonItemNumbers_DoNotChangeItemNumbers;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swNote&nbsp;=&nbsp;(Note)swModelDocExt.<b>InsertBOMBalloon2</b>(BomBalloonParams);<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">if</span>&nbsp;(swNote.<b>IsBomBalloon</b>())<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Name&nbsp;of&nbsp;BOM&nbsp;balloon:&nbsp;&quot;</span>&nbsp;+&nbsp;swNote.<b>GetName</b>());<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawing.Force<b>R</b>ebuild();<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+}</p>
+
+</body>
+
+</html>

@@ -1,0 +1,130 @@
+<html>
+
+<head>
+<title>Get and Set Seed Components Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,seed components">
+<meta name=MS-HKWD content="VBA examples,patterns">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get and Set Seed Components Example (VBA)</h1>
+<p>This example shows how to access the seed components of patterns in an 
+assembly. It also shows that seed components can be replaced either by 
+IComponent2 objects or IFeature objects representing those components.</p>
+
+<pre>'------------------------------------------------------------------
+' Preconditions: 
+' 1. Verify that the specified assembly exists.
+' 2. Open the Immediate Window.
+'
+' Postconditions:
+' 1. Gets the names of the seed components.
+' 2. Replaces the seed components either by an IComponent2 object
+'    or an IFeature object representing the component.
+' 3. Examine the Immediate window.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'------------------------------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>Sub main()
+    ' Attach to SOLIDWORKS
+    Dim swApp As SldWorks.SldWorks
+    Set swApp = Application.SldWorks    </pre>
+<pre>    Dim fileName As String
+    Dim errors As Long
+    Dim warnings As Long
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\assem2.sldasm&quot;    </pre>
+<pre>    ' Open the model
+    Dim swModel As ModelDoc2
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocASSEMBLY, swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)    </pre>
+<pre>    ' Verify that the model is active
+    If swModel Is Nothing Then
+        Debug.Print &quot;No active model document&quot;
+        Exit Sub
+    End If    </pre>
+<pre>    Debug.Print &quot;Model: &quot; &amp; swModel.<b>GetTitle</b>    </pre>
+<pre>    ' Get all of the features in the model
+    Dim swFeatMgr As FeatureManager
+    Set swFeatMgr = swModel.<b>FeatureManager</b></pre>
+<pre>    Dim vFeatures As Variant
+    vFeatures = swFeatMgr.<b>GetFeatures</b>(True)    </pre>
+<pre>    ' Iterate over all features
+    Dim iFeat As Integer
+    For iFeat = LBound(vFeatures) To UBound(vFeatures)
+        Dim swFeature As Feature
+        Set swFeature = vFeatures(iFeat)        </pre>
+<pre>        ' Is the current feature a patterned feature?
+        Select Case UCase(swFeature.<b>GetTypeName2</b>)
+        Case &quot;LOCALLPATTERN&quot;
+            ' ILocalLinearPatternFeatureData
+            Debug.Print &quot;    Linear Pattern: &quot; &amp; swFeature.Name
+            ProcessGenericPatternDefinition swFeature, swModel        </pre>
+<pre>        Case &quot;LOCALCIRPATTERN&quot;
+            ' ILocalCircularPatternFeatureData
+            Debug.Print &quot;    Circular Pattern: &quot; &amp; swFeature.Name
+            ProcessGenericPatternDefinition swFeature, swModel            </pre>
+<pre>        Case &quot;DERIVEDLPATTERN&quot;
+            ' IDerivedPatternFeatureData
+            Debug.Print &quot;    Derived Linear Pattern: &quot; &amp; swFeature.Name
+            ProcessGenericPatternDefinition swFeature, swModel        </pre>
+<pre>        Case &quot;DERIVEDCIRPATTERN&quot;
+            ' IDerivedPatternFeatureData
+            Debug.Print &quot;    Derived Circular Pattern: &quot; &amp; swFeature.Name
+            ProcessGenericPatternDefinition swFeature, swModel            </pre>
+<pre>        End Select
+    Next</pre>
+<pre>End Sub</pre>
+<pre>Private Sub ProcessGenericPatternDefinition(swFeature As Feature, swModel As ModelDoc2)    </pre>
+<pre>    Dim patternDef As Object
+    Set patternDef = swFeature.<b>GetDefinition</b></pre>
+<pre>    ' Verify the type of feature data object
+    If TypeOf patternDef Is DerivedPatternFeatureData Or _
+       TypeOf patternDef Is LocalCircularPatternFeatureData Or _
+       TypeOf patternDef Is LocalLinearPatternFeatureData Then    </pre>
+<pre>        If patternDef.<b>AccessSelections</b>(swModel, Nothing) Then
+            ' Get the seed components for this pattern
+            Dim vSeedComps As Variant
+            vSeedComps = patternDef.<b>SeedComponentArray</b>            </pre>
+<pre>            ProcessSeedComponentArray vSeedComps            </pre>
+<pre>            ' Replace the seed array
+            patternDef.<b>SeedComponentArray</b> = vSeedComps            </pre>
+<pre>            ' Update the feature definition
+            swFeature.<b>ModifyDefinition</b> patternDef, swModel, Nothing
+        End If
+    End If
+End Sub
+</pre>
+<pre>Private Sub ProcessSeedComponentArray(ByRef vSeedComps As Variant)
+    ' Replace the current seeds with themselves as either features or components
+    Dim replacementSeeds() As Object
+    ReDim replacementSeeds(LBound(vSeedComps) To UBound(vSeedComps))    </pre>
+<pre>    ' Iterate over each seed component
+    Dim iSeed As Integer
+    For iSeed = LBound(vSeedComps) To UBound(vSeedComps)
+        Dim swCompFeat As Feature
+        Set swCompFeat = vSeedComps(iSeed)        </pre>
+<pre>        Debug.Print &quot;        Seed &quot; &amp; iSeed &amp; &quot;: &quot; &amp; swCompFeat.<b>Name</b>        </pre>
+<pre>        ' Access the seed component represented by the feature
+        Dim swComp As Component2
+        Set swComp = swCompFeat.<b>GetSpecificFeature2</b>        </pre>
+<pre>        ' Arbitrarily decide whether to replace this seed component
+        ' with a component or a feature
+        If iSeed Mod 2 = 0 Then
+            Set replacementSeeds(iSeed) = swComp
+        Else
+            Set replacementSeeds(iSeed) = swCompFeat
+        End If
+        </pre>
+<pre>    Next    </pre>
+<pre>    ' Replace the seed array
+    vSeedComps = replacementSeeds
+End Sub</pre>
+
+</body>
+
+</html>

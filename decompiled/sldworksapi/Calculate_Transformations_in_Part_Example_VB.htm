@@ -1,0 +1,106 @@
+<html>
+
+<head>
+<title>Calculate Transformations in Part Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,bodies">
+<meta name=MS-HKWD content="VBA examples,transforms">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Calculate Transformations in Part Example (VBA)</h1>
+<p>This example shows how to calculate transformations between solid bodies in a 
+part, which would make one solid body coincide with another solid body if the 
+transformation matrix is applied.</p>
+
+<pre>'--------------------------------------------------------------
+' Preconditions:
+' 1. Ensure that the specified part file to
+'    open exists.
+' 2. Open the Immediate window.
+' 3. Run the macro.
+'
+' Postconditions:
+' 1. Opens the specified part file.
+' 2. Gets the solid bodies in the specified part file.
+' 3. Iterates through the solid bodies in the part
+'    and calculates transformations between solid
+'    bodies.
+' 4. Examine the Immediate window.
+'----------------------------------------------------------------
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swModelDocExt As SldWorks.ModelDocExtension
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim file As String
+    Dim status As Long
+    Dim warnings As Long</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    file = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\routing-pipes\routes\Framework (Done).SLDPRT&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(file, swDocPART, swOpenDocOptions_Silent, &quot;&quot;, status, warnings)
+    If swModel Is Nothing Then Exit Sub    </pre>
+<pre>    Set swModelDocExt = swModel.<b>Extension</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Dim swPart As SldWorks.PartDoc
+    Set swPart = swModel
+       </pre>
+<pre>    Dim bodies As Variant
+    Dim swBody_A As SldWorks.Body2
+    Dim swBody_B As SldWorks.Body2</pre>
+<pre>    'Get solid bodies
+    Dim bodyType As swBodyType_e
+    Dim visibleOnly As Boolean
+    bodyType = swSolidBody
+    visibleOnly = True
+    bodies = swPart.<b>GetBodies2</b>(bodyType, visibleOnly)
+    'Iterate through the solid bodies in the part
+    'and calculate the transformation matrix between
+    'swBody_A and swBody_B 
+    'coincide when possible
+    If Not IsEmpty(bodies) Then
+        Dim i As Long
+        Dim j As Long
+        Dim maxIndex As Long
+        maxIndex = UBound(bodies)
+        For i = 0 To maxIndex
+            Set swBody_A = bodies(i)
+            For j = 0 To maxIndex
+                If i &lt;&gt; j Then
+                    Set swBody_B = bodies(j)                </pre>
+<pre>                    Dim swXfm As MathTransform
+                    Dim bResult As Boolean
+                    Set swXfm = Nothing
+                    bResult = False
+                    bResult = swBody_A.<b>GetCoincidenceTransform2</b>(swBody_B, swXfm)                    </pre>
+<pre>                    Debug.Print i &amp; &quot; -&gt; &quot; &amp; j, swBody_A.<b>Name</b> &amp; &quot; -&gt; &quot; &amp; swBody_B.<b>Name</b></pre>
+<pre>                    If bResult &lt;&gt; False Then
+                        Debug.Print vbTab &amp; &quot;Can coincide.&quot;
+                        Dim vXfm As Variant
+                        vXfm = swXfm.ArrayData
+                        Debug.Print vbTab &amp; &quot;Rotation:&quot;
+                        Debug.Print vbTab &amp; vXfm(0), vXfm(1), vXfm(2)
+                        Debug.Print vbTab &amp; vXfm(3), vXfm(4), vXfm(5)
+                        Debug.Print vbTab &amp; vXfm(6), vXfm(7), vXfm(8)
+                        Debug.Print vbTab &amp; &quot;Translation:&quot;
+                        Debug.Print vbTab &amp; vXfm(9), vXfm(10), vXfm(11)
+                        Debug.Print vbTab &amp; &quot;Scaling: &quot; &amp; vXfm(12)
+                        </pre>
+<pre>                    Else
+                        Debug.Print vbTab &amp; &quot;Cannot coincide.&quot;
+                    End If
+                End If
+            Next j
+        Next i
+    End If
+    
+End Sub</pre>
+
+</body>
+
+</html>

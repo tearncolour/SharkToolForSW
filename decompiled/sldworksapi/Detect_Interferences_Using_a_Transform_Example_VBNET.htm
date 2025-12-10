@@ -1,0 +1,365 @@
+<html>
+
+<head>
+<title>Detect Interferences Using a Transform Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,interference detection">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Detect Interferences Using a Transform Example (VB.NET)</h1>
+<p>This example shows how to specify a transform to detect interferences.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	'----------------------------------------------------------------------------<br>
+	' Preconditions:<br>
+	' 1. Open <i>public_documents</i><b>\samples\tutorial\api\InterferenceAssem.sldasm</b>.<br>
+	' 2. Uncomment one of the userOpt assignments.<br>
+	'<br>
+	' Postconditions:<br>
+	' 1. When the macro stops, observe the position of the components in the 
+	<br>
+	'&nbsp;&nbsp;&nbsp; graphics area.<br>
+	' 2. Press F5 to continue.<br>
+	' 3. Inspect the Immediate Window for interfering components.<br>
+	'<br>
+	' NOTE: Because the model is used elsewhere,<br>
+	' do not save changes when closing it.<br>
+	' 
+	---------------------------------------------------------------------------<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Runtime.InteropServices<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Diagnostics<br>
+	<br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black">
+	</span><span style="color:Blue">Class</span><span style="color:Black"> 
+	SolidWorksMacro<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swDoc </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swADoc </span><span style="color:Blue">As</span><span style="color:Black"> 
+	AssemblyDoc<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSM </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SelectionMgr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swIDM </span><span style="color:Blue">As</span><span style="color:Black"> 
+	InterferenceDetectionMgr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swComp() </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Component2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	varComp </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	numOfComp </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Long<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swCompTrans() </span><span style="color:Blue">As</span><span style="color:Black"> 
+	MathTransform<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	varCompTrans </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	isInterfering </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	outIntComp </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	outIntFaces </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	gposX </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	gposY </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	I </span><span style="color:Blue">As</span><span style="color:Black"> </span>
+	<span style="color:Blue">Long<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Uncomment one of the following lines to transform the components<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Dim 
+	userOpt As Long = 0 'make components coincident<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	userOpt </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Long</span><span style="color:Black"> = 1
+	</span><span style="color:Green">'make components intersecting<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	main()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDoc = swApp.ActiveDoc<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swADoc = swDoc<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSM = swDoc.SelectionManager<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SetPosAsPerOption()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectAllComponent()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;isInterfering = </span><span style="color:Blue">False<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numOfComp = 
+	swSM.GetSelectedObjectCount<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	(numOfComp) </span><span style="color:Blue">Then<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;getSelectedComp()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PrintComponentName(varComp)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CreateSameTransMatAsCompCount()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ChangePosOfCompAsPerOption()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varCompTrans = swCompTrans<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swIDM = swADoc.<b>InterferenceDetectionManager</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swIDM.<b>TreatCoincidenceAsInterference</b> = </span>
+	<span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;isInterfering = swIDM.<b>GetComponentsTransformInterference</b>((varComp), 
+	(varCompTrans), outIntComp)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop</span><span style="color:Black">
+	</span><span style="color:Green">' Observe transformation of objects for 
+	interference detection<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swIDM.<b>Done</b>() </span>
+	<span style="color:Green">' Interference detection stopped<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PrintInterferenceInfo()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varComp = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Else<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MsgBox(</span><span style="color:#a31515">&quot;Select 
+	components&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	SetPosAsPerOption()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	(userOpt = 0) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;gposX = 100.0 / 1000.0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;gposY = -50.0 / 1000.0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ElseIf</span><span style="color:Black"> 
+	(userOpt = 1) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;gposX = 70.0 / 1000.0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;gposY = -50.0 / 1000.0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	SelectAllComponent()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	boolstatus </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = 
+	swDoc.Extension.SelectByID2(</span><span style="color:#a31515">&quot;SquarePad_Red-1@InterferenceAssem&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">False</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swDoc.Extension.SelectByID2(</span><span style="color:#a31515">&quot;SquarePad_Green-1@InterferenceAssem&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">True</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swDoc.Extension.SelectByID2(</span><span style="color:#a31515">&quot;SquarePad_Blue-1@InterferenceAssem&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">True</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swDoc.Extension.SelectByID2(</span><span style="color:#a31515">&quot;SquarePad_Orange-1@InterferenceAssem&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">True</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swDoc.Extension.SelectByID2(</span><span style="color:#a31515">&quot;SquarePad_SkyBlue-1@InterferenceAssem&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">True</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swDoc.Extension.SelectByID2(</span><span style="color:#a31515">&quot;SquarePad_Yellow-1@InterferenceAssem&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">True</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = swDoc.Extension.SelectByID2(</span><span style="color:#a31515">&quot;SquarePad_Pink-1@InterferenceAssem&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">True</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	PrintInterferenceInfo()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	(isInterfering) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Interfering 
+	components:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	I = 0 </span><span style="color:Blue">To</span><span style="color:Black"> 
+	UBound(outIntComp)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swOutComp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Component2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swOutComp = outIntComp(I)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(swOutComp.Name2)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swOutComp.Select4(</span><span style="color:Blue">True</span><span style="color:Black">,
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">,
+	</span><span style="color:Blue">False</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swOutComp = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next</span><span style="color:Black"> 
+	I<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Else<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;No 
+	interference&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	getSelectedComp()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReDim</span><span style="color:Black"> 
+	swComp(numOfComp - 1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	I = 1 </span><span style="color:Blue">To</span><span style="color:Black"> 
+	numOfComp<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp(I - 1) = swSM.GetSelectedObject6(I, -1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next</span><span style="color:Black"> 
+	I<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varComp = swComp<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	PrintComponentName(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	varComp </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> (IsNothing(varComp))
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	userOpt = 0 </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Detect 
+	interferences between coincident components:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Else<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Detect 
+	interferences between intersecting components:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	I = LBound(varComp) </span><span style="color:Blue">To</span><span style="color:Black"> 
+	UBound(varComp)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swComp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Component2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp = varComp(I)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Component 
+	name : &quot;</span><span style="color:Black"> &amp; swComp.Name2)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next</span><span style="color:Black"> 
+	I<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	CreateSameTransMatAsCompCount()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReDim</span><span style="color:Black"> 
+	swCompTrans(numOfComp - 1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> (IsNothing(varComp))
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	I = LBound(varComp) </span><span style="color:Blue">To</span><span style="color:Black"> 
+	UBound(varComp)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swComp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Component2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp = varComp(I)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCompTrans(I) = swComp.Transform2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next</span><span style="color:Black"> 
+	I<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	ChangePosOfCompAsPerOption()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ChangeRefPosOfComp(gposX, gposY)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	ChangeRefPosOfComp(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	posX </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double</span><span style="color:Black">,
+	</span><span style="color:Blue">ByVal</span><span style="color:Black"> posY
+	</span><span style="color:Blue">As</span><span style="color:Black"> </span>
+	<span style="color:Blue">Double</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> (IsNothing(varComp))
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	I = LBound(varComp) </span><span style="color:Blue">To</span><span style="color:Black"> 
+	UBound(varComp)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	(I &gt; 0) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	varData </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varData = 
+	swCompTrans(I).ArrayData<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varData(9) = posX * I<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;varData(10) = posY * I<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swCompTrans(I).ArrayData = varData<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	(userOpt = 2) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp(I).Transform2 
+	= swCompTrans(I)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDoc.ForceRebuild3(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next</span><span style="color:Black"> 
+	I<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	<br>
+	<br>
+	</span><span style="color:Blue">End</span><span style="color:Black"> </span>
+	<span style="color:Blue">Class</span>
+</div>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

@@ -1,0 +1,188 @@
+<html>
+
+<head>
+<title>Get Bounding Box Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,bounding box">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Bounding Box Example (VB.NET)</h1>
+<p>This example shows how to get the bounding boxes for the selected feature and 
+face. This example also shows how to draw 3D sketches depicting the bounding 
+boxes.</p>
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><span style="color:green;">'<font face="Courier New">----------------------------------------------</font></span><font face="Courier New">
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify that the part to open exists.
+'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Selects the&nbsp;<b>Sweep1</b>&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Creates&nbsp;a&nbsp;3D&nbsp;sketch&nbsp;of&nbsp;the&nbsp;bounding&nbsp;box&nbsp;of</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;the&nbsp;selected&nbsp;<b>Sweep1</b>&nbsp;feature.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Selects the&nbsp;top&nbsp;face.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Creates&nbsp;a&nbsp;3D&nbsp;sketch&nbsp;of&nbsp;the bounding box of 
+'    the&nbsp;selected&nbsp;face.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Examine&nbsp;the&nbsp;graphics&nbsp;area&nbsp;and&nbsp;the&nbsp;Immediate</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;window.</span><font SIZE="2" COLOR="#008000">
+'
+' NOTE: Because this part is used elsewhere,
+' do not save changes.</font>
+<span style="color:green;">'----------------------------------------------</span>
+ 
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeat&nbsp;<span style="color:blue;">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFace&nbsp;<span style="color:blue;">As</span>&nbsp;Face2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;BoxFeatureArray(6)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;BoxFaceArray(6)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double
+        </span><font SIZE="2" COLOR="#0000ff">Dim</font><font SIZE="2"> swSketchMgr </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2"> SketchManager</font>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchPt(8)&nbsp;<span style="color:blue;">As</span>&nbsp;SketchPoint
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSketchSeg(12)&nbsp;<span style="color:blue;">As</span>&nbsp;SketchSegment
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color: #0000FF">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Open&nbsp;part&nbsp;document</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\cstick.sldprt&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Select&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Sweep1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;selected&nbsp;feature's&nbsp;bounding&nbsp;box</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Feature:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swFeat.<b>GetBox</b>(BoxFeatureArray)&nbsp;:&nbsp;<span style="color:#2b91af;">Debug</span>.Assert(status)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Pt1&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#a31515;">&quot;(&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFeatureArray(0)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFeatureArray(1)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFeatureArray(2)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#a31515;">&quot;)&nbsp;mm&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Pt2&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#a31515;">&quot;(&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFeatureArray(3)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFeatureArray(4)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFeatureArray(5)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#a31515;">&quot;)&nbsp;mm&quot;</span>)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>Insert3DSketch2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetAddToDB</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetDisplayWhenAdded</b>(<span style="color:blue;">False</span>)<font SIZE="2">
+
+        swSketchMgr = swModel.<b>SketchManager</b></font>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Draw&nbsp;points&nbsp;at&nbsp;each&nbsp;corner&nbsp;of&nbsp;bounding&nbsp;box</span><font SIZE="2">
+        swSketchPt(0) = swSketchMgr.<b>CreatePoint</b>(BoxFeatureArray(3), BoxFeatureArray(1), BoxFeatureArray(5))
+        swSketchPt(1) = swSketchMgr.CreatePoint(BoxFeatureArray(0), BoxFeatureArray(1), BoxFeatureArray(5))
+        swSketchPt(2) = swSketchMgr.CreatePoint(BoxFeatureArray(0), BoxFeatureArray(1), BoxFeatureArray(2))
+        swSketchPt(3) = swSketchMgr.CreatePoint(BoxFeatureArray(3), BoxFeatureArray(1), BoxFeatureArray(2))
+        swSketchPt(4) = swSketchMgr.CreatePoint(BoxFeatureArray(3), BoxFeatureArray(4), BoxFeatureArray(5))
+        swSketchPt(5) = swSketchMgr.CreatePoint(BoxFeatureArray(0), BoxFeatureArray(4), BoxFeatureArray(5))
+        swSketchPt(6) = swSketchMgr.CreatePoint(BoxFeatureArray(0), BoxFeatureArray(4), BoxFeatureArray(2))
+        swSketchPt(7) = swSketchMgr.CreatePoint(BoxFeatureArray(3), BoxFeatureArray(4), BoxFeatureArray(2))
+
+</font><font SIZE="2" COLOR="#008000">        ' Now draw bounding box</font></font><font SIZE="2"><font face="Courier New">
+        swSketchSeg(0) = swSketchMgr.<b>CreateLine</b>(swSketchPt(0).<b>X</b>, swSketchPt(0).<b>Y</b>, swSketchPt(0).<b>Z</b>, swSketchPt(1).X, swSketchPt(1).Y, swSketchPt(1).Z)
+        swSketchSeg(1) = swSketchMgr.CreateLine(swSketchPt(1).X, swSketchPt(1).Y, swSketchPt(1).Z, swSketchPt(2).X, swSketchPt(2).Y, swSketchPt(2).Z)
+        swSketchSeg(2) = swSketchMgr.CreateLine(swSketchPt(2).X, swSketchPt(2).Y, swSketchPt(2).Z, swSketchPt(3).X, swSketchPt(3).Y, swSketchPt(3).Z)
+        swSketchSeg(3) = swSketchMgr.CreateLine(swSketchPt(3).X, swSketchPt(3).Y, swSketchPt(3).Z, swSketchPt(0).X, swSketchPt(0).Y, swSketchPt(0).Z)
+        swSketchSeg(4) = swSketchMgr.CreateLine(swSketchPt(0).X, swSketchPt(0).Y, swSketchPt(0).Z, swSketchPt(4).X, swSketchPt(4).Y, swSketchPt(4).Z)
+        swSketchSeg(5) = swSketchMgr.CreateLine(swSketchPt(1).X, swSketchPt(1).Y, swSketchPt(1).Z, swSketchPt(5).X, swSketchPt(5).Y, swSketchPt(5).Z)
+        swSketchSeg(6) = swSketchMgr.CreateLine(swSketchPt(2).X, swSketchPt(2).Y, swSketchPt(2).Z, swSketchPt(6).X, swSketchPt(6).Y, swSketchPt(6).Z)
+        swSketchSeg(7) = swSketchMgr.CreateLine(swSketchPt(3).X, swSketchPt(3).Y, swSketchPt(3).Z, swSketchPt(7).X, swSketchPt(7).Y, swSketchPt(7).Z)
+        swSketchSeg(8) = swSketchMgr.CreateLine(swSketchPt(4).X, swSketchPt(4).Y, swSketchPt(4).Z, swSketchPt(5).X, swSketchPt(5).Y, swSketchPt(5).Z)
+        swSketchSeg(9) = swSketchMgr.CreateLine(swSketchPt(5).X, swSketchPt(5).Y, swSketchPt(5).Z, swSketchPt(6).X, swSketchPt(6).Y, swSketchPt(6).Z)
+        swSketchSeg(10) = swSketchMgr.CreateLine(swSketchPt(6).X, swSketchPt(6).Y, swSketchPt(6).Z, swSketchPt(7).X, swSketchPt(7).Y, swSketchPt(7).Z)
+        swSketchSeg(11) = swSketchMgr.CreateLine(swSketchPt(7).X, swSketchPt(7).Y, swSketchPt(7).Z, swSketchPt(4).X, swSketchPt(4).Y, swSketchPt(4).Z)</font></pre>
+</font>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetDisplayWhenAdded</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetAddToDB</b>(<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>Insert3DSketch2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.ClearSelection2(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;selected&nbsp;face's&nbsp;bounding&nbsp;box</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;-0.0000762173696102764,&nbsp;0.219999999999857,&nbsp;0.00945327855254163,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;selected&nbsp;face's&nbsp;bounding&nbsp;box</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Face&nbsp;=&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFaceArray&nbsp;=&nbsp;swFace.<b>GetBox</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Pt1&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#a31515;">&quot;(&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFaceArray(0)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFaceArray(1)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFaceArray(2)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#a31515;">&quot;)&nbsp;mm&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Pt2&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#a31515;">&quot;(&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFaceArray(3)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFaceArray(4)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BoxFaceArray(5)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#a31515;">&quot;)&nbsp;mm&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>Insert3DSketch2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetAddToDB</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetDisplayWhenAdded</b>(<span style="color:blue;">False</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Draw&nbsp;points&nbsp;at&nbsp;each&nbsp;corner&nbsp;of&nbsp;bounding&nbsp;box</span><font SIZE="2">
+        swSketchPt(0) = swSketchMgr.<b>CreatePoint</b>(BoxFaceArray(3), BoxFaceArray(1), BoxFaceArray(5))
+        swSketchPt(1) = swSketchMgr.CreatePoint(BoxFaceArray(0), BoxFaceArray(1), BoxFaceArray(5))
+        swSketchPt(2) = swSketchMgr.CreatePoint(BoxFaceArray(0), BoxFaceArray(1), BoxFaceArray(2))
+        swSketchPt(3) = swSketchMgr.CreatePoint(BoxFaceArray(3), BoxFaceArray(1), BoxFaceArray(2))
+        swSketchPt(4) = swSketchMgr.CreatePoint(BoxFaceArray(3), BoxFaceArray(4), BoxFaceArray(5))
+        swSketchPt(5) = swSketchMgr.CreatePoint(BoxFaceArray(0), BoxFaceArray(4), BoxFaceArray(5))
+        swSketchPt(6) = swSketchMgr.CreatePoint(BoxFaceArray(0), BoxFaceArray(4), BoxFaceArray(2))
+        swSketchPt(7) = swSketchMgr.CreatePoint(BoxFaceArray(3), BoxFaceArray(4), BoxFaceArray(2))</font>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Now&nbsp;draw&nbsp;bounding&nbsp;box</span>
+<font SIZE="2">        swSketchSeg(0) = swSketchMgr.<b>CreateLine</b>(swSketchPt(0).<b>X</b>, swSketchPt(0).<b>Y</b>, swSketchPt(0).<b>Z</b>, swSketchPt(1).X, swSketchPt(1).Y, swSketchPt(1).Z)
+        swSketchSeg(1) = swSketchMgr.CreateLine(swSketchPt(1).X, swSketchPt(1).Y, swSketchPt(1).Z, swSketchPt(2).X, swSketchPt(2).Y, swSketchPt(2).Z)
+        swSketchSeg(2) = swSketchMgr.CreateLine(swSketchPt(2).X, swSketchPt(2).Y, swSketchPt(2).Z, swSketchPt(3).X, swSketchPt(3).Y, swSketchPt(3).Z)
+        swSketchSeg(3) = swSketchMgr.CreateLine(swSketchPt(3).X, swSketchPt(3).Y, swSketchPt(3).Z, swSketchPt(0).X, swSketchPt(0).Y, swSketchPt(0).Z)
+        swSketchSeg(4) = swSketchMgr.CreateLine(swSketchPt(0).X, swSketchPt(0).Y, swSketchPt(0).Z, swSketchPt(4).X, swSketchPt(4).Y, swSketchPt(4).Z)
+        swSketchSeg(5) = swSketchMgr.CreateLine(swSketchPt(1).X, swSketchPt(1).Y, swSketchPt(1).Z, swSketchPt(5).X, swSketchPt(5).Y, swSketchPt(5).Z)
+        swSketchSeg(6) = swSketchMgr.CreateLine(swSketchPt(2).X, swSketchPt(2).Y, swSketchPt(2).Z, swSketchPt(6).X, swSketchPt(6).Y, swSketchPt(6).Z)
+        swSketchSeg(7) = swSketchMgr.CreateLine(swSketchPt(3).X, swSketchPt(3).Y, swSketchPt(3).Z, swSketchPt(7).X, swSketchPt(7).Y, swSketchPt(7).Z)
+        swSketchSeg(8) = swSketchMgr.CreateLine(swSketchPt(4).X, swSketchPt(4).Y, swSketchPt(4).Z, swSketchPt(5).X, swSketchPt(5).Y, swSketchPt(5).Z)
+        swSketchSeg(9) = swSketchMgr.CreateLine(swSketchPt(5).X, swSketchPt(5).Y, swSketchPt(5).Z, swSketchPt(6).X, swSketchPt(6).Y, swSketchPt(6).Z)
+        swSketchSeg(10) = swSketchMgr.CreateLine(swSketchPt(6).X, swSketchPt(6).Y, swSketchPt(6).Z, swSketchPt(7).X, swSketchPt(7).Y, swSketchPt(7).Z)
+        swSketchSeg(11) = swSketchMgr.CreateLine(swSketchPt(7).X, swSketchPt(7).Y, swSketchPt(7).Z, swSketchPt(4).X, swSketchPt(4).Y, swSketchPt(4).Z)</font>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetDisplayWhenAdded</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>SetAddToDB</b>(<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>Insert3DSketch2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

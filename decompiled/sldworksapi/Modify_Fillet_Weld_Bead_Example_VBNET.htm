@@ -1,0 +1,140 @@
+<html>
+
+<head>
+<title>Modify Fillet Weld Bead Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,weldments">
+<meta name=MS-HKWD content="VB.NET examples,weld beads">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Modify Fillet Weld Bead Example (VB.NET)</h1>
+<p>This example shows how to modify a fillet weld bead.</p>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color: green">
+'----------------------------------------------------------------------------</span><br>
+<span style="color: green">'&nbsp;Preconditions:</span><br>
+<span style="color: green">'&nbsp;1.&nbsp;Open&nbsp;<i>public_documents</i><b>\samples\tutorial\api\weldment_box3.sldprt</b>.</span><br>
+<span style="color: green">'&nbsp;2.&nbsp;Open&nbsp;an&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color: green">'</span><br>
+<span style="color: green">'&nbsp;Postconditions:</span><br>
+<span style="color: green">
+'&nbsp;1.&nbsp;Inspect&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;to&nbsp;see&nbsp;the&nbsp;properties&nbsp;of&nbsp;<b>Fillet&nbsp;Bead1</b>.</span><br>
+<span style="color: green">'&nbsp;2.&nbsp;Modifies&nbsp;some&nbsp;properties&nbsp;of&nbsp;<b>Fillet&nbsp;Bead1</b>.<br>
+</span><font color="#008000">'<br>
+' <span style="font-weight: bold;">NOTE</span>: Because 
+ the model is used elsewhere, do not save changes.</font><br>
+<span style="color: green">
+'---------------------------------------------------------------------------</span><br>
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+<span style="color: blue">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+<span style="color: blue">Imports</span>&nbsp;System<br>
+<span style="color: blue">Imports</span>&nbsp;System.Diagnostics<br>
+&nbsp;<br>
+<span style="color: blue">Partial</span>&nbsp;<span style="color: blue">Class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModel&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color: blue">As</span>&nbsp;ModelDocExtension<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSelMgr&nbsp;<span style="color: blue">As</span>&nbsp;SelectionMgr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swWeldBead&nbsp;<span style="color: blue">As</span>&nbsp;WeldmentBeadFeatureData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swFeat&nbsp;<span style="color: blue">As</span>&nbsp;Feature<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSelData&nbsp;<span style="color: blue">As</span>&nbsp;SelectData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;v1&nbsp;<span style="color: blue">As</span>&nbsp;Vertex<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;v2&nbsp;<span style="color: blue">As</span>&nbsp;Vertex<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;set1&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;faceVar&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;ve&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;fVar1&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;fVar2&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;f1(0)&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;f2(1)&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;e(0)&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;bdlen&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Double</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;bdPitch&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Double</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;bdsz&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Double</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;bdTy&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: #0000FF">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;i&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: #0000FF">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;boolstatus&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Sub</span>&nbsp;main()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelData&nbsp;=&nbsp;swSelMgr.<b>CreateSelectData</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Select&nbsp;Fillet&nbsp;Bead1&nbsp;feature</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Fillet&nbsp;Bead1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat&nbsp;=&nbsp;swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swWeldBead&nbsp;=&nbsp;swFeat.<b>GetDefinition</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Roll&nbsp;back&nbsp;to&nbsp;the&nbsp;feature&nbsp;just&nbsp;before&nbsp;Fillet&nbsp;Bead1</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swWeldBead.<b>AccessSelections</b>(swModel,&nbsp;<span style="color: blue">Nothing</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Get&nbsp;Fillet&nbsp;Bead1&nbsp;properties</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color: #a31515">&quot;Fillet&nbsp;Bead1&nbsp;properties:&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bdlen&nbsp;=&nbsp;swWeldBead.<b>BeadLength</b>(swWeldBeadSide_e.swWeldBeadArrowSide)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Weld&nbsp;bead&nbsp;length:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;bdlen)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bdPitch&nbsp;=&nbsp;swWeldBead.<b>BeadPitch</b>(swWeldBeadSide_e.swWeldBeadArrowSide)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Weld&nbsp;bead&nbsp;pitch:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;bdPitch)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bdsz&nbsp;=&nbsp;swWeldBead.<b>BeadSize</b>(swWeldBeadSide_e.swWeldBeadArrowSide)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Weld&nbsp;bead&nbsp;size:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;bdsz)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bdTy&nbsp;=&nbsp;swWeldBead.<b>BeadType</b>(swWeldBeadSide_e.swWeldBeadArrowSide)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Weld&nbsp;bead&nbsp;type&nbsp;as&nbsp;defined&nbsp;in&nbsp;swWeldBeadType_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;bdTy)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Propagate&nbsp;the&nbsp;weld&nbsp;bead&nbsp;along&nbsp;the&nbsp;tangent?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swWeldBead.<b>TangentPropagation</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Apply&nbsp;weld&nbsp;bead&nbsp;to&nbsp;both&nbsp;sides&nbsp;of&nbsp;intersecting&nbsp;faces?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swWeldBead.<b>UseOtherSide</b>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Get&nbsp;Fillet&nbsp;Bead1&nbsp;faces</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swWeldBead.<b>GetFaces</b>(swWeldBeadSide_e.swWeldBeadArrowSide,&nbsp;set1,&nbsp;faceVar)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">For</span>&nbsp;i&nbsp;=&nbsp;LBound(faceVar)&nbsp;<span style="color: blue">To</span>&nbsp;UBound(faceVar)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;faceVar(i).<b>Select4</b>(<span style="color: blue">True</span>,&nbsp;swSelData)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Next</span>&nbsp;i<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">For</span>&nbsp;i&nbsp;=&nbsp;LBound(set1)&nbsp;<span style="color: blue">To</span>&nbsp;UBound(set1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;set1(i).<b>Select4</b>(<span style="color: blue">True</span>,&nbsp;swSelData)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Next</span>&nbsp;i<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Get&nbsp;Fillet&nbsp;Bead1&nbsp;virtual&nbsp;edges</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ve&nbsp;=&nbsp;swWeldBead.<b>GetVirtualEdges</b>(<span style="color: blue">False</span>,&nbsp;swWeldBeadSide_e.swWeldBeadArrowSide)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">For</span>&nbsp;i&nbsp;=&nbsp;LBound(ve)&nbsp;<span style="color: blue">To</span>&nbsp;UBound(ve)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;ve(i).<b>Select4</b>(<span style="color: blue">True</span>,&nbsp;swSelData)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v1&nbsp;=&nbsp;ve(i).<b>GetStartVertex</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v2&nbsp;=&nbsp;ve(i).<b>GetEndVertex</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Next</span>&nbsp;i<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Set&nbsp;new&nbsp;properties&nbsp;of&nbsp;Fillet&nbsp;Bead1</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swWeldBead.<b>BeadLength</b>(swWeldBeadSide_e.swWeldBeadArrowSide)&nbsp;=&nbsp;bdlen&nbsp;*&nbsp;0.5<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swWeldBead.<b>BeadPitch</b>(swWeldBeadSide_e.swWeldBeadArrowSide)&nbsp;=&nbsp;bdPitch&nbsp;*&nbsp;0.5<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swWeldBead.<b>BeadSize</b>(swWeldBeadSide_e.swWeldBeadArrowSide)&nbsp;=&nbsp;bdsz&nbsp;*&nbsp;0.5<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swWeldBead.<b>BeadType</b>(swWeldBeadSide_e.swWeldBeadArrowSide)&nbsp;=&nbsp;bdTy<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Modify&nbsp;Fillet&nbsp;Bead1</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus&nbsp;=&nbsp;swFeat.<b>ModifyDefinition</b>(swWeldBead,&nbsp;swModel,&nbsp;<span style="color: blue">Nothing</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;swApp&nbsp;<span style="color: blue">As</span>&nbsp;SldWorks<br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color: blue">End</span>&nbsp;<span style="color: blue">Class</span><br>
+&nbsp;</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

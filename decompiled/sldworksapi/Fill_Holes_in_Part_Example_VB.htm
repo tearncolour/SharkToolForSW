@@ -1,0 +1,144 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Fill Holes in Part Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3578>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+ <META NAME="MS-HKWD" CONTENT="VBA examples,holes">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Fill Holes in Part Example (VBA)</h1>
+
+<p>In CAM drilling operations, it might be useful to deduce the appearance 
+ of an item before machining begins. This is slightly different than calculating 
+ the minimum amount of raw material required, i.e., the stock size. This example shows how to use some of the geometry- and topology-related 
+ methods and properties to fill all holes in a part.</p>
+<pre>'--------------------------------------------------------------------------
+' Preconditions: Open <i>public_documents</i><b>\samples\tutorial\api\cover_datum.sldrpt</b>.
+'
+' Postconditions:
+' 1. Creates a new part.
+' 2. Fills the holes in the new part.
+' 3. Click the surface-imported and thicken features, which were created
+'    by filling the holes, in the FeatureManager design tree and examine
+'    the part after each click.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'-----------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swPart As SldWorks.PartDoc
+    Dim swBody As SldWorks.Body2
+    Dim swFace As SldWorks.Face2
+    Dim swLoop As SldWorks.Loop2
+    Dim vEdgeArr As Variant
+    Dim swCurve() As SldWorks.Curve
+    Dim vCurveArr As Variant
+    Dim swEdge As SldWorks.Edge
+    Dim swTempBody As SldWorks.Body2
+    Dim swSurf As SldWorks.Surface
+    Dim swSurfCopy As SldWorks.Surface
+    Dim sPartTemplateName As String
+    Dim swNewModel As SldWorks.ModelDoc2
+    Dim swNewPart  As SldWorks.PartDoc
+    Dim swFeat() As SldWorks.Feature
+    Dim swKnitFeat As SldWorks.Feature
+    Dim swThickFeat As SldWorks.Feature
+    Dim swNewFeatMgr As SldWorks.FeatureManager
+    Dim i As Long
+    Dim bRet As Boolean
+    Dim vBodies As Variant</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swPart = swModel</pre>
+<pre>    vBodies = swPart.<b>GetBodies2</b>(swSolidBody, False)
+    Set swBody = vBodies(0)</pre>
+<pre>    ' Create new part
+    sPartTemplateName = swApp.<b>GetUserPreferenceStringValue</b>(swDefaultTemplatePart)
+    Set swNewModel = swApp.<b>NewDocument</b>(sPartTemplateName, swDwgPaperAsize, 0#, 0#)
+    Set swNewFeatMgr = swNewModel.<b>FeatureManager</b>
+    Set swNewPart = swNewModel</pre>
+<pre>    ReDim swFeat(0)</pre>
+<pre>    Set swFace = swBody.<b>GetFirstFace</b>
+    Do While Not swFace Is Nothing
+        Set swLoop = swFace.<b>GetFirstLoop</b>
+        Do While Not swLoop Is Nothing
+            If swLoop.<b>IsOuter</b> Then
+                vEdgeArr = swLoop.<b>GetEdges</b>
+                If UBound(vEdgeArr) &gt;= 0 Then
+                    ReDim swCurve(UBound(vEdgeArr))
+                    For i = 0 To UBound(vEdgeArr)
+                        Set swEdge = vEdgeArr(i)
+                        Set swCurve(i) = swEdge.<b>GetCurve</b>
+                    Next i
+                    vCurveArr = swCurve
+                    Set swSurf = swFace.<b>GetSurface</b>
+                    Set swSurfCopy = swSurf.<b>Copy</b>
+                    Set swTempBody = swSurfCopy.<b>CreateTrimmedSheet4</b>(vCurveArr, False)
+                    ' Typically nothing is returned if the loop is
+                    ' perpendicular to the surface, as in the
+                    ' end loops of a cylinder
+                    If Not swTempBody Is Nothing Then
+                        ' Sheet body only has one face
+                        Debug.Assert 1 = swTempBody.<b>GetFaceCount</b>
+                        Debug.Assert swSheetBody = swTempBody.<b>GetType</b>
+                        Set swFeat(UBound(swFeat)) = swNewPart.<b>CreateFeatureFromBody3</b>(swTempBody, False, swCreateFeatureBodyCheck)
+                        Debug.Assert Not swFeat(UBound(swFeat)) Is Nothing
+                        ReDim Preserve swFeat(UBound(swFeat) + 1)
+                    End If
+                End If
+            End If
+            Set swLoop = swLoop.<b>GetNext</b>
+        Loop
+        Set swFace = swFace.<b>GetNextFace</b>
+    Loop
+    ' Remove last empty feature
+    ReDim Preserve swFeat(UBound(swFeat) - 1)
+    swNewModel.<b>ClearSelection2</b> True
+    For i = 0 To UBound(swFeat)
+        bRet = swFeat(i).<b>Select2</b>(True, 1)
+    Next i
+    swNewFeatMgr.<b>InsertSewRefSurface</b> True, False, False, 3.001639406912E-05, 0.0001
+    ' Make sure surfaces are successfully sewn together
+    Set swKnitFeat = swNewModel.<b>FeatureByPositionReverse</b>(0)
+    bRet = swKnitFeat.<b>Select2</b>(False, 1)
+    Set swThickFeat = swNewFeatMgr.<b>FeatureBossThicken</b>(0.00254, 0, 7471215, False, True, True, True)</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

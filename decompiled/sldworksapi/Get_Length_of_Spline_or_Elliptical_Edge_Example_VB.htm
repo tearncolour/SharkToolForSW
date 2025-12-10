@@ -1,0 +1,229 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Length of Spline or Elliptical Edge Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="Splines,length">
+<meta name=MS-HKWD content="VBA examples,splines">
+<meta name=MS-HKWD content="Edge (see also IEdge Interface),length">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=5751>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Get Length of Spline or Elliptical Edge Example (VBA)</h1>
+
+<p>This example shows how to get the length of an edge using display tessellation.</p>
+
+<pre>'-------------------------------------------------------------------
+' Preconditions:
+' 1. Open a part that contains a spline or elliptical edge.
+' 2. Select the spline or elliptical edge.
+' 3. Open the Immediate window.
+'
+' Postconditions:
+' 1. Creates two 3D sketches:
+'    * <b>Control Pts</b> contains control points for the edge.
+'    * <b>Spline Pts</b> contains spline points for the edge.
+' 2. Examine the graphics area, FeatureManager design tree,
+'    the Immediate window.
+'
+' NOTE: A sketch with spline points is only created for a spline edge.
+'-------------------------------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>'  Tolerances that the user can set using IModeler::SetTolerances</pre>
+<pre>Public Enum swTolerances_e
+    swBSCurveOutputTol = 0  ' 3D bspline curve output tolerance (meters)
+    swBSCurveNonRationalOutputTol = 1  ' 3D non-rational bspline curve output tolerance (meters)
+    swUVCurveOutputTol = 2  ' 2D trim curve output tolerance (fraction of characteristic min. face dimension)
+    swSurfChordTessellationTol = 3  ' Chord tolerance or deviation for tessellation for surfaces
+    swSurfAngularTessellationTol = 4  ' Angular tolerance or deviation for tessellation for surfaces
+    swCurveChordTessellationTol = 5  ' Chord tolerance or deviation for tessellation for curves
+End Enum</pre>
+<pre>Public Enum swCurveTypes_e
+    LINE_TYPE = 3001
+    CIRCLE_TYPE = 3002
+    ELLIPSE_TYPE = 3003
+    INTERSECTION_TYPE = 3004
+    BCURVE_TYPE = 3005
+    SPCURVE_TYPE = 3006
+    CONSTPARAM_TYPE = 3008
+    TRIMMED_TYPE = 3009
+End Enum</pre>
+<pre>' Define two types
+Type DoubleRec
+    dValue As Double
+End Type</pre>
+<pre>Type Long2Rec
+    iLower As Long ' Assuming that a C int has 4 bytes
+    iUpper As Long
+End Type</pre>
+<pre>' Extract two integer values out of a single double value,
+' by assigning a DoubleRec to the double value and then
+' copying the value over an Long2Rec and
+' extracting the integer values
+Function ExtractFields(ByVal dValue As Double, iLower As Integer, iUpper As Integer)
+    Dim dr As DoubleRec
+    Dim i2r As Long2Rec</pre>
+<pre>    ' Set the double value
+    dr.dValue = dValue</pre>
+<pre>    ' Copy the values
+    LSet i2r = dr</pre>
+<pre>    ' Extract the values
+    iLower = i2r.iLower
+    iUpper = i2r.iUpper</pre>
+<pre>End Function</pre>
+<pre>Sub ProcessModellerSettings(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swModeller As SldWorks.Modeler)</pre>
+<pre>    ' Process modeler settings
+    Debug.Print &quot;Modeler Settings:&quot;
+    Debug.Print &quot;  BSCurveOutputTol                 = &quot; &amp; swModeller.<b>GetToleranceValue</b>(swBSCurveOutputTol)
+    Debug.Print &quot;  BSCurveNonRationalOutputTol      = &quot; &amp; swModeller.<b>GetToleranceValue</b>(swBSCurveNonRationalOutputTol)
+    Debug.Print &quot;  UVCurveOutputTol                 = &quot; &amp; swModeller.<b>GetToleranceValue</b>(swUVCurveOutputTol)
+    Debug.Print &quot;  SurfChordTessellationTol         = &quot; &amp; swModeller.<b>GetToleranceValue</b>(swSurfChordTessellationTol)
+    Debug.Print &quot;  SurfAngularTessellationTol       = &quot; &amp; swModeller.<b>GetToleranceValue</b>(swSurfAngularTessellationTol)
+    Debug.Print &quot;  CurveChordTessellationTol        = &quot; &amp; swModeller.<b>GetToleranceValue</b>(swCurveChordTessellationTol)
+    Debug.Print &quot;&quot;</pre>
+<pre>End Sub</pre>
+<pre>Sub ProcessBCurveInfo(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, vBCurveParam As Variant)</pre>
+<pre>    Dim nDim As Integer
+    Dim nOrder As Integer
+    Dim nCtrlPoints As Integer
+    Dim nPeriodicity As Integer
+    Dim nNumKnots As Integer
+    Dim swSketch As SldWorks.Sketch
+    Dim swSkFeat As SldWorks.Feature
+    Dim swSkPt As SldWorks.SketchPoint
+    Dim i As Integer</pre>
+<pre>    ExtractFields vBCurveParam(0), nDim, nOrder
+    ExtractFields vBCurveParam(1), nCtrlPoints, nPeriodicity
+    nNumKnots = nOrder + nCtrlPoints</pre>
+<pre>    Debug.Print &quot;  Dimension        = &quot; &amp; nDim
+    Debug.Print &quot;  Order            = &quot; &amp; nOrder
+    Debug.Print &quot;  Num Ctrl Pts     = &quot; &amp; nCtrlPoints
+    Debug.Print &quot;  Periodicity      = &quot; &amp; nPeriodicity
+    Debug.Print &quot;  Num Knots        = &quot; &amp; nNumKnots
+    Debug.Print &quot;&quot;</pre>
+<pre>    For i = 0 To nNumKnots - 1
+        ' Knot weights should be increasing monotonically
+        Debug.Print &quot;  Knot(&quot; &amp; i &amp; &quot;)          = &quot; &amp; vBCurveParam(2 + i)
+    Next i</pre>
+<pre>    Debug.Print &quot;&quot;</pre>
+<pre>    swModel.<b>Insert3DSketch2</b> False
+    swModel.<b>SetAddToDB</b> True
+    swModel.<b>SetDisplayWhenAdded</b> False</pre>
+<pre>    Set swSketch = swModel.<b>GetActiveSketch2</b>
+    Set swSkFeat = swSketch</pre>
+<pre>    If 3 = nDim Then</pre>
+<pre>        For i = 2 + nNumKnots To UBound(vBCurveParam) - 1 Step 3</pre>
+<pre>            Debug.Print &quot;  Ctrl(&quot; &amp; (i - 2 - nNumKnots) / 3 &amp; &quot;)          = (&quot; &amp; vBCurveParam(i + 0) * 1000# &amp; &quot;, &quot; &amp; vBCurveParam(i + 1) * 1000# &amp; &quot;, &quot; &amp; vBCurveParam(i + 2) * 1000# &amp; &quot;) mm&quot;
+            Set swSkPt = swModel.<b>CreatePoint2</b>(vBCurveParam(i + 0), vBCurveParam(i + 1), vBCurveParam(i + 2))
+        Next i
+    Else
+        For i = 2 + nNumKnots To UBound(vBCurveParam) - 1 Step 4
+            Debug.Print &quot;  Ctrl(&quot; &amp; (i - 2 - nNumKnots) / 4 &amp; &quot;)          = (&quot; &amp; vBCurveParam(i + 0) * 1000# &amp; &quot;, &quot; &amp; vBCurveParam(i + 1) * 1000# &amp; &quot;, &quot; &amp; vBCurveParam(i + 2) * 1000# &amp; &quot;) mm [&quot; &amp; vBCurveParam(i + 3) &amp; &quot;]&quot;
+            Set swSkPt = swModel.<b>CreatePoint2</b>(vBCurveParam(i + 0), vBCurveParam(i + 1), vBCurveParam(i + 2))
+       Next i
+    End If</pre>
+<pre>    swModel.<b>SetDisplayWhenAdded</b> True
+    swModel.<b>SetAddToDB</b> False
+    swModel.<b>Insert3DSketch2</b> True</pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    swSkFeat.Name = &quot;Control Pts&quot;</pre>
+<pre>End Sub</pre>
+<pre>Sub ProcessSplineInfo(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, vSplinePts As Variant)
+    Dim swSketch As SldWorks.Sketch
+    Dim swSkFeat As SldWorks.Feature
+    Dim swSkPt As SldWorks.SketchPoint
+    Dim i As Long</pre>
+<pre>    swModel.<b>Insert3DSketch2</b> False
+    swModel.<b>SetAddToDB</b> True
+    swModel.<b>SetDisplayWhenAdded</b> False</pre>
+<pre>    Set swSketch = swModel.<b>GetActiveSketch2</b>
+    Set swSkFeat = swSketch</pre>
+<pre>    For i = 0 To UBound(vSplinePts) Step 3
+        Debug.Print &quot;  SplinePt(&quot; &amp; i / 3 &amp; &quot;)     = (&quot; &amp; vSplinePts(i + 0) * 1000# &amp; &quot;, &quot; &amp; vSplinePts(i + 1) * 1000# &amp; &quot;, &quot; &amp; vSplinePts(i + 2) * 1000# &amp; &quot;) mm&quot;
+        Set swSkPt = swModel.<b>CreatePoint2</b>(vSplinePts(i + 0), vSplinePts(i + 1), vSplinePts(i + 2))
+    Next i</pre>
+<pre>    swModel.<b>SetDisplayWhenAdded</b> True
+    swModel.<b>SetAddToDB</b> False
+    swModel.<b>Insert3DSketch2</b> True</pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    swSkFeat.<b>Name</b> = &quot;Spline Pts&quot;</pre>
+<pre>End Sub</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModeller As SldWorks.Modeler
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swEdge As SldWorks.Edge
+    Dim swCurve As SldWorks.Curve
+    Dim vBCurveParam As Variant
+    Dim vSplinePts As Variant
+    Dim i As Long
+    Dim bRet As Boolean
+    </pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModeller = swApp.<b>GetModeler</b>
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swEdge = swSelMgr.<b>GetSelectedObject5</b>(1)
+    Set swCurve = swEdge.<b>GetCurve</b>: Debug.Assert swCurve.IsBcurve
+    ProcessModellerSettings swApp, swModel, swModeller
+    vBCurveParam = swCurve.<b>GetBCurveParams</b>(False)
+    vSplinePts = swCurve.<b>GetSplinePts</b>(vBCurveParam)</pre>
+<pre>    Debug.Print &quot;File = &quot; &amp; swModel.<b>GetPathName</b>
+    Debug.Print &quot;  Identity         = &quot; &amp; swCurve.<b>Identity</b></pre>
+<pre>    ProcessBCurveInfo swApp, swModel, vBCurveParam</pre>
+<pre>    Debug.Print &quot;  &quot;</pre>
+<pre>    ' Do not assert because null is a valid return value
+    '   ICurve::GetSplinePts
+    '       *  If the curve is periodic, then it must not have any repeated knots.
+    '       *  If the curve is non-periodic, it must only have repeated
+    '          knots at its ends.    
+    '
+    '       The curve must be cubic or lower degree, non-rational, and
+    '           have continuous first and second derivatives.
+    '
+    '       NOTE: For a linear or quadratic curve to satisfy these continuity
+    '       requirements, it must consist of a single segment.</pre>
+<pre>    If Not IsNull(vSplinePts) Then
+        ProcessSplineInfo swApp, swModel, vSplinePts
+        Debug.Print &quot; &quot;</pre>
+<pre>    End If</pre>
+<pre>End Sub
+
+</pre>
+
+</body>
+
+</html>

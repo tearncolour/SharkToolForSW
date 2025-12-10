@@ -1,0 +1,144 @@
+<html>
+
+<head>
+<title>Merge Arc Segment Bodies With Adjacent Bodies Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,structural-member group">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Merge Arc Segment Bodies With Adjacent Bodies Example (VBA)</h1>
+<p>This example shows how to create structural-member groups with and without merging 
+arc segment bodies with adjacent bodies.</p>
+
+<pre>'--------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified files exist:
+'    * part template
+'    * weldment profile
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens a new part.
+' 2. Creates a sketch of two lines and two tangent arcs.
+' 3. Creates a structural-member group using an adjacent line and arc
+'    and merges the arc segment's body with the line's body.
+' 4. Creates another structural-member group using the other adjacent
+'    line and arc and does not merge the arc segment's body with the
+'    line's body.
+' 5. Examine the Immediate window.
+' 6. Expand <b>Cut list(3)</b> in the FeatureManager design tree.
+' 7. Point at each <b>PIPE, SCH 40, 12.70 DIA.</b> and examine the 
+'    graphics area to verify whether that <b>PIPE, SCH 40, 12.70 </b>
+'    <b>DIA.</b> is merged.
+'---------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swFeature As SldWorks.Feature
+Dim swFeatureManager As SldWorks.FeatureManager
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSketchMgr As SldWorks.SketchManager
+Dim swSketchSegment As SldWorks.SketchSegment
+Dim swSelectionMgr As SldWorks.SelectionMgr
+Dim group1 As SldWorks.StructuralMemberGroup
+Dim group2 As SldWorks.StructuralMemberGroup
+Dim group As SldWorks.StructuralMemberGroup
+Dim swStructuralMemberFeatureData As SldWorks.StructuralMemberFeatureData
+Dim segmentsArray(1) As SldWorks.SketchSegment
+Dim status As Boolean
+Dim groups As Variant
+Dim groupArray(0) As Object
+Dim i As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SOLIDWORKS 2016\templates\Part.prtdot&quot;, 0, 0, 0)
+    Set swFeatureManager = swModel.<b>FeatureManager</b>
+    Set swModelDocExt = swModel.<b>Extension</b>
+    Set swSketchMgr = swModel.<b>SketchManager</b>
+    Set swSelectionMgr = swModel.<b>SelectionManager</b>    </pre>
+<pre>    'Insert weldment feature
+    Set swFeature = swFeatureManager.<b>InsertWeldmentFeature</b>    </pre>
+<pre>    'Create sketch of two lines and two tangent arcs
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True
+    Set swSketchSegment = swSketchMgr.<b>CreateLine</b>(0#, 0#, 0#, -0.101812, 0#, 0#)
+    Set swSketchSegment = swSketchMgr.<b>CreateLine</b>(-0.1016, -0.059455, 0#, 0#, -0.059455, 0#)
+    Set swSketchSegment = swSketchMgr.<b>CreateTangentArc</b>(0#, -0.059455, 0#, 0#, 0#, 0#, 1)
+    Set swSketchSegment = swSketchMgr.<b>CreateTangentArc</b>(-0.1016, -0#, 0#, -0.1016, -0.059455, 0#, 1)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True
+    swModel.<b>ViewZoomtofit2</b>
+    swModel.<b>ShowNamedView2</b> &quot;*Normal To&quot;, -1
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Create structural-member group
+    Set group1 = swFeatureManager.<b>CreateStructuralMemberGroup</b>()
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line1@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, -9.63105065508915E-02, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Arc1@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, 7.2699684110568E-03, -9.02652809559659E-04, 0, True, 0, Nothing, 0)
+    Set segmentsArray(0) = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set segmentsArray(1) = swSelectionMgr.<b>GetSelectedObject6</b>(2, -1)
+    group1.<b>segments</b> = segmentsArray
+    group1.<b>ApplyCornerTreatment</b> = True
+    group1.<b>CornerTreatmentType</b> = 1
+    group1.<b>GapWithinGroup</b> = 0
+    group1.<b>GapForOtherGroups</b> = 0
+    group1.<b>Angle</b> = 0
+    group1.<b>MergeArcSegmentBodies</b> = True
+    Set groupArray(0) = group1
+    groups = groupArray
+    Set swFeature = swFeatureManager.<b>InsertStructuralWeldment5</b>(&quot;C:\Program Files\SolidWorks Corp\SOLIDWORKS\lang\english\weldment profiles\ansi inch\pipe\0.5 sch 40.sldlfp&quot;, swConnectedSegmentsOption_e.swConnectedSegments_SimpleCut, False, (groups), &quot;&quot;)    
+    swModel.<b>ClearSelection2</b> True   </pre>
+<pre>    'Create structural-member group
+    Set group2 = swFeatureManager.<b>CreateStructuralMemberGroup</b>()
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Arc2@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, -0.106961319560779, -4.49372254001996E-04, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line2@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, -4.25304114129424E-02, -0.059455, 0, True, 0, Nothing, 0)
+    Set segmentsArray(0) = <b>swSelectionMgr</b>.GetSelectedObject6(1, -1)
+    Set segmentsArray(1) = <b>swSelectionMgr</b>.GetSelectedObject6(2, -1)
+    group2.<b>segments</b> = segmentsArray
+    group2.<b>ApplyCornerTreatment</b> = True
+    group2.<b>CornerTreatmentType</b> = 1
+    group2.<b>GapWithinGroup</b> = 0
+    group2.<b>GapForOtherGroups</b> = 0
+    group2.<b>Angle</b> = 0
+    group2.<b>MergeArcSegmentBodies</b> = False
+    Set groupArray(0) = group2
+    groups = groupArray
+    Set swFeature = swFeatureManager.<b>InsertStructuralWeldment5</b>(&quot;C:\Program Files\SolidWorks Corp\SOLIDWORKS\lang\english\weldment profiles\ansi inch\pipe\0.5 sch 40.sldlfp&quot;, swConnectedSegmentsOption_e.swConnectedSegments_SimpleCut, False, (groups), &quot;&quot;) 
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;pipe 0.5 sch 40(1)&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swFeature = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swStructuralMemberFeatureData = swFeature.<b>GetDefinition</b>
+    swStructuralMemberFeatureData.<b>AccessSelections</b> swModel, Nothing
+    Debug.Print &quot;&quot;
+    Debug.Print &quot;Number of groups: &quot; &amp; swStructuralMemberFeatureData.<b>GetGroupsCount</b>
+    Debug.Print &quot; Feature name: &quot; &amp; swFeature.<b>Name</b>
+    groups = swStructuralMemberFeatureData.<b>groups</b>
+        For i = LBound(groups) To UBound(groups)
+           Set group = groups(i)
+            Debug.Print (&quot; Arc segment merged? &quot; &amp; group.<b>MergeArcSegmentBodies</b>)
+         Next i
+    swStructuralMemberFeatureData.<b>ReleaseSelectionAccess</b>    </pre>
+<pre>    Debug.Print &quot;&quot;</pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;pipe 0.5 sch 40(2)&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swFeature = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swStructuralMemberFeatureData = swFeature.<b>GetDefinition</b>
+    swStructuralMemberFeatureData.<b>AccessSelections</b> swModel, Nothing
+    Debug.Print &quot;&quot;
+    Debug.Print &quot;Number of groups: &quot; &amp; swStructuralMemberFeatureData.<b>GetGroupsCount</b>
+    Debug.Print &quot; Feature name: &quot; &amp; swFeature.<b>Name</b>
+    groups = swStructuralMemberFeatureData.<b>groups</b>
+        For i = LBound(groups) To UBound(groups)
+           Set group = groups(i)
+            Debug.Print (&quot; Arc segment merged? &quot; &amp; group.<b>MergeArcSegmentBodies</b>)
+         Next i
+    swStructuralMemberFeatureData.<b>ReleaseSelectionAccess</b>  </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

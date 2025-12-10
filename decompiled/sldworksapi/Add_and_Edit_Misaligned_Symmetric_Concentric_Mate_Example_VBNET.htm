@@ -1,0 +1,234 @@
+<html>
+
+<head>
+<title>Add and Edit Misaligned Symmetric Concentric Mate Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,mates">
+<meta name=MS-HKWD content="VB.NET examples,components">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add and Edit Misaligned Symmetric Concentric Mate Example (VB.NET)</h1>
+<p>This example shows how to add and edit a misaligned symmetric concentric mate 
+between components.</p>
+
+<p style="font-family: Consolas; font-size: 13; color: black; background: white" class="APICODE"><font face="Courier New"><span style="color: green">'-----------------------------------------------------------------</span><br>
+<span style="color: green">'&nbsp;Preconditions:</span><br>
+<span style="color: green">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;parts&nbsp;to&nbsp;open&nbsp;and&nbsp;assembly&nbsp;template&nbsp;exist.</span><br>
+<span style="color: green">'&nbsp;2.&nbsp;Open&nbsp;a&nbsp;new&nbsp;session&nbsp;of&nbsp;SOLIDWORKS&nbsp;to&nbsp;ensure&nbsp;that&nbsp;the&nbsp;assembly</span><br>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;document's&nbsp;title&nbsp;is&nbsp;<b>Assem1</b>.</span><br>
+<span style="color: green">'&nbsp;3.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color: green">'</span><br>
+<span style="color: green">'&nbsp;Postconditions:</span><br>
+<span style="color: green">'&nbsp;1.&nbsp;Opens&nbsp;<b>wheel_hub.sldprt</b>.</span><br>
+<span style="color: green">'&nbsp;2.&nbsp;Opens&nbsp;a&nbsp;new&nbsp;assembly&nbsp;document&nbsp;titled&nbsp;<b>Assem1</b>&nbsp;and&nbsp;adds&nbsp;</span><br>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;<b>wheel_hub.sldprt</b>&nbsp;as&nbsp;a&nbsp;component.</span><br>
+<span style="color: green">'&nbsp;3.&nbsp;Opens and adds&nbsp;<b>beam&nbsp;with&nbsp;holes.sldprt</b>&nbsp;as&nbsp;another&nbsp;component.</span><br>
+<span style="color: green">'&nbsp;4.&nbsp;Adds&nbsp;a&nbsp;concentric&nbsp;mate&nbsp;between&nbsp;the&nbsp;components.</span><br>
+<span style="color: green">'&nbsp;5.&nbsp;Adds&nbsp;a&nbsp;misaligned&nbsp;symmetric&nbsp;concentric&nbsp;mate</span><br>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;between&nbsp;the&nbsp;components.</span><br>
+<font color="#008000">' 6. Edits the misaligned symmetric concentric mate.<br>
+' 7. Examine the Immediate window, graphics area, and the mates<br>
+'&nbsp;&nbsp;&nbsp; in the Mates folder in the FeatureManager design tree.</font><br>
+<span style="color: green">'</span><br>
+<span style="color: green">'&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;parts&nbsp;are&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span><br>
+<span style="color: green">'-----------------------------------------------------------------</span><br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+<span style="color:blue;">Imports</span>&nbsp;System<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics<br>
+&nbsp;<br>
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAssembly&nbsp;<span style="color:blue;">As</span>&nbsp;AssemblyDoc<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swInsertedComponent&nbsp;<span style="color:blue;">As</span>&nbsp;Component2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swMathUtil&nbsp;<span style="color:blue;">As</span>&nbsp;MathUtility<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swTransform&nbsp;<span style="color:blue;">As</span>&nbsp;MathTransform<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swMate&nbsp;<span style="color:blue;">As</span>&nbsp;Mate2<br>
+	<span style="color:blue;">Dim</span>&nbsp;swLinkedMate&nbsp;<span style="color:blue;">As</span>&nbsp;Mate2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swComp&nbsp;<span style="color:blue;">As</span>&nbsp;Component2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelectionManager&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swFeature&nbsp;<span style="color:blue;">As</span>&nbsp;Feature<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSheetWidth&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSheetHeight&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;AssemblyTitle&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;TransformData(15)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;TransformDataObj&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Open&nbsp;the&nbsp;part</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS&nbsp;2018\samples\tutorial\api\wheel_hub.sldprt&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>ActivateDoc2</b>(<span style="color:#a31515;">&quot;wheel_hub.sldprt&quot;</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;errors)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;an&nbsp;assembly</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheetWidth&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSheetHeight&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssembly&nbsp;=&nbsp;swApp.<b>NewDocument</b>(<span style="color:#a31515;">&quot;C:\ProgramData\SolidWorks\SOLIDWORKS&nbsp;2018\templates\Assembly.asmdot&quot;</span>,&nbsp;0,&nbsp;swSheetWidth,&nbsp;swSheetHeight)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AssemblyTitle&nbsp;=&nbsp;swAssembly.<b>GetTitle</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Add&nbsp;the&nbsp;part&nbsp;to&nbsp;the&nbsp;assembly</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swInsertedComponent&nbsp;=&nbsp;swAssembly.<b>AddComponent5</b>(fileName,&nbsp;swAddComponentConfigOptions_e.swAddComponentConfigOptions_CurrentSelectedConfig,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;-0.000181145833835217,&nbsp;0.000107469465717713,&nbsp;0.0000225750183631135)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>CloseDoc</b>(fileName)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(0)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(1)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(2)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(3)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(4)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(5)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(6)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(7)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(8)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(9)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(10)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(11)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(12)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(13)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(14)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(15)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformDataObj&nbsp;=&nbsp;TransformData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathUtil&nbsp;=&nbsp;swApp.<b>GetMathUtility</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTransform&nbsp;=&nbsp;swMathUtil.<b>CreateTransform</b>((TransformDataObj))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swInsertedComponent.<b>SetTransformAndSolve2</b>(swTransform)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Open and add&nbsp;another&nbsp;part&nbsp;to&nbsp;the&nbsp;assembly</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS&nbsp;2018\samples\tutorial\api\beam&nbsp;with&nbsp;holes.sldprt&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_AutoMissingConfig,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>ActivateDoc3</b>(AssemblyTitle,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;errors)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssembly&nbsp;=&nbsp;swModel<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swInsertedComponent&nbsp;=&nbsp;swAssembly.<b>AddComponent5</b>(fileName,&nbsp;swAddComponentConfigOptions_e.swAddComponentConfigOptions_CurrentSelectedConfig,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;-0.0543800538871437,&nbsp;-0.10948954091873,&nbsp;0.0944189997389913)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>CloseDoc</b>(fileName)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(0)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(1)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(2)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(3)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(4)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(5)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(6)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(7)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(8)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(9)&nbsp;=&nbsp;-0.179380053887144<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(10)&nbsp;=&nbsp;-0.0894895409187302<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(11)&nbsp;=&nbsp;0.0744189997389913<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(12)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(13)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(14)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(15)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformDataObj&nbsp;=&nbsp;TransformData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathUtil&nbsp;=&nbsp;swApp.<b>GetMathUtility</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTransform&nbsp;=&nbsp;swMathUtil.<b>CreateTransform</b>((TransformDataObj))<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Add&nbsp;a concentric&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByRay</b>(-0.158811046822791,&nbsp;-0.11180606883903,&nbsp;0.110029416510201,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.000877710636365774,&nbsp;2,&nbsp;<span style="color:blue;">True</span>,&nbsp;1,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByRay</b>(-0.0595820179927387,&nbsp;-0.0282041473137156,&nbsp;0.0120989536100637,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.000877710636365774,&nbsp;2,&nbsp;<span style="color:blue;">True</span>,&nbsp;1,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMate&nbsp;=&nbsp;swAssembly.<b>AddMate5</b>(swMateType_e.swMateCONCENTRIC,&nbsp;swMateAlign_e.swMateAlignALIGNED,&nbsp;<span style="color:blue;">False</span>,&nbsp;0.128546596088087,&nbsp;0.0254,&nbsp;0.0254,&nbsp;0.0254,&nbsp;0.0254,&nbsp;0,&nbsp;0.5235987755983,&nbsp;0.5235987755983,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;errors)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditRebuild3</b>()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Move&nbsp;a&nbsp;component&nbsp;in&nbsp;order&nbsp;to&nbsp;add&nbsp;another&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;beam&nbsp;with&nbsp;holes-1@Assem1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;COMPONENT&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(0)&nbsp;=&nbsp;0.999268594246539<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(1)&nbsp;=&nbsp;-0.0382397247969312<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(2)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(3)&nbsp;=&nbsp;0.0382397247969312<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(4)&nbsp;=&nbsp;0.999268594246539<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(5)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(6)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(7)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(8)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(9)&nbsp;=&nbsp;-0.0817169203602251<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(10)&nbsp;=&nbsp;-0.00405863499514564<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(11)&nbsp;=&nbsp;0.158954897029145<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(12)&nbsp;=&nbsp;1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(13)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(14)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformData(15)&nbsp;=&nbsp;0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransformDataObj&nbsp;=&nbsp;TransformData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathUtil&nbsp;=&nbsp;swApp.<b>GetMathUtility</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swTransform&nbsp;=&nbsp;swMathUtil.<b>CreateTransform</b>((TransformDataObj))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionManager&nbsp;=&nbsp;swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComp&nbsp;=&nbsp;swSelectionManager.<b>GetSelectedObjectsComponent4</b>(1,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swComp.<b>SetTransformAndSolve2</b>(swTransform)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Add&nbsp;a&nbsp;misaligned&nbsp;symmetric&nbsp;concentric&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByRay</b>(-0.0362917984178921,&nbsp;-0.0292363280984205,&nbsp;0.194521666713399,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.000877710636365774,&nbsp;2,&nbsp;<span style="color:blue;">True</span>,&nbsp;1,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByRay</b>(0.054967212945769,&nbsp;-0.0278611795938559,&nbsp;0.0112380964281442,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.000877710636365774,&nbsp;2,&nbsp;<span style="color:blue;">True</span>,&nbsp;1,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Misaligned&nbsp;concentric&nbsp;mate:&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMate&nbsp;=&nbsp;swAssembly.<b>AddConcentricMateWithTolerance</b>(swMateAlign_e.swMateAlignALIGNED,&nbsp;swConcentricAlignmentType_e.swConcentricAlignSymmetric,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;errors)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;errors&nbsp;=&nbsp;1&nbsp;<span style="color:blue;">Then</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Added&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Not&nbsp;added&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Edit&nbsp;the&nbsp;misaligned&nbsp;symmetric&nbsp;concentric&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'and&nbsp;change&nbsp;its position from symmetric to aligned</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByRay</b>(0.0548392523382404,&nbsp;-0.0277425865184,&nbsp;0.00906375356890976,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.00107347349835279,&nbsp;2,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByRay</b>(0.00980255664001106,&nbsp;-0.0292099642897483,&nbsp;0.193646683964346,&nbsp;-0.400036026779312,&nbsp;-0.515038074910024,&nbsp;-0.758094294050284,&nbsp;0.00107347349835279,&nbsp;2,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Concentric2&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;MATE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssembly.<b>EditConcentricMate</b>(swMateAlign_e.swMateAlignALIGNED,&nbsp;swConcentricAlignmentType_e.swConcentricAlignThisMate,&nbsp;<span style="color:blue;">True</span>,&nbsp;0.095,&nbsp;errors)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;errors&nbsp;=&nbsp;1&nbsp;<span style="color:blue;">Then</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Edited&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Concentric2&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;MATE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">True</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swSelectionManager.<b>GetSelectedObject6</b>(1,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMate&nbsp;=&nbsp;swFeature.<b>GetSpecificFeature2</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+<span style="color: green">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+'Get&nbsp;the&nbsp;linked&nbsp;concentric&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swLinkedMate&nbsp;=&nbsp;swMate.<b>GetLinkedMate</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;current&nbsp;misaligned&nbsp;deviation</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Current&nbsp;misalignment&nbsp;deviation:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swLinkedMate.<b>GetCurrentMisalignedDeviation</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Do not 
+use&nbsp;document&nbsp;property&nbsp;value&nbsp;for&nbsp;misalignment&nbsp;deviation</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMate.<b>SetUseMisalignedDeviationDocumentProperty</b>(<span style="color:blue;">False</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Use&nbsp;document&nbsp;property?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swMate.<b>GetUseMisalignedDeviationDocumentProperty</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Change&nbsp;mate&nbsp;alignment&nbsp;type&nbsp;to&nbsp;symmetric</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swLinkedMate.<b>SetConcentricAlignmentType</b>(<span style="color:#2b91af;">swConcentricAlignmentType_e</span>.swConcentricAlignSymmetric)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Concentric&nbsp;alignment&nbsp;type&nbsp;as&nbsp;defined&nbsp;in&nbsp;swConcentricAlignmentType_e:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swLinkedMate.<b>GetConcentricAlignmentType</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;maximum&nbsp;misalignment&nbsp;deviation</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMate.<b>SetMaximumMisalignedDeviation</b>(0.102)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Maximum&nbsp;misalignment&nbsp;deviation:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swMate.<b>GetMaximumMisalignedDeviation</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Not&nbsp;edited&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If<br>
+</span>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>EditRebuild3</b>()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks<br>
+&nbsp;<br>
+&nbsp;<br>
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span><br>
+&nbsp;<br>
+ 
+</font></p>
+
+</body>
+
+</html>

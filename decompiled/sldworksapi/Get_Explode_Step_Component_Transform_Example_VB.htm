@@ -1,0 +1,99 @@
+<html>
+<head>
+<title>Get Explode Step Component Transform Example (VBA)</title>
+<meta content="en-us" http-equiv="Content-Language" />
+<meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
+<meta content="VBA examples,explode steps" name="MS-HKWD" />
+<meta content="VBA examples,transforms" name="MS-HKWD" />
+<link href="ApiHelp.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h1 style="font-weight:normal;font-size:7.5pt">SOLIDWORKS API Help</h1>
+<h1>Get Explode Step Component Transform Example (VBA)</h1>
+<p>This example shows how to get the transformation matrix of a component in a 
+radial explode step and apply it to another component to overlap the components.</p>
+<p style="font-family:'Courier New', Courier, monospace; font-size:10pt">
+'----------------------------------------------------------------------------
+<br />
+' Preconditions: <br />
+' 1. Open an assembly with an explode view with at least one radial explode<br>
+'&nbsp;&nbsp;&nbsp; step with at least two components.<br>
+' 2. Activate the explode view.<br />
+' 3. Replace <i>component_name</i> in the code below with the name of a second<br>
+'&nbsp;&nbsp;&nbsp; component to overlap the first.<br>
+' 4. Open an Immediate window.<br />
+' <br />
+' Postconditions: For each explode step:<br />
+' 1. Gets the transformation matrix of a component in the radial explode step. <br />
+' 2. Selects another component to overlap.<br>
+' 3. Applies the transformation matrix to overlap the components.<br>
+' 4. Prints to the Immediate window the transformation matrix for the component.<br />
+'----------------------------------------------------------------------------
+</p>
+<p class="APICODE">Dim swApp As SldWorks.SldWorks<br>
+Dim assDoc As SldWorks.AssemblyDoc<br>
+Dim c As SldWorks.Configuration<br>
+Dim Part As MSldWorks.odelDoc2<br>
+Dim es As SldWorks.ExplodeStep<br>
+Dim comp As SldWorks.Component2<br>
+Dim mathXForm As SldWorks.MathTransform<br>
+Dim compXForm As SldWorks.MathTransform<br>
+Dim obj As SldWorks.Component2<br>
+Dim selMgr As SSldWorks.electionMgr<br>
+Dim viewCount, nStep, i, j, k As Long<br>
+Dim varComp, varXForm As Variant<br>
+Dim MathUtility As SldWorks.MathUtility<br>
+Dim boolstatus As Boolean<br>
+Dim longstatus As Long, longwarnings As Long<br>
+Option Explicit<br>
+Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; Set Part = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; Set assDoc = Part<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set c = Part.<b>GetActiveConfiguration</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; nStep = c.<b>GetNumberOfExplodeSteps</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; For i = 0 To nStep - 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; j = 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set es = c.<b>GetExplodeStep</b>(i)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; varComp = es.<b>GetComponents</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'Get the 
+transformation matrix for the second component in the radial explode step<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set comp = es.<b>GetComponent</b>(j)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print comp.<b>Name2</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; varXForm = es.<b>GetStepComponentXForm</b>(j)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set MathUtility = swApp.<b>GetMathUtility</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set mathXForm = MathUtility.<b>CreateTransform</b>(varXForm)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'Select another 
+component to overlap<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set selMgr = Part.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; boolstatus = Part.<b>Extension</b>.<b>SelectByID2</b>(&quot;<i>component_name</i>&quot;, 
+&quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set obj = selMgr.<b>GetSelectedObject6</b>(1, 
+-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 'Applies the 
+transformation matrix to overlap the components<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set compXForm = obj.<b>Transform2</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set compXForm = compXForm.<b>Multiply</b>(mathXForm)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; obj.<b>Transform2</b> = compXForm<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print es.<b>Name</b> 
+&amp; &quot;&nbsp; :&nbsp; &quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For k = 0 To 15<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+varXForm(k)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next k<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Call Part.<b>EditRebuild3</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Next i<br>
+</p>
+<p class="APICODE">End Sub</p>
+</body>
+</html>

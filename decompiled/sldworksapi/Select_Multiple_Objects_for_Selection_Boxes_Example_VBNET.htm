@@ -1,0 +1,448 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Select Multiple Objects for Selection Boxes Example (VB.NET)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VB.NET examples,PropertyManager pages">
+<meta name=MS-HKWD content="VB.NET examples, multiselect">
+<meta name=MS-HKWD content="VB.NET examples, selection boxes">
+<meta name=MS-HKWD content="VB.NET examples, selections">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=7625>
+<meta name=layout-width content=910>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Select Multiple Objects for Selection Boxes Example (VB.NET)</h1>
+
+<font SIZE="2">
+<p><a name="Top"></a>This example shows how to select multiple objects and add the selected 
+objects to different selection boxes on a PropertyManager page.</p>
+</font>
+
+<font SIZE="2" COLOR="#008000">
+<p><font face="Courier New" size="2">
+'----------------------------------------------------------------------------<br>
+' Preconditions: <br>
+' 1. Verify that the specified assembly exists.<br>
+' 2. Copy <a href="#Module">SolidWorksMacro.vb</a> to your project.<br>
+' 3. Add a class module and copy <a href="#Class">
+clsPropMgr.vb</a> to that module.<br>
+' 4. Add the SolidWorks.Interop.swpublished 
+primary interop assembly<br>
+' &nbsp;&nbsp;&nbsp;reference to your project (click <b>Project &gt; Add Reference</b>, <br>
+'&nbsp;&nbsp;&nbsp; browse to <i>install_dir</i>\<b>api\redist</b>, select<br>
+'&nbsp;&nbsp;&nbsp;
+<b>SolidWorks.Interop.swpublished.dll &gt; OK</b>).<br>
+' 5. Verify that the <b>Tools &gt; Options &gt; System Options &gt; 
+Stop VSTA debugger <br>
+</b>' &nbsp;&nbsp;&nbsp;<b>on macro exit</b> checkbox is clear.<br>
+'<br>
+' Postconditions:<br>
+' 1. Opens the assembly.<br>
+' 2. Creates a PropertyManager page.<br>
+' 3. Examine the PropertyManager page to verify that&nbsp; <br>
+'&nbsp;&nbsp;&nbsp; three selected faces 
+appear in the top selection<br>
+'&nbsp;&nbsp;&nbsp;&nbsp;box and two selected 
+faces appear in the bottom<br>
+'&nbsp;&nbsp;&nbsp; selection box.<br>
+' 4. Close the PropertyManager page.<br>
+'<br>
+' &nbsp;NOTES: <br>
+' &nbsp;* &nbsp;Reselect the&nbsp;<b>Tools &gt; Options &gt; System Options &gt; 
+Stop VSTA debugger <br>
+</b>' &nbsp;&nbsp;&nbsp;&nbsp;<b>on macro exit</b> checkbox, if it was selected 
+prior to running the macro.<br>
+' &nbsp;* &nbsp;Because the assembly document is used 
+elsewhere, <br>
+'&nbsp;&nbsp;&nbsp;&nbsp; do not save changes.<br>
+'----------------------------------------------------------------------------
+</font></p>
+</font>
+
+<p class=APICODE>
+<font size="2" face="Courier New" color="#008000"><a name="Module"></a>'SolidWorksMacro.vb</font></p>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swSelectionMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">WithEvents</span>&nbsp;pm&nbsp;<span style="color:blue;">As</span>&nbsp;clsPropMgr
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Const</span>&nbsp;mark&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Const</span>&nbsp;mark2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;2
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;openDocErrors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;OpenDocWarnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;selections1(2)&nbsp;<span style="color:blue;">As</span>&nbsp;Face2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;selections2(1)&nbsp;<span style="color:blue;">As</span>&nbsp;Face2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;j&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;nbrSelections&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>SetUserPreferenceToggle</b>(swUserPreferenceToggle_e.swStopDebuggingVstaOnExit,&nbsp;<span style="color:blue;">False</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\advdrawings\bladed&nbsp;shaft.sldasm&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocASSEMBLY,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;openDocErrors,&nbsp;OpenDocWarnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;a&nbsp;new&nbsp;instance&nbsp;of&nbsp;the&nbsp;PropertyManager&nbsp;class</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;clsPropMgr(swApp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm.Show()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Selections&nbsp;for&nbsp;top&nbsp;selection&nbsp;box</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.00369805475952489,&nbsp;0.0901975482463513,&nbsp;0.00315907187808762,&nbsp;<span style="color:blue;">True</span>,&nbsp;mark,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.00860570843923369,&nbsp;0.0737431971170679,&nbsp;0.0039892160950501,&nbsp;<span style="color:blue;">True</span>,&nbsp;mark,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.0100013029872912,&nbsp;0.0446884591512742,&nbsp;0.00996173127262523,&nbsp;<span style="color:blue;">True</span>,&nbsp;mark,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrSelections&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObjectCount2</b>(-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrSelections&nbsp;=&nbsp;nbrSelections&nbsp;-&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;nbrSelections
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selections1(i)&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObject6</b>(i&nbsp;+&nbsp;1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next
+</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.ClearSelection2(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Selections&nbsp;for&nbsp;bottom&nbsp;selection&nbsp;box</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;-0.0264206017159268,&nbsp;-0.00342602957275062,&nbsp;0.00987615560137556,&nbsp;<span style="color:blue;">True</span>,&nbsp;mark2,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;-0.00128130257782288,&nbsp;-0.00354158999988385,&nbsp;0.0177003152412567,&nbsp;<span style="color:blue;">True</span>,&nbsp;mark2,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrSelections&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObjectCount2</b>(-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrSelections&nbsp;=&nbsp;nbrSelections&nbsp;-&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;j&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;nbrSelections
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selections2(j)&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObject6</b>(j&nbsp;+&nbsp;1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next
+</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.ClearSelection2(<span style="color:blue;">True</span>)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Populate&nbsp;selection&nbsp;boxes</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectBoxFaces1(selections1,&nbsp;mark)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectBoxFaces2(selections2,&nbsp;mark2)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;SelectBoxFaces1(<span style="color:blue;">ByVal</span>&nbsp;selections()&nbsp;<span style="color:blue;">As</span>&nbsp;Face2,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;selectionBoxMark&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelectData&nbsp;<span style="color:blue;">As</span>&nbsp;SelectData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectData&nbsp;=&nbsp;swSelectionMgr.<b>CreateSelectData</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectData.<b>Mark</b>&nbsp;=&nbsp;selectionBoxMark
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>MultiSelect2</b>(selections,&nbsp;<span style="color:blue;">True</span>,&nbsp;swSelectData)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;SelectBoxFaces2(<span style="color:blue;">ByVal</span>&nbsp;selections()&nbsp;<span style="color:blue;">As</span>&nbsp;Face2,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;selectionBoxMark&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelectData&nbsp;<span style="color:blue;">As</span>&nbsp;SelectData
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectData&nbsp;=&nbsp;swSelectionMgr.<b>CreateSelectData</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectData.<b>Mark</b>&nbsp;=&nbsp;selectionBoxMark
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt.<b>MultiSelect2</b>(selections,&nbsp;<span style="color:blue;">True</span>,&nbsp;swSelectData)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+<p align="center"><font face="Courier New" size="2"><a href="#Top">Back to top</a></font></p>
+
+<p class=APICODE>
+<font size="2" face="Courier New" color="#008000"><a name="Class"></a>'clsPropMgr.vb</font></p>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white">
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swpublished
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+&lt;<span style="color:#2b91af;">ComVisibleAttribute</span>(<span style="color:blue;">True</span>)&gt;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">clsPropMgr</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Implements</span>&nbsp;IPropertyManagerPage2Handler9
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'General&nbsp;objects&nbsp;required&nbsp;for&nbsp;the&nbsp;PropertyManager&nbsp;page</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;pm_Page&nbsp;<span style="color:blue;">As</span>&nbsp;PropertyManagerPage2
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;pm_Group&nbsp;<span style="color:blue;">As</span>&nbsp;PropertyManagerPageGroup
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;pm_Selection&nbsp;<span style="color:blue;">As</span>&nbsp;PropertyManagerPageSelectionbox
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;pm_Selection2&nbsp;<span style="color:blue;">As</span>&nbsp;PropertyManagerPageSelectionbox
+
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Each&nbsp;object&nbsp;in&nbsp;the&nbsp;page&nbsp;needs&nbsp;a&nbsp;unique&nbsp;ID</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Const</span>&nbsp;GroupID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Const</span>&nbsp;LabelID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;2
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Const</span>&nbsp;SelectionID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;3
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Const</span>&nbsp;ComboID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;4
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Const</span>&nbsp;ListID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;5
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Const</span>&nbsp;Selection2ID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;6
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ClickedCancel&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;retVal&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;Show()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Page.<b>Show2</b>(0)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'The&nbsp;following&nbsp;runs&nbsp;when&nbsp;a&nbsp;new&nbsp;instance</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'of&nbsp;the&nbsp;class&nbsp;is&nbsp;created</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<span style="color:blue;">New</span>(<span style="color:blue;">ByVal</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;PageTitle&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;caption&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;tip&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;options&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Long</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;longerrors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Long</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;controlType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;alignment&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Set&nbsp;the&nbsp;variables&nbsp;for&nbsp;the&nbsp;page</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PageTitle&nbsp;=&nbsp;<span style="color:#a31515;">&quot;MultiSelect2&nbsp;Test&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;options&nbsp;=&nbsp;swPropertyManagerButtonTypes_e.swPropertyManager_OkayButton&nbsp;+&nbsp;swPropertyManagerButtonTypes_e.swPropertyManager_CancelButton&nbsp;+&nbsp;swPropertyManagerPageOptions_e.swPropertyManagerOptions_PushpinButton
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;the&nbsp;PropertyManager&nbsp;page</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Page&nbsp;=&nbsp;<span style="color:blue;">CType</span>(swApp.<b>CreatePropertyManagerPage</b>(PageTitle,&nbsp;options,&nbsp;<span style="color:blue;">Me</span>,&nbsp;longerrors),&nbsp;PropertyManagerPage2)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Make&nbsp;sure&nbsp;that&nbsp;the&nbsp;page&nbsp;was&nbsp;created&nbsp;properly</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;longerrors&nbsp;=&nbsp;swPropertyManagerPageStatus_e.swPropertyManagerPage_Okay&nbsp;<span style="color:blue;">Then</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Begin&nbsp;adding&nbsp;the&nbsp;controls&nbsp;to&nbsp;the&nbsp;page</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;the&nbsp;group&nbsp;box</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;caption&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;options&nbsp;=&nbsp;swAddGroupBoxOptions_e.swGroupBoxOptions_Visible&nbsp;+&nbsp;swAddGroupBoxOptions_e.swGroupBoxOptions_Expanded
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Group&nbsp;=&nbsp;pm_Page.<b>AddGroupBox</b>(GroupID,&nbsp;caption,&nbsp;options)
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Create&nbsp;two&nbsp;selection&nbsp;boxes</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;controlType&nbsp;=&nbsp;swPropertyManagerPageControlType_e.swControlType_Selectionbox
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;caption&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&quot;</span>&nbsp;&nbsp;<span style="color:green;">'&nbsp;No&nbsp;caption&nbsp;for&nbsp;selection&nbsp;boxes</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;alignment&nbsp;=&nbsp;swPropertyManagerPageControlLeftAlign_e.swControlAlign_Indent
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;options&nbsp;=&nbsp;swAddControlOptions_e.swControlOptions_Visible&nbsp;+&nbsp;swAddControlOptions_e.swControlOptions_Enabled
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tip&nbsp;=&nbsp;<span style="color:#a31515;">&quot;Select&nbsp;multiple&nbsp;faces.&quot;</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection&nbsp;=&nbsp;pm_Group.<b>AddControl</b>(SelectionID,&nbsp;controlType,&nbsp;caption,&nbsp;alignment,&nbsp;options,&nbsp;tip)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection2&nbsp;=&nbsp;pm_Group.<b>AddControl</b>(Selection2ID,&nbsp;controlType,&nbsp;caption,&nbsp;alignment,&nbsp;options,&nbsp;tip) </pre>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white">
+            <font color="#008000">'Only faces can populate the selection boxes</font>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;filters(0)&nbsp;<span style="color:blue;">As</span>&nbsp;swSelectType_e
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filters(0)&nbsp;=&nbsp;swSelectType_e.swSelFACES
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;filterObj&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filterObj&nbsp;=&nbsp;filters
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection.<b>SingleEntityOnly</b>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection.<b>AllowMultipleSelectOfSameEntity</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection.<b>Height</b>&nbsp;=&nbsp;50
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection.<b>SetSelectionFilters</b>(filterObj)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection.<b>Mark</b>&nbsp;=&nbsp;SolidWorksMacro.mark
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection2.<b>SingleEntityOnly</b>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection2.<b>AllowMultipleSelectOfSameEntity</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection2.<b>Height</b>&nbsp;=&nbsp;50
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection2.<b>SetSelectionFilters</b>(filterObj)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pm_Selection2.<b>Mark</b>&nbsp;=&nbsp;SolidWorksMacro.mark2
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span>&nbsp;&nbsp;<span style="color:green;">'If&nbsp;the&nbsp;page&nbsp;is&nbsp;not&nbsp;created</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MsgBox(<span style="color:#a31515;">&quot;An&nbsp;error&nbsp;occurred&nbsp;while&nbsp;attempting&nbsp;to&nbsp;create&nbsp;the&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;PropertyManager&nbsp;Page&quot;</span>,&nbsp;vbCritical)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>AfterActivation</b>()&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.AfterActivation
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>AfterClose</b>()&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.AfterClose
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnActiveXControlCreated</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnActiveXControlCreated
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnButtonPress</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnButtonPress
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnCheckboxCheck</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Checked&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnCheckboxCheck
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnClose</b>(<span style="color:blue;">ByVal</span>&nbsp;Reason&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnClose
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;Reason&nbsp;=&nbsp;swPropertyManagerPageCloseReasons_e.swPropertyManagerPageClose_Cancel&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Cancel&nbsp;button&nbsp;was&nbsp;clicked</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ClickedCancel&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">ElseIf</span>&nbsp;Reason&nbsp;=&nbsp;swPropertyManagerPageCloseReasons_e.swPropertyManagerPageClose_Okay&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'OK&nbsp;button&nbsp;was&nbsp;clicked</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ClickedCancel&nbsp;=&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnComboboxEditChanged</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Text&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnComboboxEditChanged
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnComboboxSelectionChanged</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Item&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnComboboxSelectionChanged
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnGainedFocus</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnGainedFocus
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnGroupCheck</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Checked&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnGroupCheck
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnGroupExpand</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Expanded&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnGroupExpand
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnHelp</b>()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnHelp
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnKeystroke</b>(<span style="color:blue;">ByVal</span>&nbsp;Wparam&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Message&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Lparam&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnKeystroke
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnListboxSelectionChanged</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Item&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnListboxSelectionChanged
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnLostFocus</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnLostFocus
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnNextPage</b>()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnNextPage
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnNumberboxChanged</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Value&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnNumberboxChanged
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnOptionCheck</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnOptionCheck
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnPopupMenuItem</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnPopupMenuItem
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnPopupMenuItemUpdate</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByRef</span>&nbsp;retval&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnPopupMenuItemUpdate
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnPreview</b>()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnPreview
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnPreviousPage</b>()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnPreviousPage
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnRedo</b>()&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnRedo
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnSelectionboxCalloutCreated</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnSelectionboxCalloutCreated
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnSelectionboxCalloutDestroyed</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnSelectionboxCalloutDestroyed
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnSelectionboxFocusChanged</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnSelectionboxFocusChanged
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnSelectionboxListChanged</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Count&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnSelectionboxListChanged
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnSliderPositionChanged</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Value&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnSliderPositionChanged
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnSliderTrackingCompleted</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Value&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnSliderTrackingCompleted
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnSubmitSelection</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Selection&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;SelType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByRef</span>&nbsp;ItemText&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnSubmitSelection
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OnSubmitSelection&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;OnSubmitSelection&nbsp;fired.&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnTabClicked</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnTabClicked
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnTextboxChanged</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Text&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnTextboxChanged
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnUndo</b>()&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnUndo
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnWhatsNew</b>()&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnWhatsNew
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnListBoxRMBUp</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;posX&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;posY&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnListboxRMBUp
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;<b>OnWindowFromHandleControlCreated</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnWindowFromHandleControlCreated
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;<b>OnNumberBoxTrackingCompleted</b>(<span style="color:blue;">ByVal</span>&nbsp;Id&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Value&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Double</span>)&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.IPropertyManagerPage2Handler9.OnNumberBoxTrackingCompleted
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+<p
+	style="text-align: center;"
+	align=center><font face="Courier New" size="2"><a href="#Top">Back to top</a></font></p>
+
+</body>
+
+</html>

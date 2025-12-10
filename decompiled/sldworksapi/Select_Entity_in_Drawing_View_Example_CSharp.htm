@@ -1,0 +1,111 @@
+<html>
+
+<head>
+<title>Select Entity in Drawing View Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,drawing views">
+<meta name=MS-HKWD content="C# examples,entities">
+<meta name=MS-HKWD content="C# examples,dimensions">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Select Entity in Drawing View Example (C#)</h1>
+<p>This example shows how to select a model face, edge, or vertex in a drawing 
+view and dimension it.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+	<font color="#008000">
+	//----------------------------------------------------------------------------<br>
+	// Preconditions:<br>
+	// 1. Open a part or fully resolved assembly.<br>
+	// 2. Verify that the specified template exists.<br>
+	// 3. Select a face, edge, or vertex.<br>
+	//<br>
+	// Postconditions:<br>
+	// 1. Creates a new drawing with three views.<br>
+	// 2. Dimensions the selected face, edge, or vertex<br>
+	//&nbsp;&nbsp;&nbsp; in the first drawing view.<br>
+	// 3. Examine the drawing.<br>
+	//<br>
+	// NOTE: The dimension is not guaranteed to be created if a face is 
+	selected.<br>
+	//----------------------------------------------------------------------------</font><br>
+	<span style="color:blue;">using</span>&nbsp;Microsoft.VisualBasic;<br>
+	<span style="color:blue;">using</span>&nbsp;System;<br>
+	<span style="color:blue;">using</span>&nbsp;System.Collections;<br>
+	<span style="color:blue;">using</span>&nbsp;System.Collections.Generic;<br>
+	<span style="color:blue;">using</span>&nbsp;System.Data;<br>
+	<span style="color:blue;">using</span>&nbsp;System.Diagnostics;<br>
+	<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;<br>
+	<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;<br>
+	<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;<br>
+	<span style="color:blue;">namespace</span>&nbsp;AddDimension_CSharp.csproj<br>
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">const</span>&nbsp;<span style="color:blue;">string</span>&nbsp;sPathToTemplate&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\\ProgramData\\SolidWorks\\SOLIDWORKS 
+	2016\\data\\templates\\drawing.drwdot&quot;</span>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">const</span>&nbsp;<span style="color:blue;">double</span>&nbsp;nYoffset&nbsp;=&nbsp;0.01;<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr&nbsp;swSelMgr&nbsp;=&nbsp;<span style="color:blue;">default</span>(SelectionMgr);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Entity&nbsp;swEnt&nbsp;=&nbsp;<span style="color:blue;">default</span>(Entity);<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DrawingDoc&nbsp;swDraw&nbsp;=&nbsp;<span style="color:blue;">default</span>(DrawingDoc);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swDrawModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;View&nbsp;swView&nbsp;=&nbsp;<span style="color:blue;">default</span>(View);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>[]&nbsp;vOutline&nbsp;=&nbsp;<span style="color:blue;">null</span>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DisplayDimension&nbsp;swDispDim&nbsp;=&nbsp;<span style="color:blue;">default</span>(DisplayDimension);<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;nXpos&nbsp;=&nbsp;0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;nYpos&nbsp;=&nbsp;0;<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;bRet&nbsp;=&nbsp;<span style="color:blue;">false</span>;<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>ActiveDoc</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;(SelectionMgr)swModel.<b>SelectionManager</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEnt&nbsp;=&nbsp;(Entity)swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1);<br>
+&nbsp;<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">if</span>&nbsp;((swEnt&nbsp;!=&nbsp;<span style="color:blue;">null</span>))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDraw&nbsp;=&nbsp;(DrawingDoc)swApp.<b>NewDrawing2</b>((<span style="color:blue;">int</span>)swDwgTemplates_e.swDwgTemplateCustom,&nbsp;sPathToTemplate,&nbsp;(<span style="color:blue;">int</span>)swDwgPaperSizes_e.swDwgPaperA1size,&nbsp;0.0,&nbsp;0.0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawModel&nbsp;=&nbsp;(ModelDoc2)swDraw;<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swDraw.<b>Create3rdAngleViews2</b>(swModel.GetPathName());<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;(View)swDraw.<b>GetFirstView</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;(View)swView.<b>GetNextView</b>();<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;swView.<b>SelectEntity</b>(swEnt,&nbsp;<span style="color:blue;">false</span>);<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Work&nbsp;out&nbsp;where&nbsp;to&nbsp;place&nbsp;dimension&nbsp;-</span><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;midway&nbsp;across&nbsp;view&nbsp;and&nbsp;slightly&nbsp;above</span><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vOutline&nbsp;=&nbsp;(<span style="color:blue;">double</span>[])swView.<b>GetOutline</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nXpos&nbsp;=&nbsp;(vOutline[0]&nbsp;+&nbsp;vOutline[2])&nbsp;/&nbsp;2.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nYpos&nbsp;=&nbsp;vOutline[3]&nbsp;+&nbsp;nYoffset;<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;Create&nbsp;the&nbsp;dimension,&nbsp;even&nbsp;if&nbsp;the&nbsp;entity&nbsp;is&nbsp;not</span><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//&nbsp;visible&nbsp;in&nbsp;the&nbsp;drawing&nbsp;view</span><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDispDim&nbsp;=&nbsp;(DisplayDimension)swDrawModel.<b>Extension</b>.<b>AddDimension</b>(nXpos,&nbsp;nYpos,&nbsp;0.0,&nbsp;(<span style="color:blue;">int</span>)swSmartDimensionDirection_e.swSmartDimensionDirection_Left);<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+	}</p>
+	<p class="APICODE">&nbsp;</div>
+
+</body>
+
+</html>

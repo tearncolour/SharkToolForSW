@@ -1,0 +1,123 @@
+<html>
+
+<head>
+<title>Get Custom Properties for Configuration Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,custom properties">
+<meta name=MS-HKWD content="VB.NET examples,configurations">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Custom Properties for Configuration Example (VB.NET)</h1>
+<p>This example shows how to get the names, types, values, and evaluated 
+ values of the active configuration's custom properties. It also shows 
+ how to add a custom property to the configuration.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+		<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+		<span style="color:green;">
+		'---------------------------------------------------------------------------</span><br>
+		<span style="color:green;">'&nbsp;Preconditions:</span><br>
+		<span style="color:green;">'&nbsp;1.&nbsp;Open&nbsp;a&nbsp;part&nbsp;document.</span><br>
+		<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+		<span style="color:green;">'</span><br>
+		<span style="color:green;">'&nbsp;Postconditions:</span><br>
+		<span style="color:green;">
+		'&nbsp;1.&nbsp;Adds&nbsp;a&nbsp;date&nbsp;custom&nbsp;property&nbsp;to&nbsp;the&nbsp;part's&nbsp;configuration.</span><br>
+		<span style="color:green;">
+		'&nbsp;2.&nbsp;Tests&nbsp;whether&nbsp;the&nbsp;custom&nbsp;property&nbsp;is&nbsp;editable,&nbsp;and&nbsp;if&nbsp;so,</span><br>
+		<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;edits&nbsp;it.</span><br>
+		<span style="color:green;">
+		'&nbsp;3.&nbsp;Gets&nbsp;all&nbsp;custom&nbsp;properties&nbsp;in&nbsp;the&nbsp;configuration.</span><br>
+		<span style="color:green;">'&nbsp;4.&nbsp;Deletes&nbsp;a&nbsp;custom&nbsp;property.</span><br>
+		<span style="color:green;">'&nbsp;5.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+		<span style="color:green;">
+		'---------------------------------------------------------------------------</span><br>
+		<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+		<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+		<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+		<span style="color:blue;">Imports</span>&nbsp;System<br>
+&nbsp;<br>
+&nbsp;<br>
+		<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;config&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Configuration</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cusPropMgr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">CustomPropertyManager</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;lRetVal&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vPropNames&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vPropTypes&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vPropValues&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ValOut&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ResolvedValOut&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;wasResolved&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean<br>
+&nbsp;&nbsp;&nbsp; Dim</span>&nbsp;linkToProp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;resolved&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object<br>
+&nbsp;&nbsp;&nbsp; Dim</span>&nbsp;linkProp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;nNbrProps&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;j&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;custPropType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bRet&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()<br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.ActiveDoc<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;config&nbsp;=&nbsp;swModel.<b>GetActiveConfiguration</b><br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cusPropMgr&nbsp;=&nbsp;config.<b>CustomPropertyManager</b><br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRetVal&nbsp;=&nbsp;cusPropMgr.<b>Add3</b>(<span style="color:#a31515;">&quot;ADATE&quot;</span>,&nbsp;<span style="color:#2b91af;">swCustomInfoType_e</span>.swCustomInfoDate,&nbsp;<span style="color:#a31515;">&quot;4-13-59&quot;</span>,&nbsp;<span style="color:#2b91af;">swCustomPropertyAddOption_e</span>.swCustomPropertyDeleteAndAdd)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRetVal&nbsp;=&nbsp;cusPropMgr.<b>Get6</b>(<span style="color:#a31515;">&quot;ADATE&quot;</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;ValOut,&nbsp;ResolvedValOut,&nbsp;wasResolved, 
+		linkToProp)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet&nbsp;=&nbsp;cusPropMgr.<b>IsCustomPropertyEditable</b>(<span style="color:#a31515;">&quot;ADATE&quot;</span>,&nbsp;config.<b>Name</b>)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;bRet&nbsp;=&nbsp;True&nbsp;<span style="color:blue;">Then</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;ADATE&nbsp;is&nbsp;editable.&nbsp;Change&nbsp;the&nbsp;date.&quot;</span>)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRetVal&nbsp;=&nbsp;cusPropMgr.<b>Set2</b>(<span style="color:#a31515;">&quot;ADATE&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;4-13-89&quot;</span>)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;ADATE&nbsp;is&nbsp;not&nbsp;editable.&quot;</span>)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span><br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRetVal&nbsp;=&nbsp;cusPropMgr.<b>Get6</b>(<span style="color:#a31515;">&quot;ADATE&quot;</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;ValOut,&nbsp;ResolvedValOut,&nbsp;wasResolved, 
+		linkToProp)<br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;the&nbsp;number&nbsp;of&nbsp;custom&nbsp;properties&nbsp;for&nbsp;this&nbsp;configuration</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nNbrProps&nbsp;=&nbsp;cusPropMgr.<b>Count</b><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;custom&nbsp;properties&nbsp;for&nbsp;this&nbsp;configuration:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nNbrProps)<br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;the&nbsp;custom&nbsp;properties</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRetVal&nbsp;=&nbsp;cusPropMgr.<b>GetAll3</b>(vPropNames,&nbsp;vPropTypes,&nbsp;vPropValues,&nbsp;resolved, 
+		linkProp)<br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;For&nbsp;each&nbsp;custom&nbsp;property,&nbsp;print&nbsp;its&nbsp;name,&nbsp;type,&nbsp;and&nbsp;evaluated&nbsp;value</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;j&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;nNbrProps&nbsp;-&nbsp;1<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;custPropType&nbsp;=&nbsp;cusPropMgr.<b>GetType2</b>(vPropNames(j))<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Name,&nbsp;swCustomInfoType_e&nbsp;value,&nbsp;and&nbsp;resolved&nbsp;value:&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;vPropNames(j)&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;custPropType&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;vPropValues(j))<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>&nbsp;j<br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lRetVal&nbsp;=&nbsp;cusPropMgr.<b>Delete2</b>(<span style="color:#a31515;">&quot;ADATE&quot;</span>)<br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;the&nbsp;number&nbsp;of&nbsp;custom&nbsp;properties&nbsp;for&nbsp;this&nbsp;configuration</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nNbrProps&nbsp;=&nbsp;cusPropMgr.<b>Count</b><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;custom&nbsp;properties&nbsp;for&nbsp;this&nbsp;configuration:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nNbrProps)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;"><br>
+&nbsp;&nbsp;&nbsp; End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">'''</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+		&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SldWorks</span><br>
+&nbsp;<br>
+&nbsp;<br>
+		<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></p>
+		<p class="APICODE">&nbsp;</div></div>
+
+</body>
+
+</html>

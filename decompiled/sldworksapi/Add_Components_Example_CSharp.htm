@@ -1,0 +1,180 @@
+<html>
+
+<head>
+<title>Add Components Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,assemblies">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add Components Example (C#)</h1>
+<p>This example shows how to add multiple components 
+	to an assembly.<p class="APICODE"><span style="color:Green">
+	//---------------------------------------------------------------------------<br>
+	// Preconditions:<br>
+	//&nbsp;1. Create a new part document.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;a. Extrude a rectangular block and cut-extrude a diagonal section 
+<br>
+</span><span style="color: #008000">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	</span><span style="color:Green">off 
+	one face of the block.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;b. Click <b>Insert &gt; Reference Geometry &gt; Coordinate System</b>.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;c. Select a corner of the block for the origin of 
+<br>
+</span><span style="color: #008000">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	</span><span style="color:Green">the new coordinate 
+	system.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;d. Select an edge for the Z axis of the coordinate system.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;e. Click the green check mark to save the coordinate system.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Coordinate System1 appears in the FeatureManager design tree.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;f. Save and minimize the part.<br>
+	//&nbsp;2. Replace <i>part_path</i> in the code with the full path name 
+	<br>
+	</span><span style="color: #008000">//&nbsp;&nbsp;&nbsp; </span>
+	<span style="color:Green">of the new part.<br>
+	//&nbsp;3. Create a new assembly document.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;a. Create a line segment sketch originating at some distance 
+<br>
+</span><span style="color: #008000">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	</span><span style="color:Green">from the 
+	default origin of the assembly document.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;b. Click <b>Insert &gt; Reference Geometry &gt; Coordinate System</b>.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;c. Select one end point of the line segment for the origin of 
+<br>
+</span><span style="color: #008000">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	</span><span style="color:Green">the new 
+	coordinate system.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;d. Select the line segment for the X axis of the coordinate system.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;e. Click the green check mark to save the coordinate system.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Coordinate System1 appears in the FeatureManager design tree.<br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;f. </span><span style="color: #008000">Right-click on Coordinate System1 in the 
+	FeatureManager design tree, <br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;select Feature Properties, and rename the 
+	coordinate system <br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; and its description to differ from Coordinate System1.</span><span style="color:Green"><br>
+	//&nbsp;&nbsp;&nbsp;&nbsp;g. Save the assembly and keep it open.<br>
+	//&nbsp;4. Change the namespace to match your project's name.<br>
+	//<br>
+	// Postconditions:<br>
+	//&nbsp;Component part is inserted into the assembly such that<br>
+	//&nbsp;the part's Coordinate System1 is coincident (no translation or 
+	rotation)<br>
+	//&nbsp;with the assembly's default (not user-defined) coordinate system.<br>
+	//<br>
+	//----------------------------------------------------------------------------<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System;<br>
+	</span><span style="color:Blue">namespace</span><span style="color:Black"> 
+	AddComponents3_CSharp.csproj<br>
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">partial</span><span style="color:Black">
+	</span><span style="color:Blue">class</span><span style="color:Black">
+	</span><span style="color:#2b91af">SolidWorksMacro<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">AssemblyDoc</span><span style="color:Black"> 
+	assemb;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black">[] 
+	compNames = </span><span style="color:Blue">new</span><span style="color:Black">
+	</span><span style="color:Blue">string</span><span style="color:Black">[1];<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">double</span><span style="color:Black">[] 
+	compXforms = </span><span style="color:Blue">new</span><span style="color:Black">
+	</span><span style="color:Blue">double</span><span style="color:Black">[16];<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">string</span><span style="color:Black">[] 
+	compCoordSysNames = </span><span style="color:Blue">new</span><span style="color:Black">
+	</span><span style="color:Blue">string</span><span style="color:Black">[1];<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	vcompNames;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	vcompXforms;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	vcompCoordSysNames;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	vcomponents;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> Main()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemb = (</span><span style="color:#2b91af">AssemblyDoc</span><span style="color:Black">)swApp.ActiveDoc;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">if</span><span style="color:Black"> 
+	(((assemb != </span><span style="color:Blue">null</span><span style="color:Black">)))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>compNames[0] 
+= &quot;<i>part_path</i>&quot;<span style="color:Green">;
+	</span><span style="color:Black"><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Define the 
+	transformation matrix. See the IMathTransform API documentation. <br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// 
+	Add a rotational diagonal unit matrix (zero rotation) to the transform<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// 
+	x-axis components of rotation<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[0] = 1.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[1] = 0.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[2] = 0.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// y-axis components of 
+	rotation<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[3] = 0.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[4] = 1.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[5] = 0.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// z-axis components of 
+	rotation<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[6] = 0.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[7] = 0.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[8] = 1.0;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Add a translation vector 
+	to the transform (zero translation) <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[9] = 0.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[10] = 0.0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[11] = 0.0;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Add a scaling factor to 
+	the transform<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compXforms[12] = 0.0;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// The last three elements 
+	in the transformation matrix are unused<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// 
+	Register the coordinate system name for the component <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compCoordSysNames[0] =
+	</span><span style="color:#a31515">&quot;Coordinate System1&quot;</span><span style="color:Black">;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">// Add the components to 
+	the assembly. <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vcompNames = compNames;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vcompXforms = compXforms;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">//vcompXforms = Nothing&nbsp;&nbsp; 
+	//also achieves zero rotation and translation of the component<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vcompCoordSysNames = 
+	compCoordSysNames;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vcomponents = assemb.<b>AddComponents3</b>((vcompNames), (vcompXforms), 
+	(vcompCoordSysNames));<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:#2b91af">SldWorks</span><span style="color:Black"> 
+	swApp;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	}</span>
+	
+<p>&nbsp;</p>
+
+</body>
+
+</html>

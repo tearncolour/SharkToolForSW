@@ -1,0 +1,158 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Custom Property Values On Weldment Cut-list Folders Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2266>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+ <META NAME="MS-HAID" CONTENT="EXGetCustomPropertyValuesCutListFolders">
+ <META NAME="MS-HKWD" CONTENT="VBA examples,custom properties">
+ <META NAME="MS-HKWD" CONTENT="VBA examples,weldment cut lists">
+ <META NAME="MS-HKWD" CONTENT="VBA examples, cut lists">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Get Custom Property Values on Weldment Cut-list Folders Example (VBA)</h1>
+
+<p>This example shows how to get all of the custom property values on the 
+ weldment cut-list folders of a part in an assembly.</p>
+
+<pre>'-------------------------------------------------------
+' Preconditions:
+' 1. Open a new SOLIDWORKS session.
+' 2. Open <i>public_documents</i><b>\samples\tutorial\api\weldment_box3.sldprt</b>.
+' 3. Click <b>Tools &gt; Options &gt; Document Properties &gt; Weldments &gt;</b>
+'    <b>Rename cut list folders with Description property value &gt; OK</b>.
+' 4. Right-click <b>Cut list(31)</b> in the FeatureManager design tree
+'    and click <b>Update</b>.
+' 5. Verify that the specified assembly template exists.
+' 6. Open the Immediate window.
+'
+' Postconditions:
+' 1. Creates an assembly document and inserts the part document.
+' 2. Traverses the part's FeatureManager design tree and gets
+'    the names of custom properties, values, and evaluated values
+'    for the cut-list folders in the part document.
+' 3. Examine the Immediate window.
+'
+' NOTE: Because the part document is used elsewhere, do not
+' save changes.
+'-------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swAssem As SldWorks.AssemblyDoc
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long
+Dim fileName As String
+ 
+</pre>
+<pre>Sub VisitFeatureCustomProperties(swDocFeat As SldWorks.Feature)
+    Dim swCustPropMgr As SldWorks.CustomPropertyManager
+    Dim propNames As Variant
+    Dim vName As Variant
+    Dim propName As String
+    Dim Value As String
+    Dim resolvedValue As String</pre>
+<pre>    Set swCustPropMgr = swDocFeat.<b>CustomPropertyManager</b>
+    If Not swCustPropMgr Is Nothing Then
+        propNames = swCustPropMgr.<b>GetNames</b>
+        If Not IsEmpty(propNames) Then
+            Debug.Print swDocFeat.<b>Name</b>, swDocFeat.<b>GetTypeName</b>
+            For Each vName In propNames
+                propName = vName
+                Call swCustPropMgr.<b>Get2</b>(propName, Value, resolvedValue)
+                Debug.Print &quot;&quot;, &quot;&quot;, propName, Value, resolvedValue
+            Next vName
+        End If
+    End If</pre>
+<pre>End Sub
+ 
+</pre>
+<pre>Sub VisitDocWeldmentProperties(swCompDoc As SldWorks.ModelDoc2)
+    Dim swFeature As SldWorks.Feature
+    Dim swSubFeature As SldWorks.Feature
+    Dim swCutFolder As SldWorks.BodyFolder</pre>
+<pre>    Set swFeature = swCompDoc.<b>FirstFeature</b>
+    Do While Not swFeature Is Nothing
+        Set swSubFeature = swFeature.<b>GetFirstSubFeature</b>
+        Do While Not swSubFeature Is Nothing
+            If swSubFeature.<b>GetTypeName2</b> = &quot;CutListFolder&quot; Then
+                Set swCutFolder = swSubFeature.<b>GetSpecificFeature2</b>
+            End If
+            If Not swCutFolder Is Nothing Then
+                    Call VisitFeatureCustomProperties(swSubFeature)
+            End If
+            Set swSubFeature = swSubFeature.<b>GetNextSubFeature</b>
+        Loop
+        Set swFeature = swFeature.<b>GetNextFeature</b>
+    Loop
+End Sub
+ 
+</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SOLIDWORKS 2016\templates\assembly.asmdot&quot;, 0, 0, 0)
+    swApp.ActivateDoc2 &quot;Assem1&quot;, False, errors
+    Set swModel = swApp.<b>ActiveDoc</b>
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\weldment_box3.sldprt&quot;
+    Set swAssem = swModel
+    swApp.<b>ActivateDoc2</b> &quot;Assem1&quot;, False, errors
+    swAssem.<b>AddComponent5</b> fileName, swAddComponentConfigOptions_e.swAddComponentConfigOptions_CurrentSelectedConfig, &quot;&quot;, False, &quot;&quot;, 0.508489013092717, 0.724898979334123, 0.550645508621615</pre>
+<pre>    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;weldment_box3-1@Assem1&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)</pre>
+<pre>    Dim swSelComp As SldWorks.Component2
+    Dim refConfig As String
+    Dim swCompDoc As SldWorks.ModelDoc2</pre>
+<pre>    Set swSelComp = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swCompDoc = swSelComp.<b>GetModelDoc</b></pre>
+<pre>    Dim configNames As Variant
+    Dim vName As Variant
+    Dim configName As String
+    configNames = swCompDoc.<b>GetConfigurationNames</b>()
+    For Each vName In configNames
+        configName = vName
+        Debug.Print &quot;-----------------------------------------------&quot;
+        Debug.Print &quot;Configuration: &quot; + configName
+        status = swCompDoc.<b>ShowConfiguration2</b>(configName)
+        Call VisitDocWeldmentProperties(swCompDoc)
+    Next vName</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

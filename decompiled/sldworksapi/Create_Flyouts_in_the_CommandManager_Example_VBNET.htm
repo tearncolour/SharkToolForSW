@@ -1,0 +1,646 @@
+<html>
+
+<head>
+<title>Create Flyouts in the CommandManager Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,menus">
+<meta name=MS-HKWD content="VB.NET examples,flyouts">
+<meta name=MS-HKWD content="VB.NET examples,CommandManager">
+<meta name=MS-HKWD content="VB.NET examples,CommandGroup">
+<meta name=MS-HKWD content="VB.NET add-ins,CommandGroup">
+<meta name=MS-HKWD content="VB.NET add-ins,CommandManager">
+<meta name=MS-HKWD content="VB.NET add-ins,flyouts">
+<meta name=MS-HKWD content="VB.NET add-ins,menus">
+<meta name=MS-HKWD content="VB.NET add-ins">
+<meta name=MS-HKWD content="VB.NET images">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Flyouts in the CommandManager Example (VB.NET)</h1>
+
+
+<p>This example shows how to use an add-in to create flyouts in:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">CommandManager </font></li>
+	<li><font face="Verdana" style="font-size: 8pt">context-sensitive menus of 
+	selected faces</font></li>
+</ul>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">'---------------------------------------------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;</span><span style="color: green">SOLIDWORKS API&nbsp;SDK </span><span style="color:green;">add-in&nbsp;templates&nbsp;for&nbsp;your version&nbsp;
+'    of Microsoft Visual&nbsp;Studio&nbsp;are installed.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;In&nbsp;Microsoft&nbsp;Visual&nbsp;Studio, create a Visual Basic project using the
+'    <b>SwVBAddin</b> template.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Name&nbsp;the&nbsp;project&nbsp;<b>SwVBAddin1</b>.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Copy&nbsp;and&nbsp;paste&nbsp;<a href="#SwAddin">SwAddin</a>&nbsp;into&nbsp;<b>SwAddin.vb</b>&nbsp;of&nbsp;your&nbsp;project.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Click&nbsp;<b>Project&nbsp;&gt;&nbsp;SwVBAddin1&nbsp;Properties&nbsp;&gt;&nbsp;Debug</b>.</span>
+<span style="color:green;">'&nbsp;6.&nbsp;Select&nbsp;<b>Start&nbsp;external&nbsp;program</b>&nbsp;and&nbsp;type&nbsp;the&nbsp;pathname&nbsp;to&nbsp;your&nbsp;</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;SOLIDWORKS&nbsp;executable.
+' 7. Replace the text shown for the icons and mainIcons array elements
+'    with the pathnames to your image files.</span>
+<span style="color:green;">'&nbsp;8.&nbsp;Press&nbsp;F5&nbsp;to&nbsp;start&nbsp;debugging&nbsp;this&nbsp;add-in.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;In&nbsp;SOLIDWORKS,&nbsp;click&nbsp;<b>Tools&nbsp;&gt;&nbsp;VB.NET&nbsp;Add-in&nbsp;&gt;&nbsp;CreateCube</b>.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Click&nbsp;<b>Dynamic&nbsp;Flyout</b>&nbsp;in&nbsp;the&nbsp;CommandManager<b> </b>and click <b>FlyoutCommand 2</b>.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Inspect&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Click&nbsp;a&nbsp;face&nbsp;of&nbsp;the&nbsp;cube.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Click&nbsp;the flyout&nbsp;button&nbsp;in&nbsp;the&nbsp;face's&nbsp;context-sensitive&nbsp;menu and</span>
+<span style="color:green;">'&nbsp;   click&nbsp;<b>FlyoutCommand 1.
+</b>' 6. Inspect&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'---------------------------------------------------------------------------</span>
+ 
+<span style="color:green;"><a name="SwAddin"></a>'&nbsp;SwAddin</span>
+ 
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Collections
+<span style="color:blue;">Imports</span>&nbsp;System.Reflection
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+ 
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swpublished
+<span style="color:blue;">Imports</span>&nbsp;SolidWorksTools
+<span style="color:blue;">Imports</span>&nbsp;SolidWorksTools.File
+ 
+<span style="color:blue;">Imports</span>&nbsp;System.Collections.Generic
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+ 
+<span style="color:green;">'&nbsp;This&nbsp;VB.NET&nbsp;add-in&nbsp;shows&nbsp;how&nbsp;to&nbsp;create&nbsp;a&nbsp;flyout&nbsp;menu&nbsp;in&nbsp;both&nbsp;the&nbsp;CommandManager</span>
+<span style="color:green;">'&nbsp;and&nbsp;the&nbsp;context-sensitive&nbsp;menus&nbsp;of&nbsp;selected&nbsp;faces</span>
+ 
+ 
+&lt;<span style="color:#2b91af;">Guid</span>(<span style="color:#a31515;">&quot;88bf8dab-7623-4846-9a76-c1f64a2ebeba&quot;</span>)&gt;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span style="color:#2b91af;">ComVisible</span>(<span style="color:blue;">True</span>)&gt;&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span style="color:#2b91af;">SwAddin</span>(&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description:=<span style="color:#a31515;">&quot;A&nbsp;flyout&nbsp;menu&nbsp;appears&nbsp;on&nbsp;the&nbsp;toolbar&nbsp;and&nbsp;on&nbsp;the&nbsp;context-sensitive&nbsp;menus&nbsp;of&nbsp;selected&nbsp;faces.&quot;</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Title:=<span style="color:#a31515;">&quot;VB.NET&nbsp;Add-in&quot;</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LoadAtStartup:=<span style="color:blue;">True</span>&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)&gt;&nbsp;_
+<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SwAddin</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.<span style="color:#2b91af;">SwAddin</span>
+ 
+<span style="color:blue;">#Region</span>&nbsp;<span style="color:#a31515;">&quot;Local&nbsp;Variables&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;<span style="color:blue;">WithEvents</span>&nbsp;iSwApp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SldWorks</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;iCmdMgr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ICommandManager</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;addinID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;openDocs&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Hashtable</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;SwEventPtr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SldWorks</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ppage&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">UserPMPage</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;iBmp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">BitmapHandler</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cmdGroup&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ICommandGroup</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Const</span>&nbsp;mainCmdGroupID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Const</span>&nbsp;mainItemID1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Const</span>&nbsp;mainItemID2&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Const</span>&nbsp;flyoutGroupID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;91
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Public&nbsp;Properties</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">ReadOnly</span>&nbsp;<span style="color:blue;">Property</span>&nbsp;SwApp()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SldWorks</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Get</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;iSwApp
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Get</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Property</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">ReadOnly</span>&nbsp;<span style="color:blue;">Property</span>&nbsp;CmdMgr()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ICommandManager</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Get</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;iCmdMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Get</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Property</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">ReadOnly</span>&nbsp;<span style="color:blue;">Property</span>&nbsp;OpenDocumentsTable()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Hashtable</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Get</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;openDocs
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Get</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Property</span>
+<span style="color:blue;">#End</span>&nbsp;<span style="color:blue;">Region</span>
+ 
+<span style="color:blue;">#Region</span>&nbsp;<span style="color:#a31515;">&quot;SOLIDWORKS&nbsp;Registration&quot;</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span style="color:#2b91af;">ComRegisterFunction</span>()&gt;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Shared</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;RegisterFunction(<span style="color:blue;">ByVal</span>&nbsp;t&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Type</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;Custom&nbsp;Attribute:&nbsp;SwAddinAttribute</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;attributes()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;SWattr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SwAddinAttribute</span>&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;attributes&nbsp;=&nbsp;System.<span style="color:#2b91af;">Attribute</span>.GetCustomAttributes(<span style="color:blue;">GetType</span>(<span style="color:#2b91af;">SwAddin</span>),&nbsp;<span style="color:blue;">GetType</span>(<span style="color:#2b91af;">SwAddinAttribute</span>))
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;attributes.Length&nbsp;&gt;&nbsp;0&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SWattr&nbsp;=&nbsp;<span style="color:blue;">DirectCast</span>(attributes(0),&nbsp;<span style="color:#2b91af;">SwAddinAttribute</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;hklm&nbsp;<span style="color:blue;">As</span>&nbsp;Microsoft.Win32.<span style="color:#2b91af;">RegistryKey</span>&nbsp;=&nbsp;Microsoft.Win32.<span style="color:#2b91af;">Registry</span>.LocalMachine
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;hkcu&nbsp;<span style="color:blue;">As</span>&nbsp;Microsoft.Win32.<span style="color:#2b91af;">RegistryKey</span>&nbsp;=&nbsp;Microsoft.Win32.<span style="color:#2b91af;">Registry</span>.CurrentUser
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;keyname&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;SOFTWARE\SOLIDWORKS\Addins\{&quot;</span>&nbsp;+&nbsp;t.GUID.ToString()&nbsp;+&nbsp;<span style="color:#a31515;">&quot;}&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;addinkey&nbsp;<span style="color:blue;">As</span>&nbsp;Microsoft.Win32.<span style="color:#2b91af;">RegistryKey</span>&nbsp;=&nbsp;hklm.CreateSubKey(keyname)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey.SetValue(<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey.SetValue(<span style="color:#a31515;">&quot;Description&quot;</span>,&nbsp;SWattr.Description)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey.SetValue(<span style="color:#a31515;">&quot;Title&quot;</span>,&nbsp;SWattr.Title)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;keyname&nbsp;=&nbsp;<span style="color:#a31515;">&quot;Software\SOLIDWORKS\AddInsStartup\{&quot;</span>&nbsp;+&nbsp;t.GUID.ToString()&nbsp;+&nbsp;<span style="color:#a31515;">&quot;}&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey&nbsp;=&nbsp;hkcu.CreateSubKey(keyname)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey.SetValue(<span style="color:blue;">Nothing</span>,&nbsp;SWattr.LoadAtStartup,&nbsp;Microsoft.Win32.<span style="color:#2b91af;">RegistryValueKind</span>.DWord)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Catch</span>&nbsp;nl&nbsp;<span style="color:blue;">As</span>&nbsp;System.<span style="color:#2b91af;">NullReferenceException</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Console</span>.WriteLine(<span style="color:#a31515;">&quot;There&nbsp;was&nbsp;a&nbsp;problem&nbsp;registering&nbsp;this&nbsp;dll:&nbsp;SWattr&nbsp;is&nbsp;null.\n&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nl.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Windows.Forms.<span style="color:#2b91af;">MessageBox</span>.Show(<span style="color:#a31515;">&quot;There&nbsp;was&nbsp;a&nbsp;problem&nbsp;registering&nbsp;this&nbsp;dll:&nbsp;SWattr&nbsp;is&nbsp;null.\n&quot;</span>&nbsp;&amp;&nbsp;nl.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Catch</span>&nbsp;e&nbsp;<span style="color:blue;">As</span>&nbsp;System.<span style="color:#2b91af;">Exception</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Console</span>.WriteLine(<span style="color:#a31515;">&quot;There&nbsp;was&nbsp;a&nbsp;problem&nbsp;registering&nbsp;this&nbsp;dll:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;e.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Windows.Forms.<span style="color:#2b91af;">MessageBox</span>.Show(<span style="color:#a31515;">&quot;There&nbsp;was&nbsp;a&nbsp;problem&nbsp;registering&nbsp;this&nbsp;dll:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;e.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span style="color:#2b91af;">ComUnregisterFunction</span>()&gt;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Shared</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;UnregisterFunction(<span style="color:blue;">ByVal</span>&nbsp;t&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Type</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;hklm&nbsp;<span style="color:blue;">As</span>&nbsp;Microsoft.Win32.<span style="color:#2b91af;">RegistryKey</span>&nbsp;=&nbsp;Microsoft.Win32.<span style="color:#2b91af;">Registry</span>.LocalMachine
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;hkcu&nbsp;<span style="color:blue;">As</span>&nbsp;Microsoft.Win32.<span style="color:#2b91af;">RegistryKey</span>&nbsp;=&nbsp;Microsoft.Win32.<span style="color:#2b91af;">Registry</span>.CurrentUser
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;keyname&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;SOFTWARE\SOLIDWORKS\Addins\{&quot;</span>&nbsp;+&nbsp;t.GUID.ToString()&nbsp;+&nbsp;<span style="color:#a31515;">&quot;}&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hklm.DeleteSubKey(keyname)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;keyname&nbsp;=&nbsp;<span style="color:#a31515;">&quot;Software\SOLIDWORKS\AddInsStartup\{&quot;</span>&nbsp;+&nbsp;t.GUID.ToString()&nbsp;+&nbsp;<span style="color:#a31515;">&quot;}&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hkcu.DeleteSubKey(keyname)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Catch</span>&nbsp;nl&nbsp;<span style="color:blue;">As</span>&nbsp;System.<span style="color:#2b91af;">NullReferenceException</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Console</span>.WriteLine(<span style="color:#a31515;">&quot;There&nbsp;was&nbsp;a&nbsp;problem&nbsp;unregistering&nbsp;this&nbsp;dll:&nbsp;SWattr&nbsp;is&nbsp;null.\n&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nl.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Windows.Forms.<span style="color:#2b91af;">MessageBox</span>.Show(<span style="color:#a31515;">&quot;There&nbsp;was&nbsp;a&nbsp;problem&nbsp;unregistering&nbsp;this&nbsp;dll:&nbsp;SWattr&nbsp;is&nbsp;null.\n&quot;</span>&nbsp;&amp;&nbsp;nl.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Catch</span>&nbsp;e&nbsp;<span style="color:blue;">As</span>&nbsp;System.<span style="color:#2b91af;">Exception</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Console</span>.WriteLine(<span style="color:#a31515;">&quot;There&nbsp;was&nbsp;a&nbsp;problem&nbsp;unregistering&nbsp;this&nbsp;dll:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;e.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Windows.Forms.<span style="color:#2b91af;">MessageBox</span>.Show(<span style="color:#a31515;">&quot;There&nbsp;was&nbsp;a&nbsp;problem&nbsp;unregistering&nbsp;this&nbsp;dll:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;e.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Try</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+<span style="color:blue;">#End</span>&nbsp;<span style="color:blue;">Region</span>
+ 
+<span style="color:blue;">#Region</span>&nbsp;<span style="color:#a31515;">&quot;ISwAddin&nbsp;Implementation&quot;</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;ConnectToSW(<span style="color:blue;">ByVal</span>&nbsp;ThisSW&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;Cookie&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.<span style="color:#2b91af;">SwAddin</span>.ConnectToSW
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iSwApp&nbsp;=&nbsp;ThisSW
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinID&nbsp;=&nbsp;Cookie
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Set&nbsp;up&nbsp;callbacks</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iSwApp.<b>SetAddinCallbackInfo2</b>(0,&nbsp;<span style="color:blue;">Me</span>,&nbsp;addinID)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Set&nbsp;up&nbsp;the&nbsp;CommandManager</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iCmdMgr&nbsp;=&nbsp;iSwApp.<b>GetCommandManager</b>(Cookie)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AddCommandMgr()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Set&nbsp;up&nbsp;the&nbsp;Event&nbsp;Handlers</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwEventPtr&nbsp;=&nbsp;iSwApp
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openDocs&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">Hashtable</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventHandlers()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' Set&nbsp;up&nbsp;PropertyManager page</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AddPMP()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ConnectToSW&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;DisconnectFromSW()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;<span style="color:blue;">Implements</span>&nbsp;SolidWorks.Interop.swpublished.<span style="color:#2b91af;">SwAddin</span>.DisconnectFromSW
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RemoveCommandMgr()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RemovePMP()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DetachEventHandlers()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Runtime.InteropServices.<span style="color:#2b91af;">Marshal</span>.ReleaseComObject(iCmdMgr)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iCmdMgr&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Runtime.InteropServices.<span style="color:#2b91af;">Marshal</span>.ReleaseComObject(iSwApp)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iSwApp&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' The&nbsp;add-in&nbsp;must&nbsp;call&nbsp;GC.Collect()&nbsp;here&nbsp;to&nbsp;retrieve&nbsp;all&nbsp;managed&nbsp;code&nbsp;pointers&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">GC</span>.Collect()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">GC</span>.WaitForPendingFinalizers()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">GC</span>.Collect()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">GC</span>.WaitForPendingFinalizers()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DisconnectFromSW&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+<span style="color:blue;">#End</span>&nbsp;<span style="color:blue;">Region</span>
+ 
+<span style="color:blue;">#Region</span>&nbsp;<span style="color:#a31515;">&quot;UI&nbsp;Methods&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;AddCommandMgr()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;iBmp&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iBmp&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">BitmapHandler</span>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;thisAssembly&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Assembly</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cmdIndex0&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;cmdIndex1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;Title&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;VB.NET&nbsp;Add-in&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ToolTip&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>&nbsp;=&nbsp;<span style="color:#a31515;">&quot;Flyout&nbsp;demo&quot;</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;docTypes()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;{<span style="color:#2b91af;">swDocumentTypes_e</span>.swDocASSEMBLY,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">swDocumentTypes_e</span>.swDocDRAWING,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">swDocumentTypes_e</span>.swDocPART}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;thisAssembly&nbsp;=&nbsp;System.Reflection.<span style="color:#2b91af;">Assembly</span>.GetAssembly(<span style="color:blue;">Me</span>.GetType())
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cmdGroupErr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;ignorePrevious&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;=&nbsp;<span style="color:blue;">False</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;registryIDs&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;getDataResult&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;=&nbsp;iCmdMgr.<b>GetGroupDataFromRegistry</b>(mainCmdGroupID,&nbsp;registryIDs)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;knownIDs&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>()&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:blue;">Integer</span>(1)&nbsp;{mainItemID1,&nbsp;mainItemID2}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;getDataResult&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;CompareIDs(registryIDs,&nbsp;knownIDs)&nbsp;<span style="color:blue;">Then</span>&nbsp;<span style="color:green;">'&nbsp;If&nbsp;the&nbsp;IDs&nbsp;don't&nbsp;match,&nbsp;reset&nbsp;the&nbsp;CommandGroup</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ignorePrevious&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span></pre>
+<blockquote>
+	<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:blue;">   Dim</span>&nbsp;smallImage&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+<span style="color:blue;">   Dim</span>&nbsp;mediumImage&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+<span style="color:blue;">   Dim</span>&nbsp;largeImage&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+<span style="color:blue;">   Dim</span>&nbsp;imageSizeToUse&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+   imageSizeToUse&nbsp;=&nbsp;SwApp.<b>GetImageSize</b>(smallImage,&nbsp;mediumImage,&nbsp;largeImage)
+ 
+<span style="color:#2b91af;">   Debug</span>.Print(<span style="color:#a31515;">&quot;Image&nbsp;sizes:&quot;</span>)
+<span style="color:#2b91af;">   Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Default&nbsp;PropertyManager&nbsp;page&nbsp;and&nbsp;menu&nbsp;icon&nbsp;size&nbsp;based&nbsp;on&nbsp;DPI&nbsp;setting:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;imageSizeToUse)
+<span style="color:#2b91af;">   Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Small&nbsp;image&nbsp;size&nbsp;based&nbsp;on&nbsp;DPI&nbsp;setting:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;smallImage)
+<span style="color:#2b91af;">   Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Medium&nbsp;image&nbsp;size&nbsp;based&nbsp;on&nbsp;DPI&nbsp;setting:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;mediumImage)
+<span style="color:#2b91af;">   Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Large&nbsp;image&nbsp;size&nbsp;based&nbsp;on&nbsp;DPI&nbsp;setting:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;largeImage<span style="background-color: #FFFFFF; background-position: 0% 0%">)</span></pre>
+	<pre style="font-family: Courier New; font-size: 13; color: black; background: white">&nbsp;&nbsp;<span style="background-color: #FFFFFF; background-position: 0% 0%"> </span>cmdGroup&nbsp;=&nbsp;iCmdMgr.<b>CreateCommandGroup2</b>(mainCmdGroupID,&nbsp;Title,&nbsp;ToolTip,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;-1,&nbsp;ignorePrevious,&nbsp;cmdGroupErr)
+&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;cmdGroup&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Or</span>&nbsp;thisAssembly&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Throw</span>&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">NullReferenceException</span>()
+&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span></pre>
+</blockquote>
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;mainIcons(2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;icons(2)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;icons(0)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;<i>Pathname_to_toolbar_nxn_image</i>&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;icons(1)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;</span><span style="color: #a31515; font-style: italic">Pathname_to_toolbar_nnxnn_image</span><span style="color:#a31515;">&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;icons(2)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;</span><span style="color: #a31515; font-style: italic">Pathname_to_toolbar_nnnxnnn_image</span><span style="color:#a31515;">&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mainIcons(0)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;</span><span style="color: #a31515; font-style: italic">Pathname_to_nxn_image</span><span style="color:#a31515;">&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mainIcons(1)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;</span><span style="color: #a31515; font-style: italic">Pathname_to_nnxnn_image</span><span style="color:#a31515;">&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mainIcons(2)&nbsp;=&nbsp;<span style="color:#a31515;">&quot;</span><span style="color: #a31515; font-style: italic">Pathname_to_nnnxnnn_image</span><span style="color:#a31515;">&quot;</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.<b>IconList</b>&nbsp;=&nbsp;icons
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.<b>MainIconList</b>&nbsp;=&nbsp;mainIcons
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;menuToolbarOption&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;<span style="color:#2b91af;">swCommandItemType_e</span>.swMenuItem&nbsp;<font color="#0000FF">Or</font><span style="color:green;">&nbsp;</span><span style="color:#2b91af;">swCommandItemType_e</span>.swToolbarItem
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIndex0&nbsp;=&nbsp;cmdGroup.<b>AddCommandItem2</b>(<span style="color:#a31515;">&quot;CreateCube&quot;</span>,&nbsp;-1,&nbsp;<span style="color:#a31515;">&quot;Create&nbsp;a&nbsp;cube&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;Create&nbsp;cube&quot;</span>,&nbsp;0,&nbsp;<span style="color:#a31515;">&quot;CreateCube&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;mainItemID1,&nbsp;menuToolbarOption)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIndex1&nbsp;=&nbsp;cmdGroup.<b>AddCommandItem2</b>(<span style="color:#a31515;">&quot;Show&nbsp;PMP&quot;</span>,&nbsp;-1,&nbsp;<span style="color:#a31515;">&quot;Display&nbsp;sample&nbsp;property&nbsp;manager&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;Show&nbsp;PMP&quot;</span>,&nbsp;2,&nbsp;<span style="color:#a31515;">&quot;ShowPMP&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;PMPEnable&quot;</span>,&nbsp;mainItemID2,&nbsp;menuToolbarOption)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.<b>HasToolbar</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.<b>HasMenu</b>&nbsp;=&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.<b>Activate</b>()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;number&nbsp;of&nbsp;command&nbsp;IDs&nbsp;in&nbsp;the&nbsp;CommandGroup&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;command&nbsp;IDs&nbsp;in&nbsp;the&nbsp;CommandGroup&nbsp;is&nbsp;&quot;</span>&nbsp;&amp;&nbsp;iCmdMgr.<b>GetCommandIDsCount</b>(0).ToString())
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;group&nbsp;data&nbsp;from&nbsp;registry&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;userIDs&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;objIDs&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iCmdMgr.<b>GetGroupDataFromRegistry</b>(0,&nbsp;objIDs)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;userIDs&nbsp;=&nbsp;<span style="color:blue;">DirectCast</span>(objIDs,&nbsp;<span style="color:blue;">Integer</span>())
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Command&nbsp;IDs&nbsp;found&nbsp;in&nbsp;the&nbsp;registry:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;<span style="color:blue;">Each</span>&nbsp;ID&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;<span style="color:blue;">In</span>&nbsp;userIDs
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(ID.ToString())
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;bResult&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;flyGroup&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">FlyoutGroup</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;flyGroup&nbsp;=&nbsp;iCmdMgr.<b>CreateFlyoutGroup2</b>(flyoutGroupID,&nbsp;<span style="color:#a31515;">&quot;Dynamic&nbsp;Flyout&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;Dynamic Flyout&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;Flyout&nbsp;Hint&quot;</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mainIcons,&nbsp;icons,&nbsp;<span style="color:#a31515;">&quot;FlyoutCallback&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FlyoutEnable&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Add&nbsp;the&nbsp;FlyoutGroup&nbsp;to&nbsp;the&nbsp;context-sensitive&nbsp;menus&nbsp;of&nbsp;faces&nbsp;in&nbsp;parts&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bResult&nbsp;=&nbsp;flyGroup.<b>AddContextMenuFlyout</b>(<span style="color:blue;">CInt</span>(<span style="color:#2b91af;">swDocumentTypes_e</span>.swDocPART),&nbsp;<span style="color:blue;">CInt</span>(<span style="color:#2b91af;">swSelectType_e</span>.swSelFACES))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Context-sensitive&nbsp;menu&nbsp;flyout&nbsp;created&nbsp;for&nbsp;faces&nbsp;in&nbsp;parts:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;bResult.ToString())
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;the&nbsp;total&nbsp;number&nbsp;of&nbsp;FlyoutGroups&nbsp;in&nbsp;CommandManager&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Number&nbsp;of&nbsp;FlyoutGroups&nbsp;is&nbsp;&quot;</span>&nbsp;&amp;&nbsp;iCmdMgr.<b>NumberOfFlyoutGroups</b>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;the&nbsp;FlyoutGroups&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;objGroups&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;objGroups&nbsp;=&nbsp;<span style="color:blue;">DirectCast</span>(iCmdMgr.<b>GetFlyoutGroups</b>(),&nbsp;<span style="color:blue;">Object</span>())
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Find&nbsp;all&nbsp;FlyoutGroups&nbsp;in&nbsp;CommandManager:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;objGroups.GetUpperBound(0) 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;FlyoutGroup&nbsp;found&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;a&nbsp;FlyoutGroup&nbsp;by&nbsp;its&nbsp;user-defined&nbsp;ID&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fogrp&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">IFlyoutGroup</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fogrp&nbsp;=&nbsp;iCmdMgr.<b>GetFlyoutGroup</b>(91)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;CmdID:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;fogrp.<b>CmdID</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Button&nbsp;count:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;fogrp.<b>ButtonCount</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Flyout&nbsp;type:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;fogrp.<b>FlyoutType</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mainIcons&nbsp;=&nbsp;fogrp.<b>MainIconList</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Small&nbsp;button:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;mainIcons(0))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Medium&nbsp;</span><span style="color: #a31515">button</span><span style="color:#a31515;">:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;mainIcons(1))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Large&nbsp;</span><span style="color: #a31515">button</span><span style="color:#a31515;">:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;mainIcons(2))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;icons&nbsp;=&nbsp;fogrp.<b>IconList</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Small&nbsp;toolbar&nbsp;button:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;icons(0))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Medium&nbsp;toolbar&nbsp;button:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;icons(1))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;Large&nbsp;toolbar&nbsp;button:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;icons(2))
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;<span style="color:blue;">Each</span>&nbsp;docType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;<span style="color:blue;">In</span>&nbsp;docTypes
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cmdTab&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ICommandTab</span>&nbsp;=&nbsp;iCmdMgr.<b>GetCommandTab</b>(docType,&nbsp;Title)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;cmdTab&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">And</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;getDataResult&nbsp;<span style="color:blue;">Or</span>&nbsp;ignorePrevious&nbsp;<span style="color:blue;">Then</span>&nbsp;<span style="color:green;">'&nbsp;If&nbsp;tab&nbsp;exists,&nbsp;but&nbsp;the&nbsp;registry&nbsp;info&nbsp;is&nbsp;ignored,&nbsp;then&nbsp;re-create&nbsp;the&nbsp;tab;&nbsp;otherwise&nbsp;the&nbsp;IDs&nbsp;won't&nbsp;match&nbsp;and&nbsp;the&nbsp;tab&nbsp;will&nbsp;be&nbsp;blank</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;res&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>&nbsp;=&nbsp;iCmdMgr.<b>RemoveCommandTab</b>(cmdTab)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdTab&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;cmdTab&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdTab&nbsp;=&nbsp;iCmdMgr.<b>AddCommandTab</b>(docType,&nbsp;Title)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cmdBox&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">CommandTabBox</span>&nbsp;=&nbsp;cmdTab.<b>AddCommandTabBox</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cmdIDs(3)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;TextType(3)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIDs(0)&nbsp;=&nbsp;cmdGroup.<b>CommandID</b>(cmdIndex0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TextType(0)&nbsp;=&nbsp;<span style="color:#2b91af;">swCommandTabButtonTextDisplay_e</span>.swCommandTabButton_TextHorizontal
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIDs(1)&nbsp;=&nbsp;cmdGroup.<b>CommandID</b>(cmdIndex1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TextType(1)&nbsp;=&nbsp;<span style="color:#2b91af;">swCommandTabButtonTextDisplay_e</span>.swCommandTabButton_TextHorizontal
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIDs(2)&nbsp;=&nbsp;cmdGroup.<b>ToolbarId</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TextType(2)&nbsp;=&nbsp;<span style="color:#2b91af;">swCommandTabButtonTextDisplay_e</span>.swCommandTabButton_TextHorizontal
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bResult&nbsp;=&nbsp;cmdBox.<b>AddCommands</b>(cmdIDs,&nbsp;TextType)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;cmdBox1&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">CommandTabBox</span>&nbsp;=&nbsp;cmdTab.<b>AddCommandTabBox</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">ReDim</span>&nbsp;cmdIDs(1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">ReDim</span>&nbsp;TextType(1)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIDs(0)&nbsp;=&nbsp;flyGroup.<b>CmdID</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TextType(0)&nbsp;=&nbsp;<span style="color:#2b91af;">swCommandTabButtonTextDisplay_e</span>.swCommandTabButton_TextBelow
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bResult&nbsp;=&nbsp;cmdBox1.<b>AddCommands</b>(cmdIDs,&nbsp;TextType)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdTab.<b>AddSeparator</b>(cmdBox1,&nbsp;cmdIDs(0))
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;thisAssembly&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;RemoveCommandMgr()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iBmp.Dispose()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iCmdMgr.<b>RemoveCommandGroup</b>(mainCmdGroupID)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iCmdMgr.<b>RemoveFlyoutGroup</b>(flyoutGroupID)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Catch</span>&nbsp;e&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Exception</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;AddPMP()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ppage&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">UserPMPage</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ppage.Init(iSwApp,&nbsp;<span style="color:blue;">Me</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;RemovePMP()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ppage&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;CompareIDs(<span style="color:blue;">ByVal</span>&nbsp;storedIDs()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;addinIDs()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;storeList&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">List</span>(<span style="color:blue;">Of</span>&nbsp;<span style="color:blue;">Integer</span>)(storedIDs)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;addinList&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">List</span>(<span style="color:blue;">Of</span>&nbsp;<span style="color:blue;">Integer</span>)(addinIDs)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinList.Sort()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;storeList.Sort()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;addinList.Count&nbsp;=&nbsp;storeList.Count&nbsp;<span style="color:blue;">Then</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;i&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>&nbsp;=&nbsp;0&nbsp;<span style="color:blue;">To</span>&nbsp;addinList.Count&nbsp;-&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;addinList(i)&nbsp;=&nbsp;storeList(i)&nbsp;<span style="color:blue;">Then</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;<span style="color:blue;">True</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+<span style="color:blue;">#End</span>&nbsp;<span style="color:blue;">Region</span>
+ 
+<span style="color:blue;">#Region</span>&nbsp;<span style="color:#a31515;">&quot;Event&nbsp;Methods&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachEventHandlers()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachSWEvents()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' Listen&nbsp;for&nbsp;events&nbsp;on&nbsp;all&nbsp;currently&nbsp;open&nbsp;docs</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventsToAllDocuments()
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;DetachEventHandlers()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DetachSWEvents()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' Close&nbsp;events&nbsp;on&nbsp;all&nbsp;currently&nbsp;open&nbsp;docs</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;docHandler&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DocumentEventHandler</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;key&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;numKeys&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numKeys&nbsp;=&nbsp;openDocs.Count
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;numKeys&nbsp;&gt;&nbsp;0&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;keys()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:blue;">Object</span>(numKeys&nbsp;-&nbsp;1)&nbsp;{}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' Remove&nbsp;all&nbsp;document&nbsp;event&nbsp;handlers</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openDocs.Keys.CopyTo(keys,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">For</span>&nbsp;<span style="color:blue;">Each</span>&nbsp;key&nbsp;<span style="color:blue;">In</span>&nbsp;keys
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler&nbsp;=&nbsp;openDocs.Item(key)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler.DetachEventHandlers()&nbsp;<span style="color:green;">' This&nbsp;also&nbsp;removes&nbsp;the&nbsp;pair&nbsp;from&nbsp;the&nbsp;hash</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Next</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachSWEvents()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;iSwApp.ActiveDocChangeNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_ActiveDocChangeNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;iSwApp.DocumentLoadNotify2,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_DocumentLoadNotify2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;iSwApp.FileNewNotify2,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_FileNewNotify2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;iSwApp.ActiveModelDocChangeNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_ActiveModelDocChangeNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;iSwApp.FileOpenPostNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_FileOpenPostNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Catch</span>&nbsp;e&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Exception</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Console</span>.WriteLine(e.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;DetachSWEvents()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">RemoveHandler</span>&nbsp;iSwApp.ActiveDocChangeNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_ActiveDocChangeNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">RemoveHandler</span>&nbsp;iSwApp.DocumentLoadNotify2,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_DocumentLoadNotify2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">RemoveHandler</span>&nbsp;iSwApp.FileNewNotify2,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_FileNewNotify2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">RemoveHandler</span>&nbsp;iSwApp.ActiveModelDocChangeNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_ActiveModelDocChangeNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">RemoveHandler</span>&nbsp;iSwApp.FileOpenPostNotify,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.SldWorks_FileOpenPostNotify
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Catch</span>&nbsp;e&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Exception</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Console</span>.WriteLine(e.Message)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Try</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachEventsToAllDocuments()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;modDoc&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modDoc&nbsp;=&nbsp;iSwApp.<b>GetFirstDocument</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">While</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;modDoc&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;openDocs.Contains(modDoc)&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachModelDocEventHandler(modDoc)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modDoc&nbsp;=&nbsp;modDoc.<b>GetNext</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">While</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;AttachModelDocEventHandler(<span style="color:blue;">ByVal</span>&nbsp;modDoc&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;modDoc&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;<span style="color:blue;">False</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;docHandler&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DocumentEventHandler</span>&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;openDocs.Contains(modDoc)&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Select</span>&nbsp;<span style="color:blue;">Case</span>&nbsp;modDoc.<b>GetType</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:#2b91af;">swDocumentTypes_e</span>.swDocPART
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">PartEventHandler</span>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:#2b91af;">swDocumentTypes_e</span>.swDocASSEMBLY
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">AssemblyEventHandler</span>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Case</span>&nbsp;<span style="color:#2b91af;">swDocumentTypes_e</span>.swDocDRAWING
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">DrawingEventHandler</span>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Select</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler.Init(iSwApp,&nbsp;<span style="color:blue;">Me</span>,&nbsp;modDoc)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler.AttachEventHandlers()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openDocs.Add(modDoc,&nbsp;docHandler)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;DetachModelEventHandler(<span style="color:blue;">ByVal</span>&nbsp;modDoc&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;docHandler&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">DocumentEventHandler</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler&nbsp;=&nbsp;openDocs.Item(modDoc)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openDocs.Remove(modDoc)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modDoc&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler&nbsp;=&nbsp;<span style="color:blue;">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+<span style="color:blue;">#End</span>&nbsp;<span style="color:blue;">Region</span>
+ 
+<span style="color:blue;">#Region</span>&nbsp;<span style="color:#a31515;">&quot;Event&nbsp;Handlers&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;SldWorks_<b>ActiveDocChangeNotify</b>()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' TODO:&nbsp;Add&nbsp;your&nbsp;implementation&nbsp;here</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;SldWorks_<b>DocumentLoadNotify2</b>(<span style="color:blue;">ByVal</span>&nbsp;docTitle&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;docPath&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;SldWorks_<b>FileNewNotify2</b>(<span style="color:blue;">ByVal</span>&nbsp;newDoc&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;doctype&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;templateName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventsToAllDocuments()
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;SldWorks_<b>ActiveModelDocChangeNotify</b>()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' TODO:&nbsp;Add&nbsp;your&nbsp;implementation&nbsp;here</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;SldWorks_<b>FileOpenPostNotify</b>(<span style="color:blue;">ByVal</span>&nbsp;FileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventsToAllDocuments()
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+<span style="color:blue;">#End</span>&nbsp;<span style="color:blue;">Region</span>
+ 
+<span style="color:blue;">#Region</span>&nbsp;<span style="color:#a31515;">&quot;UI&nbsp;Callbacks&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;CreateCube()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' Make&nbsp;sure&nbsp;a&nbsp;part&nbsp;open is open</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;partTemplate&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;model&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">ModelDoc2</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;featMan&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">FeatureManager</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;partTemplate&nbsp;=&nbsp;iSwApp.<b>GetUserPreferenceStringValue</b>(<span style="color:#2b91af;">swUserPreferenceStringValue_e</span>.swDefaultTemplatePart)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;partTemplate&nbsp;=&nbsp;<span style="color:#a31515;">&quot;&quot;</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model&nbsp;=&nbsp;iSwApp.<b>NewDocument</b>(partTemplate,&nbsp;<span style="color:#2b91af;">swDwgPaperSizes_e</span>.swDwgPaperA2size,&nbsp;0.0,&nbsp;0.0)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;"> Dim</span>&nbsp;sketchMgr&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">SketchManager</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sketchMgr&nbsp;=&nbsp;model.<b>SketchManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sketchMgr.<b>InsertSketch</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sketchMgr.<b>CreateCornerRectangle</b>(0,&nbsp;0,&nbsp;0,&nbsp;0.1,&nbsp;0.1,&nbsp;0.1)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">' Extrude&nbsp;the&nbsp;sketch</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featMan&nbsp;=&nbsp;model.<b>FeatureManager
+</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featMan.<b>FeatureExtrusion3</b>(<span style="color:blue;">True</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">swEndConditions_e</span>.swEndCondBlind,&nbsp;<span style="color:#2b91af;">swEndConditions_e</span>.swEndCondBlind,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.1,&nbsp;0.0,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.0,&nbsp;0.0,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">False</span>,&nbsp;_
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">True</span>,&nbsp;<span style="color:#2b91af;">swStartConditions_e</span>.swStartSketchPlane,&nbsp;0.0,&nbsp;<span style="color:blue;">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Windows.Forms.<span style="color:#2b91af;">MessageBox</span>.Show(<span style="color:#a31515;">&quot;There&nbsp;is&nbsp;no&nbsp;part&nbsp;template&nbsp;available.&nbsp;Please&nbsp;check&nbsp;your&nbsp;options&nbsp;and&nbsp;make&nbsp;sure&nbsp;there&nbsp;is&nbsp;a&nbsp;part&nbsp;template&nbsp;selected,&nbsp;or&nbsp;select&nbsp;a&nbsp;new&nbsp;part&nbsp;template.&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;ShowPMP()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;<span style="color:blue;">Not</span>&nbsp;ppage&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ppage.<b>Show</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;PMPEnable()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;iSwApp.<b>ActiveDoc</b>&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PMPEnable&nbsp;=&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PMPEnable&nbsp;=&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;FlyoutCallback()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;flyGroup&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">FlyoutGroup</span>&nbsp;=&nbsp;iCmdMgr.<b>GetFlyoutGroup</b>(flyoutGroupID)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;flyGroup.<b>RemoveAllCommandItems</b>()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;flyGroup.<b>AddCommandItem</b>(<span style="color:#a31515;">&quot;FlyoutCommand&nbsp;1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FlyoutCommand&nbsp;1&quot;</span>,&nbsp;0,&nbsp;<span style="color:#a31515;">&quot;FlyoutCommandItem1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FlyoutEnableCommandItem1&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;flyGroup.<b>AddCommandItem</b>(<span style="color:#a31515;">&quot;FlyoutCommand&nbsp;2&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FlyoutCommand&nbsp;2&quot;</span>,&nbsp;0,&nbsp;<span style="color:#a31515;">&quot;FlyoutCommandItem2&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FlyoutEnableCommandItem2&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;flyGroup.<b>FlyoutType</b>&nbsp;=&nbsp;<span style="color:blue;">CInt</span>(<span style="color:#2b91af;">swCommandFlyoutStyle_e</span>.swCommandFlyoutStyle_LastUsed)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;FlyoutCommandItem1()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;FlyoutCommand&nbsp;1&nbsp;called&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub
+</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;FlyoutEnableCommandItem1()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Sub</span>&nbsp;FlyoutCommandItem2()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;FlyoutCommand&nbsp;2&nbsp;called&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub
+</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;FlyoutEnableCommandItem2()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Function</span>&nbsp;FlyoutEnable()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;cmdGroup.<b>HasEnabledButton</b>&nbsp;<span style="color:blue;">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Return</span>&nbsp;0
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span>
+ 
+<span style="color:blue;">#End</span>&nbsp;<span style="color:blue;">Region</span>
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

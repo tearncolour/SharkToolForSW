@@ -1,0 +1,136 @@
+<html>
+
+<head>
+<title>Get Objects in Selection Set Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,selection sets">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Objects in Selection Set Example (VBA)</h1>
+<p>This example shows how to get the objects in a selection set.</p>
+
+<pre>'----------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the assembly to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the assembly.
+' 2. Creates two selection sets.
+' 3. Traverses the nodes in the FeatureManager design tree. If the
+'    name of the node is <b>Selection-Set1(3)</b>, then:
+'    a. Gets the type of feature for this node.
+'    b. Gets the Selection Sets folder.
+'    c. Gets the selection set by name.
+'    d. Suspends the current selection list, starts a new selection list, 
+'       and adds the objects in the selection set to the new selection 
+'       list.
+'    e. Gets the number of objects in the selection list and traverses
+'       the selection list.
+'       1. Gets the type of object in the selection list.
+'       2. Casts the object to a component.
+'       3. Gets the name of the component.
+'    f. Reinstates the suspended selection list.
+' 4. Examine the Immediate window.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'----------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swFeatureMgr As SldWorks.FeatureManager
+    Dim rootNode As SldWorks.TreeControlItem
+    Dim swModelDocExtension As SldWorks.ModelDocExtension
+    Dim swSelectionSet1 As SldWorks.SelectionSet
+    Dim swSelectionSet2 As SldWorks.SelectionSet
+    Dim status As Boolean
+    Dim errors As Long
+    Dim warnings As Long
+    Dim fileName As String    </pre>
+<pre>    Set swApp = Application.SldWorks
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\wrench.sldasm&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocASSEMBLY, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Debug.Print &quot;File = &quot; &amp; swModel.<b>GetPathName</b>
+    Set swModelDocExtension = swModel.<b>Extension</b>    </pre>
+<pre>    'Create a selection set
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;arm1-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;arm2-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;clamp2-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    Set swSelectionSet1 = swModelDocExtension.<b>SaveSelection</b>(errors)
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Create another selection set
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;centerlink-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;screw-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;screw-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swSelectionSet2 = swModelDocExtension.<b>SaveSelection</b>(errors)
+    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    Set swFeatureMgr = swModel.<b>FeatureManager</b>
+    Set rootNode = swFeatureMgr.<b>GetFeatureTreeRootItem</b>()
+    If Not rootNode Is Nothing Then
+        traverse_node rootNode, swFeatureMgr, swModel
+    End If    </pre>
+<pre>End Sub</pre>
+<pre>
+Private Sub traverse_node(node As SldWorks.TreeControlItem, swFeatureMgr As SldWorks.FeatureManager, swModel As SldWorks.ModelDoc2)</pre>
+<pre>    Dim childNode As SldWorks.TreeControlItem
+    Dim featureNode As SldWorks.Feature
+    Dim nodeObjectType As Long
+    Dim nodeObject As Object
+
+    nodeObjectType = node.<b>ObjectType</b>
+    Set nodeObject = node.<b>Object</b>    </pre>
+<pre>    Select Case nodeObjectType
+        Case swTreeControlItemType_e.swFeatureManagerItem_Feature:
+            If Not nodeObject Is Nothing Then
+                Set featureNode = nodeObject
+                If featureNode.<b>Name</b> = &quot;Selection-Set1(3)&quot; Then
+
+                    Dim swSelectionSetFeature As SldWorks.Feature
+                    Dim swSelectionSetFolderFeature As SldWorks.SelectionSetFolder
+                    Dim swSelectionSet As SldWorks.SelectionSet
+                    Dim swComponent As SldWorks.Component2
+                    Dim swSelectionMgr As SldWorks.SelectionMgr
+                    Dim nbrSelections As Long
+                    Dim i As Long
+                    Dim selObj As Object                </pre>
+<pre>                    Set swSelectionSetFeature = node.<b>Object</b>
+                    Debug.Print &quot;Feature name: &quot; &amp; swSelectionSetFeature.<b>Name</b>
+                    Debug.Print &quot;  Feature type: &quot; &amp; swSelectionSetFeature.<b>GetTypeName2</b>
+                    Set swSelectionSetFolderFeature = swFeatureMgr.<b>GetSelectionSetFolder</b></pre>
+<pre>                    Set swSelectionSet = swSelectionSetFolderFeature.<b>GetSelectionSetByName</b>(swSelectionSetFeature.<b>Name</b>)
+                    Debug.Print &quot;Selection set name: &quot; &amp; swSelectionSet.<b>GetName</b>                   </pre>
+<pre>                    Set swSelectionMgr = swModel.<b>SelectionManager</b>
+                    swSelectionMgr.<b>SuspendSelectionList</b>                    </pre>
+<pre>                    swSelectionSet.<b>Select</b>                    </pre>
+<pre>                    nbrSelections = swSelectionMgr.<b>GetSelectedObjectCount2</b>(-1)
+                    Debug.Print &quot;  Number of objects selected in this selection set: &quot; &amp; nbrSelections                    </pre>
+<pre>                    For i = 1 To nbrSelections
+                        'Get each object in the new selection list
+                        Set selObj = swSelectionMgr.<b>GetSelectedObject6</b>(i, -1)
+                        Debug.Print &quot;    Object[&quot; &amp; i &amp; &quot;] in the selection list is of swSelectType_e = &quot; &amp; swSelectionMgr.<b>GetSelectedObjectType3</b>(i, -1) &amp; &quot;&quot;
+                        'Cast the object
+                        Set swComponent = selObj
+                        Debug.Print &quot;       Name of component: &quot; &amp; swComponent.<b>Name2</b>
+                    Next                    </pre>
+<pre>                    swSelectionMgr.<b>ResumeSelectionList</b>
+                End If
+            End If
+
+    End Select    </pre>
+<pre>    Set childNode = node.<b>GetFirstChild</b>()
+    While Not childNode Is Nothing
+        traverse_node childNode, swFeatureMgr, swModel
+        Set childNode = childNode.<b>GetNext</b>
+    Wend  
+  
+End Sub</pre>
+
+</body>
+
+</html>

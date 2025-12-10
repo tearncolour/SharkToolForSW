@@ -1,0 +1,112 @@
+<html>
+
+<head>
+<title>Insert Fill-surface Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,fill-surface feature">
+<meta name=MS-HKWD content="VBA examples,features">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Fill-surface Feature Example (VBA)</h1>
+<p>This example shows how to insert a fill-surface feature.</p>
+
+<pre>'-------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified part template exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Sketches a circle on the Front Plane.
+' 2. Offsets the Front Plane to create Plane1.
+' 3. Sketches a circle on Plane1.
+' 4. Creates a thin-feature loft using the circles
+'    created in steps 1 and 3.
+' 5. Selects one of the sketches to use for
+'    the fill-surface feature.
+' 6. Creates a fill-surface feature named <b>Surface-Fill1</b>.
+' 7. Gets, sets, and prints some properties of the fill-surface feature
+'    to the Immediate window.
+' 8. Examine the FeatureManager design, graphics area, and the
+'    the Immediate window.
+'--------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swSketchMgr As SldWorks.SketchManager
+Dim swSketchSegment As SldWorks.SketchSegment
+Dim swFeatMgr As SldWorks.FeatureManager
+Dim swRefPlane As SldWorks.RefPlane
+Dim swFeat As SldWorks.Feature
+Dim swFillSurfaceFeatureData as SldWorks.FillSurfaceFeatureData
+Dim selObj As Object
+Dim status As Boolean
+Dim nbrPatchEntities As Long
+Dim patchEntities As Variant
+Dim entTypes As Variant
+Dim i As Long
+</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Open a new model document
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SOLIDWORKS\SOLIDWORKS 2015\templates\part.prtdot&quot;, swDwgPaperAsize, 0, 0)    </pre>
+<pre>    'Select the front plane and sketch a circle
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, swSelectOptionDefault)
+    swModel.<b>ClearSelection2</b> True
+    Set swSketchMgr = swModel.<b>SketchManager</b>
+    Set swSketchSegment = swSketchMgr.<b>CreateCircle</b>(0#, 0#, 0#, 0.018863, -0.048015, 0#)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True    </pre>
+<pre>    'Offset the front plane to create Plane1
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    Set swFeatMgr = swModel.<b>FeatureManager</b>
+    Set swRefPlane = swFeatMgr.<b>InsertRefPlane</b>(8, 0.0762, 0, 0, 0, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Plane1&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, swSelectOptionDefault)
+    Set swSketchSegment = swSketchMgr.<b>CreateCircle</b>(0#, 0#, 0#, 0.005144, -0.017148, 0#)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True    </pre>
+<pre>    'Create a loft as a thin feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, -1.20997659765269E-02, 1.31954647737917E-02, 0, False, 1, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, -1.37458916138411E-02, 4.97220981864567E-02, 0, True, 1, Nothing, 0)
+    swFeatMgr.<b>InsertProtrusionBlend2</b> False, True, False, 1, 0, 0, 1, 1, True, True, True, 0.000254, 0.000254, 0, True, True, True, swGuideCurveInfluence_e.swGuideCurveInfluenceNextEdge    </pre>
+<pre>    'Get the sketch for the fill-surface feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, -3.09259362651374E-02, -1.50632202505945E-02, 2.65529245975468E-02, True, 257, Nothing, swSelectOptionDefault)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set selObj = swSelMgr.<b>GetSelectedObject6</b>(1, 257)    </pre>
+<pre>    'Insert the fill-surface feature
+    Set swFeat = swFeatMgr.<b>InsertFillSurface2</b>(2, swOptimizeSurface, selObj, swContact, Nothing, Nothing)</pre>
+<pre>    'Access the fill-surface feature
+    Set swFillSurfaceFeatureData = swFeat.<b>GetDefinition</b>
+    status = swFillSurfaceFeatureData.<b>AccessSelections</b>(swModel, Nothing)
+    Debug.Print &quot;Fill-surface feature: &quot;
+    Debug.Print &quot;  Number of constraint curves: &quot; &amp; swFillSurfaceFeatureData.<b>GetConstraintCurvesCount</b>
+    nbrPatchEntities = swFillSurfaceFeatureData.<b>GetPatchBoundaryCount</b>
+    Debug.Print &quot;  Number of entities used to define the patch boundary: &quot; &amp; nbrPatchEntities
+    If nbrPatchEntities &gt; 0 Then
+        'Get the type of patch boundary entities
+        patchEntities = swFillSurfaceFeatureData.<b>GetPatchBoundary</b>(entTypes)
+        For i = 0 To nbrPatchEntities - 1
+            Debug.Print (&quot;  Type of entity for patch boundary &quot; &amp; (i + 1) &amp; &quot; (1 = edge; 9 = sketch) : &quot; &amp; entTypes(i))        
+        Next i
+        Debug.Print &quot;  Results merged? &quot; &amp; swFillSurfaceFeatureData.<b>Merge</b>
+        swFillSurfaceFeatureData.<b>OptimizeSurface</b> = False
+        Debug.Print &quot;  Patch optimized? &quot; &amp; swFillSurfaceFeatureData.<b>OptimizeSurface</b>
+        Debug.Print &quot;  Original resolution control: &quot; &amp; swFillSurfaceFeatureData.<b>ResolutionControl</b>
+        If swFillSurfaceFeatureData.<b>OptimizeSurface</b> = False Then
+            swFillSurfaceFeatureData.<b>ResolutionControl</b> = 1
+        End If
+        Debug.Print &quot;  Updated resolution control (valid values 1, 2 and 3; setting this value only valid if patch is not optimized): &quot; &amp; swFillSurfaceFeatureData.<b>ResolutionControl</b>
+    End If
+    status = swFeat.<b>ModifyDefinition</b>(swFillSurfaceFeatureData, swModel, Nothing)</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

@@ -1,0 +1,124 @@
+<html>
+
+<head>
+<title>Open an Assembly in Large Design Review Mode Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,Large Design Review">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=MS-HKWD content="VBA examples,snapshots">
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Open an Assembly in Large Design Review Mode Example (VBA)</h1>
+<p>This example shows how to open an assembly in Large Design Review mode.</p>
+<pre>'----------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified assembly to open in Large Design Review mode
+'    exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Click <b>OK</b> in the Large Design Review dialog.
+' 2. Opens the assembly.
+' 3. Creates a section view.
+' 4. Creates four snapshots in the DisplayManager:
+'    * <b>Home</b>
+'    * <b>ASnap</b>
+'    * <b>Snap2</b>
+'    * <b>Snap3</b>
+' 5. Click <b>OK</b> in the Name Snapshot dialog.
+' 6. Selects and fully resolves a component.
+' 7. Inspect the Immediate window for snapshot information and inspect
+'    the graphics area.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+' ---------------------------------------------------------------------------
+Dim swApp As SldWorks.SldWorks<br>
+Dim Part As SldWorks.AssemblyDoc<br>
+Dim snap As SldWorks.snapShot<br>
+Dim snaps As Variant<br>
+Dim snap1 As SldWorks.snapShot<br>
+Dim snap2 As SldWorks.snapShot<br>
+Dim snap3 As SldWorks.snapShot<br>
+Dim i As Long<br>
+Dim boolstatus As Boolean<br>
+Dim longstatus As Long, longwarnings As Long<br>
+Option Explicit</pre>
+<p class="APICODE">Sub main()<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = _<br>
+&nbsp;&nbsp;&nbsp; Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Open a large assembly in Large Design 
+Review mode<br>
+&nbsp;&nbsp;&nbsp; Dim large_assembly_document As String<br>
+&nbsp;&nbsp;&nbsp; large_assembly_document = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\advdrawings\motor casing.sldasm&quot;<br>
+&nbsp;&nbsp;&nbsp; Set Part = swApp.<b>OpenDoc6</b>(large_assembly_document, 
+swDocASSEMBLY, swOpenDocOptions_ViewOnly, &quot;&quot;, longstatus, longwarnings)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Wait for the FeatureManager design tree 
+to synchronize<br>
+&nbsp;&nbsp;&nbsp; sleep 5<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Create section view<br>
+&nbsp;&nbsp;&nbsp; Dim sViewData As Object<br>
+&nbsp;&nbsp;&nbsp; Set sViewData = Part.<b>ModelViewManager</b>.<b>CreateSectionViewData</b>()<br>
+&nbsp;&nbsp;&nbsp; Set sViewData.<b>FirstPlane</b> = Nothing<br>
+&nbsp;&nbsp;&nbsp; sViewData.<b>FirstReverseDirection</b> = False<br>
+&nbsp;&nbsp;&nbsp; sViewData.<b>FirstOffset</b> = -0.00508<br>
+&nbsp;&nbsp;&nbsp; sViewData.<b>FirstRotationX</b> = 0<br>
+&nbsp;&nbsp;&nbsp; sViewData.<b>FirstRotationY</b> = 0<br>
+&nbsp;&nbsp;&nbsp; sViewData.<b>FirstColor</b> = 16711680<br>
+&nbsp;&nbsp;&nbsp; sViewData.<b>ShowSectionCap</b> = True<br>
+&nbsp;&nbsp;&nbsp; sViewData.<b>KeepCapColor</b> = True<br>
+&nbsp;&nbsp;&nbsp; Dim mvmgr As ModelViewManager<br>
+&nbsp;&nbsp;&nbsp; Set mvmgr = Part.<b>ModelViewManager</b><br>
+&nbsp;&nbsp;&nbsp; boolstatus = mvmgr.<b>CreateSectionView</b>(sViewData)<br>
+&nbsp;&nbsp;&nbsp; Part.<b>ClearSelection2</b> True<br>
+&nbsp;&nbsp;&nbsp; Part.<b>ShowNamedView2</b> &quot;*Front&quot;, 1<br>
+&nbsp;&nbsp;&nbsp; Part.<b>ShowNamedView2</b> &quot;*Dimetric&quot;, 9<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Add a named snapshot<br>
+&nbsp;&nbsp;&nbsp; Set snap1 = mvmgr.<b>AddSnapShot</b>(&quot;ASnap&quot;)<br>
+&nbsp;&nbsp;&nbsp; ' Open dialog box to name the next snapshot<br>
+&nbsp;&nbsp;&nbsp; Set snap2 = mvmgr.<b>AddSnapShot</b>(&quot;?&quot;)<br>
+&nbsp;&nbsp;&nbsp; ' Add a snapshot with the next default name<br>
+&nbsp;&nbsp;&nbsp; Set snap3 = mvmgr.<b>AddSnapShot</b>(&quot;&quot;)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; snap1.<b>Comment</b> = &quot;&lt;TS&gt; This is a 
+comment for ASnap.&quot;<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; snaps = mvmgr.<b>GetSnapShots</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; For i = 0 To UBound(snaps)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set snap = snaps(i)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; snap.Activate<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Snapshot name: &quot; &amp; snap.<b>Name</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Comment: &quot; &amp; snap.<b>Comment</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+ViewID: &quot; &amp; snap.<b>ViewId</b><br>
+&nbsp;&nbsp;&nbsp; Next<br>
+&nbsp;&nbsp;&nbsp; </p>
+<pre>   ' Selects a component
+    boolstatus = Part.<b>Extension</b>.<b>SelectByID2</b>(&quot;motor casing-1@motor casing&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)</pre>
+<pre>   ' Fully resolve only the selected component
+   Part.<b>SelectiveOpen</b> True, False<br>
+&nbsp;&nbsp; </pre>
+<p class="APICODE">End Sub<br>
+Sub sleep(PauseTime As Integer)<br>
+&nbsp;&nbsp;&nbsp; Dim Start, TotalTime as Integer<br>
+&nbsp;&nbsp;&nbsp; Start = Timer&nbsp;&nbsp;&nbsp; ' Set start time<br>
+&nbsp;&nbsp;&nbsp; Do While Timer &lt; Start + PauseTime<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DoEvents&nbsp;&nbsp;&nbsp; ' Yield to 
+other processes<br>
+&nbsp;&nbsp;&nbsp; Loop<br>
+End Sub</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

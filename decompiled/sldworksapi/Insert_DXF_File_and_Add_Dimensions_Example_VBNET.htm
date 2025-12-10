@@ -1,0 +1,561 @@
+<html>
+
+<head>
+<title>Insert DXF/DWG File and Add Dimensions Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,autodimension">
+<meta name=MS-HKWD content="VB.NET examples,DXF/DWG files">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert DXF/DWG File and Add Dimensions Example (VB.NET)</h1>
+<p>This example shows how to insert a DXF/DWG image on a preselected plane 
+ or face and then autodimension it.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	'----------------------------------------------------------------------------<br>
+	' Preconditions:<br>
+	' 1. Open a part.<br>
+	' 2. Replace <i>path_name</i> with the pathname of an existing DXF/DWG file.<br>
+	' 3. Select a plane or face on which to insert the DXF/DWG image.<br>
+	'<br>
+	' Postconditions:<br>
+	' 1. Adds the DXF/DWG image as a sketch.<br>
+	' 2. Autodimensions the sketch.<br>
+	' 3. Use <b>Zoom to Area</b> to inspect the sketch dimensioning.<br>
+	' 4. Press F5 to rebuild the model.<br>
+	'---------------------------------------------------------------------------<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System<br>
+	<br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black">
+	</span><span style="color:Blue">Class</span><span style="color:Black"> 
+	SolidWorksMacro<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Const</span><span style="color:Black"> 
+	nTolerance </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double</span><span style="color:Black"> = 
+	0.00000001<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swModelView </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelView<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchManager<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	nRetVal </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Long<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	GetAllSketchLines(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketch </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Sketch) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vSketchSegArr </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vSketchSeg </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchSeg </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchSegment<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchCurrLine </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchLineArr() </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReDim</span><span style="color:Black"> 
+	swSketchLineArr(0)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vSketchSegArr = swSketch.<b>GetSketchSegments</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	IsNothing(vSketchSegArr) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black">
+	</span><span style="color:Blue">Each</span><span style="color:Black"> 
+	vSketchSeg </span><span style="color:Blue">In</span><span style="color:Black"> 
+	vSketchSegArr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSeg = vSketchSeg<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	swSketchSegments_e.swSketchLINE = swSketchSeg.<b>GetType</b> </span>
+	<span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchCurrLine = 
+	swSketchSeg<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchLineArr(UBound(swSketchLineArr)) = 
+	swSketchCurrLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReDim</span><span style="color:Black">
+	</span><span style="color:Blue">Preserve</span><span style="color:Black"> 
+	swSketchLineArr(UBound(swSketchLineArr) + 1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	0 = UBound(swSketchLineArr) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	No straight lines in this sketch<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetAllSketchLines = </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Remove last, empty sketch line<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReDim</span><span style="color:Black">
+	</span><span style="color:Blue">Preserve</span><span style="color:Black"> 
+	swSketchLineArr(UBound(swSketchLineArr) - 1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetAllSketchLines = swSketchLineArr<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	GetSketchPoint(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketch </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Sketch, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketchPt </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vSketchPtArr </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vSketchPtArr = 
+	swSketch.<b>GetSketchPoints2</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	IsNothing(vSketchPtArr) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Use first point<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchPt = vSketchPtArr(0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetSketchPoint = </span><span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetSketchPoint = </span>
+	<span style="color:Blue">False<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	FindVerticalOrigin(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketch </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Sketch, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketchSegVert </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchSegment, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketchPtVert </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vSketchLineArr </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vSketchLine </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchCurrLine </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swStartPt </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swEndPt </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Get first vertical line<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vSketchLineArr = 
+	GetAllSketchLines(swApp, swModel, swSketch)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	IsNothing(vSketchLineArr) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black">
+	</span><span style="color:Blue">Each</span><span style="color:Black"> 
+	vSketchLine </span><span style="color:Blue">In</span><span style="color:Black"> 
+	vSketchLineArr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchCurrLine = vSketchLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swStartPt = swSketchCurrLine.<b>GetStartPoint2</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEndPt = swSketchCurrLine.<b>GetEndPoint2</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	Math.Abs(swStartPt.<b>X</b> - swEndPt.<b>X</b>) &lt; nTolerance </span>
+	<span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegVert = 
+	swSketchCurrLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FindVerticalOrigin = </span><span style="color:Blue">
+	True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Get first point<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FindVerticalOrigin = 
+	GetSketchPoint(swApp, swModel, swSketch, swSketchPtVert)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	FindHorizontalOrigin(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketch </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Sketch, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketchSegHoriz </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchSegment, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketchPtHoriz </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vSketchLineArr </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	vSketchLine </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchCurrLine </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swStartPt </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swEndPt </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Get first horizontal line<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vSketchLineArr = 
+	GetAllSketchLines(swApp, swModel, swSketch)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	IsNothing(vSketchLineArr) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black">
+	</span><span style="color:Blue">Each</span><span style="color:Black"> 
+	vSketchLine </span><span style="color:Blue">In</span><span style="color:Black"> 
+	vSketchLineArr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchCurrLine = vSketchLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swStartPt = swSketchCurrLine.<b>GetStartPoint2</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEndPt = swSketchCurrLine.<b>GetEndPoint2</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	Math.Abs(swStartPt.<b>Y</b> - swEndPt.<b>Y</b>) &lt; nTolerance </span>
+	<span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegHoriz = 
+	swSketchCurrLine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FindHorizontalOrigin = </span><span style="color:Blue">
+	True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Get first point<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FindHorizontalOrigin = 
+	GetSketchPoint(swApp, swModel, swSketch, swSketchPtHoriz)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	AutoDimensionSketch(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSketch </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Sketch, </span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	swSelData </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SelectData) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Long<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swFeat </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchSegHoriz </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchSegment = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchPtHoriz </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchSegVert </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchSegment = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketchPtVert </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SketchPoint = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	bRet </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">False</span><span style="color:Black"> = 
+	FindHorizontalOrigin(swApp, swModel, swSketch, swSketchSegHoriz, 
+	swSketchPtHoriz) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AutoDimensionSketch = 
+	swAutodimStatus_e.swAutodimStatusDatumLineNotHorizontal<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">False</span><span style="color:Black"> = 
+	FindVerticalOrigin(swApp, swModel, swSketch, swSketchSegVert, swSketchPtVert)
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AutoDimensionSketch = 
+	swAutodimStatus_e.swAutodimStatusDatumLineNotVertical<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Exit</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = swSketch<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = swFeat.<b>Select2</b>(</span><span style="color:Blue">False</span><span style="color:Black">, 
+	0)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Editing sketch clears selections<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditSketch</b>()<br>
+	<b>
+	<br>
+	</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Reselect sketch segments with 
+	correct marks for auto-dimensioning<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	swSketchSegVert </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Vertical line is for horizontal datum<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = swSketchSegVert.<b>Select4</b>(</span><span style="color:Blue">True</span><span style="color:Black">, 
+	swSelData)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ElseIf</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	swSketchPtHoriz </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = swSketchPtHoriz.<b>Select4</b>(</span><span style="color:Blue">True</span><span style="color:Black">, 
+	swSelData)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ElseIf</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	swSketchPtVert </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Use any sketch point for horizontal datum<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = swSketchPtVert.<b>Select4</b>(</span><span style="color:Blue">True</span><span style="color:Black">, 
+	swSelData)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	swSketchSegHoriz </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Horizontal line is for vertical datum<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = 
+	swSketchSegHoriz.<b>Select4</b>(</span><span style="color:Blue">True</span><span style="color:Black">, 
+	swSelData)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ElseIf</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	swSketchPtVert </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = swSketchPtVert.<b>Select4</b>(</span><span style="color:Blue">True</span><span style="color:Black">, 
+	swSelData)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ElseIf</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	swSketchPtHoriz </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Use any sketch point for vertical datum<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = swSketchPtHoriz.<b>Select4</b>(</span><span style="color:Blue">True</span><span style="color:Black">, 
+	swSelData)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	No straight lines, probably contains circles<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	so use sketch points for datums<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	IsNothing(GetAllSketchLines(swApp, swModel, swSketch)) </span>
+	<span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	swSketchPtHoriz </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = 
+	swSketchPtHoriz.<b>Select4</b>(</span><span style="color:Blue">False</span><span style="color:Black">, 
+	swSelData)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ElseIf</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	swSketchPtVert </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = 
+	swSketchPtVert.<b>Select4</b>(</span><span style="color:Blue">False</span><span style="color:Black">, 
+	swSelData)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr = swModel.<b>SketchManager</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nRetVal = swSketchMgr.<b>FullyDefineSketch</b>(</span><span style="color:Blue">True</span><span style="color:Black">,
+	</span><span style="color:Blue">True</span><span style="color:Black">, 
+	swSketchFullyDefineRelationType_e.swSketchFullyDefineRelationType_Vertical
+	</span><span style="color:Blue">Or</span><span style="color:Black"> 
+	swSketchFullyDefineRelationType_e.swSketchFullyDefineRelationType_Horizontal,
+	</span><span style="color:Blue">True</span><span style="color:Black">, 1,
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">, 1,
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">, 1, 
+	1)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Redraw so dimensions are 
+	displayed immediately<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	rect() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rect = </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelView.<b>GraphicsRedraw</b>(rect)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	main()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Const</span><span style="color:Black"> 
+	sDwgFileName </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black"> =
+	</span><span style="color:#a31515">&quot;<i>path_name</i>&quot;<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swFeatMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	FeatureManager<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swFeat </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSketch </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Sketch<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSelMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SelectionMgr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	swSelData </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SelectData<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	bRet </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	importData </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ImportDxfDwgData<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = swApp.<b>ActiveDoc</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelView = swModel.<b>ActiveView</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatMgr = swModel.<b>FeatureManager</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;importData = swApp.<b>GetImportFileData</b>(sDwgFileName)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Unit<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;importData.<b>LengthUnit</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">) 
+	= swLengthUnit_e.swMM<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Position<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = importData.<b>SetPosition</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 
+	swDwgImportEntitiesPositioning_e.swDwgEntitiesCentered, 0, 0)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Sheet scale<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = importData.<b>SetSheetScale</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 
+	1.0#, 2.0#)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Paper size<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bRet = importData.<b>SetPaperSize</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 
+	swDwgPaperSizes_e.swDwgPaperAsize, 0.0#, 0.0#)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Import method<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;importData.<b>ImportMethod</b>(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">) 
+	= swImportDxfDwg_ImportMethod_e.swImportDxfDwg_ImportToExistingPart<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = swFeatMgr.<b>InsertDwgOrDxfFile2</b>(sDwgFileName, 
+	importData)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketch = swFeat.<b>GetSpecificFeature2</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr = swModel.<b>SelectionManager</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelData = swSelMgr.<b>CreateSelectData</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nRetVal = AutoDimensionSketch(swApp, swModel, swSketch, swSelData)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Stop<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Rebuild to update sketch<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditRebuild3</b>()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	<br>
+	</span><span style="color:Blue">End</span><span style="color:Black"> </span>
+	<span style="color:Blue">Class</span>
+</div>
+
+</body>
+
+</html>

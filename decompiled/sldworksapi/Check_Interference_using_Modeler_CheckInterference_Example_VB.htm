@@ -1,0 +1,167 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Check Interference Using IModeler::CheckInterference Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=5055>
+<meta name=layout-width content=723>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+ <META NAME="MS-HKWD" CONTENT="VBA examples,interference detection">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Check Interference Using IModeler::CheckInterference Example (VBA)</h1>
+
+<p>This example shows how to check interference in an assembly using IModeler::CheckInterference. 
+ </p>
+
+<pre>'---------------------------------------------------------------------
+' Preconditions: Open <i>public_documents</i><b>\samples\tutorial\api\assem20.sldasm</b>.
+'
+' Postconditions:
+' 1. Checks interference between the components is
+'    in the context of the assembly.
+' 2. Draws lines that outline the faces in <b>block20</b>
+'    that are involved in the interference with
+'    <b>cylinder20</b>.
+' 3. Creates a 3D sketch of the lines.
+' 4. Examine the graphics area and FeatureManager design tree.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'---------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swModel As SldWorks.ModelDoc2
+    Dim swPart1 As SldWorks.PartDoc
+    Dim swPart2 As SldWorks.PartDoc
+    Dim swComponent1 As SldWorks.Component2
+    Dim swComponent2 As SldWorks.Component2
+    Dim bValue As Boolean
+    Dim swBody1 As SldWorks.Body2
+    Dim swBody2 As SldWorks.Body2
+    Dim swBodyCopy1 As SldWorks.Body2
+    Dim swBodyCopy2 As SldWorks.Body2
+    Dim vBodies As Variant
+    Dim swModeler As SldWorks.Modeler
+    Dim vFaces1 As Variant
+    Dim vFaces2 As Variant
+    Dim vFace As Variant
+    Dim swFace As SldWorks.Face2
+    Dim vEdges As Variant
+    Dim vEdge As Variant
+    Dim swEdge As SldWorks.Edge
+    Dim swVertex1 As SldWorks.Vertex
+    Dim swVertex2 As SldWorks.Vertex
+    Dim vPoint1 As Variant
+    Dim vPoint2 As Variant
+    Dim swTransform1 As SldWorks.MathTransform
+    Dim swTransform2 As SldWorks.MathTransform
+    Dim swInverseTransform As SldWorks.MathTransform
+    Dim swRelativeTransform As SldWorks.MathTransform
+    Dim swMathPoint As SldWorks.MathPoint
+    Dim swMathPointTransformed As SldWorks.MathPoint
+    Dim swMathUtility As SldWorks.MathUtility
+    Dim lIdx As Long
+    Dim lNumEdges As Long
+    Dim lCoord As Long
+    Dim lEpsilon As Double</pre>
+<pre>    lEpsilon = 0.000000001</pre>
+<pre>    ' Connect to SOLIDWORKS
+    Set swApp = Application.SldWorks</pre>
+<pre>    ' Get modeler
+    Set swModeler = swApp.<b>GetModeler</b></pre>
+<pre>    ' Get Math utility
+    Set swMathUtility = swApp.<b>GetMathUtility</b></pre>
+<pre>    ' Get active document
+    Set swModel = swApp.<b>ActiveDoc</b></pre>
+<pre>    ' Select first component
+    swModel.<b>ClearSelection2</b> True
+    bValue = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;block20-1@assem20&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swComponent1 = swModel.<b>SelectionManager</b>.<b>GetSelectedObject6</b>(1, -1)</pre>
+<pre>    ' Select second component
+    swModel.<b>ClearSelection2</b> True
+    bValue = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;cylinder20-1@assem20&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swComponent2 = swModel.<b>SelectionManager</b>.<b>GetSelectedObject6</b>(1, -1)</pre>
+<pre>    ' Get transform for each component
+    Set swTransform1 = swComponent1.<b>Transform</b>
+    Set swTransform2 = swComponent2.<b>Transform</b></pre>
+<pre>    ' Get document for each component
+    Set swPart1 = swComponent1.<b>GetModelDoc</b>
+    Set swPart2 = swComponent2.<b>GetModelDoc</b></pre>
+<pre>    ' Get bodies for first component
+    vBodies = swComponent1.<b>GetBodies2</b>(swBodyType_e.swSolidBody)
+    Set swBody1 = vBodies(0)</pre>
+<pre>    ' Make a copy for boolean operations
+    Set swBodyCopy1 = swBody1.<b>Copy</b></pre>
+<pre>    ' Get bodies for second component
+    vBodies = swComponent2.<b>GetBodies2</b>(swBodyType_e.swSolidBody)
+    Set swBody2 = vBodies(0)</pre>
+<pre>    ' Make a copy for boolean operations
+    Set swBodyCopy2 = swBody2.<b>Copy</b></pre>
+<pre>    ' Move bodies to their correct position</pre>
+<pre>    ' Apply transform
+    bValue = swBodyCopy1.<b>ApplyTransform</b>(swTransform1)
+    bValue = swBodyCopy2.<b>ApplyTransform</b>(swTransform2)</pre>
+<pre>    swModel.<b>EditRebuild3</b></pre>
+<pre>    bValue = swModeler.<b>CheckInterference</b>(swBodyCopy1, swBodyCopy2, False, vFaces1, vFaces2, vBodies)</pre>
+<pre>    ' Display edges of block20 that interfere with cylinder20
+    If (Not IsEmpty(vFaces1)) Then
+        swModel.<b>SetAddToDB</b> True
+        swModel.<b>Insert3DSketch2</b> False
+        For Each vFace In vFaces1
+            Set swFace = vFace
+            vEdges = swFace.<b>GetEdges</b>
+            lNumEdges = (UBound(vEdges) - LBound(vEdges) + 1)
+            For lIdx = 0 To (lNumEdges - 1)
+                Set swEdge = vEdges(lIdx)
+                Set swVertex1 = swEdge.<b>GetStartVertex</b>
+                Set swVertex2 = swEdge.<b>GetEndVertex</b>
+                vPoint1 = swVertex1.<b>GetPoint</b>
+                vPoint2 = swVertex2.<b>GetPoint</b>
+                For lCoord = 0 To 2
+                    If (Abs(vPoint1(lCoord)) &lt; lEpsilon) Then
+                        vPoint1(lCoord) = 0#
+                    End If
+                    If (Abs(vPoint2(lCoord)) &lt; lEpsilon) Then
+                        vPoint2(lCoord) = 0#
+                    End If
+                Next lCoord
+                swModel.<b>CreateLine2</b> vPoint1(0), vPoint1(1), vPoint1(2), vPoint2(0), vPoint2(1), vPoint2(2)
+            Next lIdx
+        Next vFace
+        swModel.<b>Insert3DSketch2</b> True
+        swModel.<b>SetAddToDB</b> False
+    End If</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

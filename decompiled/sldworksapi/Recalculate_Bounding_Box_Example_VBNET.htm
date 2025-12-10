@@ -1,0 +1,108 @@
+<html>
+
+<head>
+<title>Recalculate Bounding Box Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,bounding box">
+<meta name=MS-HKWD content="VB.NET examples,assemblies">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Recalculate Bounding Box Example (VB.NET)</h1>
+
+<p>This example shows how to recalculate the bounding box of an assembly. 
+ </p>
+
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><span style="color:green;">'-----------------------------------------</span>
+<span style="color:green;">'&nbsp;Preconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Specified&nbsp;assembly&nbsp;document&nbsp;exists.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Run&nbsp;the&nbsp;macro.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;Postconditions:</span>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;assembly&nbsp;document.</span>
+<span style="color:green;">'&nbsp;2.&nbsp;Gets&nbsp;the&nbsp;bounding&nbsp;box&nbsp;for&nbsp;the&nbsp;assembly.</span>
+<span style="color:green;">'&nbsp;3.&nbsp;Prints&nbsp;the&nbsp;lower-&nbsp;and&nbsp;upper-diagonal&nbsp;corner&nbsp;points</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;of&nbsp;the&nbsp;bounding&nbsp;box&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;4.&nbsp;Modifies&nbsp;a&nbsp;dimension&nbsp;in&nbsp;a&nbsp;component&nbsp;in&nbsp;the&nbsp;assembly.</span>
+<span style="color:green;">'&nbsp;5.&nbsp;Updates&nbsp;the&nbsp;bounding&nbsp;box.</span>
+<span style="color:green;">'&nbsp;6.&nbsp;Prints&nbsp;the&nbsp;lower-&nbsp;and&nbsp;upper-diagonal&nbsp;corner&nbsp;points</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;of&nbsp;the&nbsp;bounding&nbsp;box&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">'&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;values&nbsp;printed&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window</span>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;to&nbsp;verify&nbsp;that&nbsp;the&nbsp;bounding&nbsp;box&nbsp;was&nbsp;updated.</span>
+<span style="color:green;">'</span>
+<span style="color:green;">'&nbsp;NOTE:&nbsp;Because&nbsp;this&nbsp;assembly&nbsp;is&nbsp;used&nbsp;elsewhere,</span>
+<span style="color:green;">'&nbsp;do&nbsp;not&nbsp;save&nbsp;any&nbsp;changes&nbsp;when&nbsp;closing&nbsp;it.</span>
+<span style="color:green;">'-------------------------------------------</span>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color:blue;">Imports</span>&nbsp;System
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swAssy&nbsp;<span style="color:blue;">As</span>&nbsp;AssemblyDoc
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDimension&nbsp;<span style="color:blue;">As</span>&nbsp;Dimension
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;ProcessAssyBox(<span style="color:blue;">ByVal</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;swAssy&nbsp;<span style="color:blue;">As</span>&nbsp;AssemblyDoc)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;vBox&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vBox&nbsp;=&nbsp;swAssy.<b>GetBox</b>(0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Min&nbsp;=&nbsp;(&quot;</span>&nbsp;&amp;&nbsp;vBox(0)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;vBox(1)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;vBox(2)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;)&nbsp;mm&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Max&nbsp;=&nbsp;(&quot;</span>&nbsp;&amp;&nbsp;vBox(3)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;vBox(4)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;,&nbsp;&quot;</span>&nbsp;&amp;&nbsp;vBox(5)&nbsp;*&nbsp;1000.0#&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;)&nbsp;mm&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\key&nbsp;pad_1.sldasm&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocASSEMBLY,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssy&nbsp;=&nbsp;swModel
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Print&nbsp;the&nbsp;two&nbsp;diagonal&nbsp;corner&nbsp;points</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;of&nbsp;the&nbsp;bounding&nbsp;box&nbsp;before&nbsp;modifying&nbsp;the</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;assembly</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Before:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ProcessAssyBox(swApp,&nbsp;swAssy)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Change&nbsp;a&nbsp;dimension&nbsp;of&nbsp;one&nbsp;of&nbsp;the&nbsp;assembly&nbsp;components</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;Sketch1@Pad_1-1@key&nbsp;pad_1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;SKETCH&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>EditSketch</b>()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;D1@Sketch1@Pad_1-1@key&nbsp;pad_1&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;DIMENSION&quot;</span>,&nbsp;0.00306153201295202,&nbsp;0.0373842545521677,&nbsp;-0.0323079625553351,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimension&nbsp;=&nbsp;<a href="mailto:swModel.Parameter(%22D1@Sketch1@pad_1.Part%22)e">swModel.<b>Parameter</b>(<span style="color:#a31515;">&quot;D1@Sketch1@pad_1.Part&quot;</span>)</a><font SIZE="2">
+        errors = swDimension.<b>SetSystemValue3</b>(0.04, swSetValueInConfiguration_e.swSetValue_InThisConfiguration, </font><font SIZE="2" COLOR="#0000ff">Nothing</font><font SIZE="2">)
+</font> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Update&nbsp;the&nbsp;bounding&nbsp;box</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssy.<b>UpdateBox</b>()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Print&nbsp;the&nbsp;two&nbsp;diagonal&nbsp;corner&nbsp;points&nbsp;of&nbsp;the</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;bounding&nbsp;box&nbsp;after&nbsp;modifying&nbsp;the&nbsp;assembly</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;After:&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ProcessAssyBox(swApp,&nbsp;swAssy)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></pre>
+
+</body>
+
+</html>

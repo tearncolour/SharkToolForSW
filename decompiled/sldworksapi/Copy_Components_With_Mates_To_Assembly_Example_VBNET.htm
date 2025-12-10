@@ -1,0 +1,271 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Copy Components With Mates to Assembly Example (VB.NET)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VB.NET examples, assemblies">
+<meta name=MS-HKWD content="VB.NET examples, components">
+<meta name=MS-HKWD content="VB.NET examples, mates">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2088>
+<meta name=layout-width content=1395>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Copy Components With Mates to Assembly Example (VB.NET)</h1>
+<p>This example shows how to copy components with mates in an assembly.</p>
+
+<p><font face="Courier New" size="2" color="#008000">'----------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Open <i>public_documents</i><b>\samples\tutorial\driveworksxpress\mobile gantry.SLDASM</b>.<br>
+' 2. Inspect <b>Leg&lt;1&gt;</b> and <b>Leg&lt;2&gt;</b> in the assembly.<br>
+'<br>
+' Postconditions:<br>
+' 1. Replaces <b>Leg&lt;1&gt;</b> with a copy of <b>Leg&lt;2&gt;</b>.<br>
+' 2. Inspect <b>Leg&lt;2&gt;</b> and <b>leg&lt;3&gt;</b> in the assembly.<br>
+'<br>
+' NOTE: Because this assembly is used elsewhere, do not save changes.<br>
+'----------------------------------------------------------------------------</font></p>
+
+<p class=apiCode>Imports SolidWorks.Interop.sldworks</p>
+
+<p class=apiCode>Imports System.Runtime.InteropServices</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode>Partial Class SolidWorksMacro</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Sub 
+ main()</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ swModel As ModelDoc2</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ swModelDocExt As ModelDocExtension</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ swSelMgr As SelectionMgr</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ blRepeat(2) As Boolean</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ blFlip(2) As Boolean</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ SelectedComps As Object</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ RepeatOptions As Object</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ MateRefs As Object</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ InpValues As Object</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ FlipValues As Object</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ swAssy As AssemblyDoc</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ swItem As Component</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ swFeature As Feature</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ refPlane As RefPlane</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ arrMateEntities(2) As Object</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ arrCompsToCopy(0) As Object</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ boolstatus As Boolean</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ dValues(2) As Double</p>
+<p class=apiCode>&nbsp;</p>
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swModel 
+ = swApp.<b>ActiveDoc</b></p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swAssy 
+ = swModel</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swSelMgr 
+ = swModel.<b>SelectionManager</b></p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swModelDocExt 
+ = swModel.<b>Extension</b></p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->boolstatus 
+ = swModelDocExt.<b>SelectByID2</b>(&quot;Leg-1@mobile gantry&quot;, &quot;COMPONENT&quot;, 
+ 0, 0, 0, False, 0, Nothing, 0)</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swModel.<b>EditDelete</b>()</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swModel.<b>ClearSelection2</b>(True)</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->boolstatus 
+ = swModelDocExt.<b>SelectByID2</b>(&quot;Leg-2@mobile gantry&quot;, &quot;COMPONENT&quot;, 
+ 0, 0, 0, False, 0, Nothing, 0)</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swItem 
+ = CType(swSelMgr.<b>GetSelectedObject6</b>(1, -1), Component2)</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->arrCompsToCopy(0) 
+ = swItem</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->arrMateEntities(0) 
+ = Nothing</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->arrMateEntities(1) 
+ = Nothing</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swModel.ClearSelection2(True)</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->boolstatus 
+ = swModelDocExt.<b>SelectByID2</b>(&quot;Left End@Universal Beam-1@mobile gantry&quot;, 
+ &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swFeature 
+ = CType(swSelMgr.<b>GetSelectedObject6</b>(1, -1), Feature)</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->refPlane 
+ = CType(swFeature.<b>GetSpecificFeature2</b>, RefPlane)</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->arrMateEntities(2) 
+ = refPlane</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swModel.<b>ClearSelection2</b>(True)</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->blRepeat(0) 
+ = True</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->blRepeat(1) 
+ = True</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->blRepeat(2) 
+ = False</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->SelectedComps 
+ = arrCompsToCopy</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->RepeatOptions 
+ = blRepeat</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->MateRefs 
+ = arrMateEntities</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->dValues(0) 
+ = 0.0</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->dValues(1) 
+ = 0.0</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->dValues(2) 
+ = 0.0</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->InpValues 
+ = dValues</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->blFlip(0) 
+ = False</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->blFlip(1) 
+ = False</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->blFlip(2) 
+ = False</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->FlipValues 
+ = blFlip</p>
+
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ disparrCompsToCopy(0) As DispatchWrapper</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->disparrCompsToCopy(0) 
+ = New DispatchWrapper(arrCompsToCopy(0))</p>
+
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Dim 
+ dispMateRefs(2) As DispatchWrapper</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->dispMateRefs(0) 
+ = New DispatchWrapper(MateRefs(0))</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->dispMateRefs(1) 
+ = New DispatchWrapper(MateRefs(1))</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->dispMateRefs(2) 
+ = New DispatchWrapper(MateRefs(2))</p>
+
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}--><font color="#008000">'Repeat 
+ all mates except the coincident mate with &quot;Right End@Universal Beam-1&quot;</font></p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swAssy.<span 
+ style="font-weight: bold;">CopyWithMates(</span>(disparrCompsToCopy), 
+ RepeatOptions, (dispMateRefs), InpValues, FlipValues<span style="font-weight: bold;">)</span></p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->swAssy.<b>EditRebuild</b>()</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->End 
+ Sub</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->Public 
+ swApp As SldWorks</p>
+<p class=apiCode>&nbsp;</p>
+
+<p class=apiCode>End Class</p>
+
+</body>
+
+</html>

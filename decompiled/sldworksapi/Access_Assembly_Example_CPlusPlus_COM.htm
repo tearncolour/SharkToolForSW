@@ -1,0 +1,717 @@
+
+ 
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Access Assembly Example (C++ COM)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta content="text/html; charset=windows-1252" http-equiv="content-type" />
+<meta content="EXAccessAssembly" name="MS-HAID" />
+<meta content="C++ examples,FeatureManager design tree" name="MS-HKWD" />
+<meta content="C++ examples,drawings" name="MS-HKWD" />
+<meta content="Assemblies (see also IAssemblyDoc Interface),collapse" name="MS-HKWD" />
+<meta content="C++ examples,assemblies" name="MS-HKWD" />
+<meta content="C++ examples,components" name="MS-HKWD" />
+<meta content="Assemblies (see also IAssemblyDoc Interface)" name="MS-HKWD" />
+<meta content="C++ examples" name="MS-HKWD" />
+<meta content="FeatureManager design tree (see also IFeatureManager and IFeatMgrView Interfaces)" name="MS-HKWD" />
+<meta content="RoboHELP by eHelp Corporation - www.ehelp.com" name="generator" />
+<meta content="0.1" name="generator-major-version" />
+<meta content="1" name="generator-minor-version" />
+<meta content="kadov" name="filetype" />
+<meta content="1" name="filetype-version" />
+<meta content="1" name="page-count" />
+<meta content="6898" name="layout-height" />
+<meta content="750" name="layout-width" />
+
+
+<!--(Links)=========================================================-->
+
+<link href="./APIHelp.css" rel="stylesheet" />
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Access Assembly Example (C++ COM)</h1>
+
+<p>This example shows how to open, explode and collapse, and create a drawing of 
+an assembly. It also shows how to traverse the FeatureManager design tree, get a 
+component, and suppress and resolve that component. This example uses CComPtr 
+Smart_Pointers.htm and CComBSTR smart types.</p>
+
+<p>&nbsp;</p>
+
+<h3>DemoAssemblies.cpp: application code</h3>
+
+<p class="apiCode">
+///////////////////////////////////////////////////////////////////////</p>
+
+<p class="apiCode">//</p>
+
+<p class="apiCode">// Preconditions: <span style="font-weight: bold;">
+ujoint.sldasm</span> 
+ exists in the specified folder and </p>
+
+<p class="apiCode">// <!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}-->contains 
+a component named <span style="font-weight: bold;">bracket-1</span>. </p>
+
+<p class="apiCode">// <!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}--></p>
+
+<p class="apiCode">//</p>
+
+<p class="apiCode">// Postconditions: None </p>
+
+<p class="apiCode">//</p>
+
+<p class="apiCode">//<span style="font-weight: bold;"> NOTE:</span> Scroll down 
+see the code for the <span style="font-weight: bold;">stdafx.h</span> 
+ header file.</p>
+
+<p class="apiCode">//</p>
+
+<p class="apiCode">
+///////////////////////////////////////////////////////////////////////</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">#include &quot;stdafx.h&quot;</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">VARIANT_BOOL retVal = VARIANT_FALSE;</p>
+
+<p class="apiCode">HRESULT hres = NOERROR;</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">//Function prototypes</p>
+
+<p class="apiCode">void OpenAssembly(ISldWorks* swApp, IModelDoc2** swModel); 
+ </p>
+
+<p class="apiCode">void TraverseFeatureManagerDesignTree(IModelDoc2* swModel, 
+IComponent2** swComponent); </p>
+
+<p class="apiCode">void SuppressSelectedComponent(IComponent2* swComponent, 
+ISldWorks* swApp); </p>
+
+<p class="apiCode">void ResolveSelectedComponent(IComponent2* swComponent, 
+ISldWorks* swApp);</p>
+
+<p class="apiCode">void ExplodeAssembly(IModelDoc2* swModel, IAssemblyDoc** 
+swAssemblyDoc); </p>
+
+<p class="apiCode">void CollapseAssembly(IModelDoc2* swModel, IAssemblyDoc* 
+swAssemblyDoc); </p>
+
+<p class="apiCode">void CreateDrawingOfAssembly(ISldWorks* swApp, IModelDoc2* 
+swModel); </p>
+
+<p class="apiCode">void CloseDocuments(ISldWorks* swApp);</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">using namespace std;</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">int _tmain()</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">//Initialize COM</p>
+
+<p class="apiCode" style="margin-left: 49px;">CoInitialize(NULL); <!--kadov_tag{{<spaces>}}-->
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}--></p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">//Use ATL smart pointers</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;ISldWorks&gt; swApp; </p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;IModelDoc2&gt; swModel;</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;IComponent2&gt; swComponent;</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;IAssemblyDoc&gt; 
+swAssemblyDoc; 
+ </p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">bool bDone;</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">do</p>
+
+<p class="apiCode" style="margin-left: 49px;">{</p>
+
+<p class="apiCode" style="margin-left: 89px;">try</p>
+
+<p class="apiCode" style="margin-left: 89px;">{</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Open or attach to the currently 
+running instance of the <span style="font-weight: bold;">sldworks.exe</span> </p>
+
+<p class="apiCode" style="margin-left: 129px;">//COM server on your local 
+computer; throw an exception if </p>
+
+<p class="apiCode" style="margin-left: 129px;">//SOLIDWORKS is not opened or 
+attached to</p>
+
+<p class="apiCode" style="margin-left: 129px;">hres = 
+swApp.CoCreateInstance(__uuidof(SldWorks), NULL, CLSCTX_LOCAL_SERVER);</p>
+
+<p class="apiCode" style="margin-left: 129px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">if (hres != S_OK)</p>
+
+<p class="apiCode" style="margin-left: 169px;">throw 0;</p>
+
+<p class="apiCode" style="margin-left: 89px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">bDone = true;</p>
+
+<p class="apiCode" style="margin-left: 89px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">IModelDoc2* swModel = NULL;</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Open assembly</p>
+
+<p class="apiCode" style="margin-left: 129px;">OpenAssembly(swApp, &amp;swModel);</p>
+
+<p class="apiCode" style="margin-left: 129px;">IComponent2* swComponent = NULL;</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Traverse FeatureManager design 
+tree to get specified feature</p>
+
+<p class="apiCode" style="margin-left: 129px;">
+TraverseFeatureManagerDesignTree(swModel, &amp;swComponent);</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Suppress selected component if 
+it is resolved</p>
+
+<p class="apiCode" style="margin-left: 129px;">
+SuppressSelectedComponent(swComponent, swApp);</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Resolve selected component if 
+it is suppressed</p>
+
+<p class="apiCode" style="margin-left: 129px;">
+ResolveSelectedComponent(swComponent, swApp);</p>
+
+<p class="apiCode" style="margin-left: 129px;">IAssemblyDoc* swAssemblyDoc = 
+NULL;</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Explode assembly</p>
+
+<p class="apiCode" style="margin-left: 129px;">ExplodeAssembly(swModel, 
+&amp;swAssemblyDoc);</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Collapse exploded assembly</p>
+
+<p class="apiCode" style="margin-left: 129px;">CollapseAssembly(swModel, 
+swAssemblyDoc);</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Create drawing of assembly</p>
+
+<p class="apiCode" style="margin-left: 129px;">CreateDrawingOfAssembly(swApp, 
+swModel); 
+ </p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Close documents</p>
+
+<p class="apiCode" style="margin-left: 129px;">CloseDocuments(swApp);</p>
+
+<p class="apiCode" style="margin-left: 89px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 89px;">}</p>
+
+<p class="apiCode" style="margin-left: 89px;">//Catch the exception and tell the 
+user that SOLIDWORKS is not running</p>
+
+<p class="apiCode" style="margin-left: 89px;">catch (int)</p>
+
+<p class="apiCode" style="margin-left: 89px;">{</p>
+
+<p class="apiCode" style="margin-left: 129px;">cout &lt;&lt; &quot;Error starting or 
+attaching to a SOLIDWORKS session.&quot; &lt;&lt; endl;</p>
+
+<p class="apiCode" style="margin-left: 89px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Release COM references</p>
+
+<p class="apiCode" style="margin-left: 129px;">swApp = NULL; </p>
+
+<p class="apiCode" style="margin-left: 129px;">swModel = NULL;</p>
+
+<p class="apiCode" style="margin-left: 129px;">swComponent = NULL;</p>
+
+<p class="apiCode" style="margin-left: 129px;">swAssemblyDoc = NULL;</p>
+
+<p class="apiCode" style="margin-left: 89px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">//Uninitialize COM</p>
+
+<p class="apiCode" style="margin-left: 129px;">CoUninitialize();</p>
+
+<p class="apiCode" style="margin-left: 129px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">return 1;</p>
+
+<p class="apiCode" style="margin-left: 89px;">}</p>
+
+<p class="apiCode" style="margin-left: 49px;">}</p>
+
+<p class="apiCode" style="margin-left: 49px;">while(!bDone);</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">//Release COM references</p>
+
+<p class="apiCode" style="margin-left: 49px;">swApp = NULL; </p>
+
+<p class="apiCode" style="margin-left: 49px;">swModel = NULL;</p>
+
+<p class="apiCode" style="margin-left: 49px;">swComponent = NULL;</p>
+
+<p class="apiCode" style="margin-left: 49px;">swAssemblyDoc = NULL;</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">//Uninitialize COM</p>
+
+<p class="apiCode" style="margin-left: 49px;">CoUninitialize();</p>
+
+<p class="apiCode"><!--kadov_tag{{<spaces>}}-->&nbsp;&nbsp;&nbsp;&nbsp;<!--kadov_tag{{</spaces>}}--></p>
+
+<p class="apiCode" style="margin-left: 49px;">return 0;</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">void OpenAssembly(ISldWorks* swApp, IModelDoc2** swModel)</p>
+
+<p class="apiCode">//Open assembly</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR 
+sFileName(L&quot;c:\\test\\universaljoint\\ujoint.sldasm&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR 
+sDefaultConfiguration(L&quot;Default&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long fileerror, filewarning;</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">IModelDoc2* swModelAssembly;</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swApp-&gt;<span style="font-weight: bold;">OpenDoc6</span>(sFileName, 
+swDocASSEMBLY, swOpenDocOptions_Silent, sDefaultConfiguration, &amp;fileerror, 
+&amp;filewarning, &amp;swModelAssembly);</p>
+
+<p class="apiCode" style="margin-left: 49px;">*swModel = swModelAssembly; //Set 
+the value of the input argument equal to address of the interface</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">void TraverseFeatureManagerDesignTree(IModelDoc2* swModel, 
+IComponent2** swComponent)</p>
+
+<p class="apiCode">// Traverse FeatureManager design tree to get the</p>
+
+<p class="apiCode">// specified feature in FeatureManager design tree</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">//Use ATL smart pointers</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;IFeature&gt; swFeature;</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;ISelectionMgr&gt; swSelMgr;</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR sGetFeatureName(L&quot;&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR 
+sFeatureName(L&quot;bracket-1&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">bool bFoundComponents = false;</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swModel-&gt;<span style="font-weight: bold;">IFirstFeature</span>(&amp;swFeature);</p>
+
+<p class="apiCode" style="margin-left: 49px;">// If the name of the feature is 
+&quot;bracket-1&quot;</p>
+
+<p class="apiCode" style="margin-left: 49px;">// then select the feature</p>
+
+<p class="apiCode" style="margin-left: 49px;">do</p>
+
+<p class="apiCode" style="margin-left: 49px;">{</p>
+
+<p class="apiCode" style="margin-left: 89px;">hres = swFeature-&gt;<span style="font-weight: bold;">get_Name</span>(&amp;sGetFeatureName);</p>
+
+<p class="apiCode" style="margin-left: 89px;">if (sGetFeatureName == 
+sFeatureName)</p>
+
+<p class="apiCode" style="margin-left: 89px;">{</p>
+
+<p class="apiCode" style="margin-left: 129px;">hres = swFeature-&gt;<span style="font-weight: bold;">Select2</span>(true, 
+1, &amp;retVal);</p>
+
+<p class="apiCode" style="margin-left: 129px;">hres = swModel-&gt;<span style="font-weight: bold;">get_ISelectionManager</span>(&amp;swSelMgr);</p>
+
+<p class="apiCode" style="margin-left: 129px;">struct IDispatch *pComponentDisp;</p>
+
+<p class="apiCode" style="margin-left: 129px;">hres = swSelMgr-&gt;<span style="font-weight: bold;">GetSelectedObject6</span>(1, 
+-1, &amp;pComponentDisp);</p>
+
+<p class="apiCode" style="margin-left: 129px;">IComponent2* swSelectedComponent;</p>
+
+<p class="apiCode" style="margin-left: 129px;">hres = 
+pComponentDisp-&gt;QueryInterface(__uuidof(IComponent2), 
+reinterpret_cast&lt;void**&gt;(&amp;swSelectedComponent));</p>
+
+<p class="apiCode" style="margin-left: 129px;">pComponentDisp-&gt;Release();</p>
+
+<p class="apiCode" style="margin-left: 129px;">*swComponent = 
+swSelectedComponent; <!--kadov_tag{{<spaces>}}-->&nbsp;<!--kadov_tag{{</spaces>}}-->//Set 
+the value of the input argument equal to address of the interface</p>
+
+<p class="apiCode" style="margin-left: 129px;">bFoundComponents = true;</p>
+
+<p class="apiCode" style="margin-left: 89px;">}</p>
+
+<p class="apiCode" style="margin-left: 89px;">else</p>
+
+<p class="apiCode" style="margin-left: 89px;">//Get next feature</p>
+
+<p class="apiCode" style="margin-left: 89px;">{</p>
+
+<p class="apiCode" style="margin-left: 129px;">CComPtr&lt;IFeature&gt; swFeatureNext;</p>
+
+<p class="apiCode" style="margin-left: 129px;">hres = swFeature-&gt;<span style="font-weight: bold;">IGetNextFeature</span>(&amp;swFeatureNext);</p>
+
+<p class="apiCode" style="margin-left: 129px;">swFeature.Release();</p>
+
+<p class="apiCode" style="margin-left: 129px;">swFeature = swFeatureNext;</p>
+
+<p class="apiCode" style="margin-left: 89px;">}</p>
+
+<p class="apiCode" style="margin-left: 49px;">}while ( !bFoundComponents);</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">void SuppressSelectedComponent(IComponent2* swComponent, 
+ISldWorks* swApp)</p>
+
+<p class="apiCode">//Suppress selected component if it is resolved</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR messageSuppressed 
+(L&quot;Component is already suppressed.&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lComponentSuppressState;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lSuppressMessageResult;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lSuppressError;</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swComponent-&gt;<span style="font-weight: bold;">GetSuppression</span>(&amp;lComponentSuppressState);</p>
+
+<p class="apiCode" style="margin-left: 49px;">if (lComponentSuppressState == 
+swComponentSuppressed)</p>
+
+<p class="apiCode" style="margin-left: 89px;">hres = swApp-&gt;<span style="font-weight: bold;">SendMsgToUser2</span>(messageSuppressed, 
+swMbInformation, swMbOk, &amp;lSuppressMessageResult);</p>
+
+<p class="apiCode" style="margin-left: 49px;">else</p>
+
+<p class="apiCode" style="margin-left: 89px;">hres = swComponent-&gt;<span style="font-weight: bold;">SetSuppression2</span>(swComponentSuppressed, 
+&amp;lSuppressError);</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">void ResolveSelectedComponent(IComponent2* swComponent, 
+ISldWorks* swApp)</p>
+
+<p class="apiCode">//Resolve selected component if it is suppressed</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR messageResolved 
+(L&quot;Component is already resolved.&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lComponentResolveState;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lResolveMessageResult;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lResolveError;</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swComponent-&gt;<span style="font-weight: bold;">GetSuppression</span>(&amp;lComponentResolveState);</p>
+
+<p class="apiCode" style="margin-left: 49px;">if (lComponentResolveState == 
+swComponentFullyResolved)</p>
+
+<p class="apiCode" style="margin-left: 89px;">hres = swApp-&gt;<span style="font-weight: bold;">SendMsgToUser2</span>(messageResolved, 
+swMbInformation, swMbOk, &amp;lResolveMessageResult);</p>
+
+<p class="apiCode" style="margin-left: 49px;">else</p>
+
+<p class="apiCode" style="margin-left: 89px;">hres = swComponent-&gt;<span style="font-weight: bold;">SetSuppression2</span>(swComponentFullyResolved, 
+&amp;lResolveError);</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">void ExplodeAssembly(IModelDoc2* swModel, IAssemblyDoc** 
+swAssemblyDoc) </p>
+
+<p class="apiCode">//Explode assembly</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;IModelView&gt; 
+swExplodeModelView;</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">double dZoomFactorOut = 0.3;</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">IAssemblyDoc* swThisAssemblyDoc;</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swModel-&gt;<span style="font-weight: bold;">get_IActiveView</span>(&amp;swExplodeModelView);</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swExplodeModelView-&gt;<span style="font-weight: bold;">ZoomByFactor</span>(dZoomFactorOut);</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = 
+swModel-&gt;QueryInterface(__uuidof(IAssemblyDoc), 
+reinterpret_cast&lt;void**&gt;(&amp;swThisAssemblyDoc));</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swThisAssemblyDoc-&gt;<span style="font-weight: bold;">AutoExplode</span>(&amp;retVal);</p>
+
+<p class="apiCode" style="margin-left: 49px;">*swAssemblyDoc = 
+swThisAssemblyDoc;</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">void CollapseAssembly(IModelDoc2* swModel, IAssemblyDoc* 
+swAssemblyDoc)</p>
+
+<p class="apiCode">//Collapse assembly</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swAssemblyDoc-&gt;<span style="font-weight: bold;">AutoExplode</span>(&amp;retVal);</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swAssemblyDoc-&gt;<span style="font-weight: bold;">ViewCollapseAssembly</span>();</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swModel-&gt;<span style="font-weight: bold;">ViewZoomtofit2</span>();</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">void CreateDrawingOfAssembly(ISldWorks* swApp, IModelDoc2* 
+swModel)</p>
+
+<p class="apiCode">//Create a drawing of the assembly</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;IModelDoc2&gt; swNewModel;</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;IModelDocExtension&gt; 
+swModelDocExt;</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComPtr&lt;IDrawingDoc&gt; swDrawingDoc;</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR sDrawingDocTemplate 
+(L&quot;c:\\Program Files\\SOLIDWORKS\\data\\templates\\Drawing.drwdot&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR sActiveAssembly 
+(L&quot;c:\\test\\universaljoint\\ujoint.sldasm&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">CComBSTR sDrawingDocName (L&quot;ujoint 
+- Sheet1&quot;);</p>
+
+<p class="apiCode" style="margin-left: 49px;">&nbsp;</p>
+
+<p class="apiCode" style="margin-left: 49px;">double dWidth = 0.2794;</p>
+
+<p class="apiCode" style="margin-left: 49px;">double dHeight = 0.4318;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lPaperSize = 2;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lWindowStyle = 2;</p>
+
+<p class="apiCode" style="margin-left: 49px;">long lErrorActivatingDoc;</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swApp-&gt;<span style="font-weight: bold;">INewDocument2</span>(sDrawingDocTemplate, 
+lPaperSize, dWidth, dHeight, &amp;swNewModel);</p>
+
+<p class="apiCode" style="margin-left: 49px;">swDrawingDoc = swNewModel;</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swApp-&gt;<span style="font-weight: bold;">ArrangeWindows</span>(lWindowStyle);</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swModel-&gt;Release();</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swApp-&gt;<span style="font-weight: bold;">IActivateDoc3</span>(sActiveAssembly, 
+false, &amp;lErrorActivatingDoc, &amp;swModel);</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swModel-&gt;<span style="font-weight: bold;">get_Extension</span>(&amp;swModelDocExt);</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swModelDocExt-&gt;<span style="font-weight: bold;">SelectByID2</span>(sActiveAssembly, 
+L&quot;COMPONENT&quot;, 0.0, 0.0, 0.0, VARIANT_FALSE, 0, NULL, swSelectOptionDefault, 
+&amp;retVal);</p>
+
+<p class="apiCode" style="margin-left: 49px;">swNewModel.Release();</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swApp-&gt;<span style="font-weight: bold;">IActivateDoc3</span>(sDrawingDocName, 
+false, &amp;lErrorActivatingDoc, &amp;swNewModel);</p>
+
+<p class="apiCode" style="margin-left: 49px;">hres = swDrawingDoc-&gt;<span style="font-weight: bold;">Create3rdAngleViews</span>(sActiveAssembly, 
+&amp;retVal);</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">void CloseDocuments(ISldWorks* swApp)</p>
+
+<p class="apiCode">//Close assembly and drawing documents</p>
+
+<p class="apiCode">{</p>
+
+<p class="apiCode" style="margin-left: 49px;">swApp-&gt;<span style="font-weight: bold;">CloseAllDocuments</span>(true, 
+&amp;retVal);</p>
+
+<p class="apiCode">}</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<h3>stdafx.h: header file</h3>
+
+<p class="apiCode">
+//////////////////////////////////////////////////////////////////////</p>
+
+<p class="apiCode">// </p>
+
+<p class="apiCode">//stdafx.h: include file for standard system include files,</p>
+
+<p class="apiCode">// or project-specific include files that are used 
+frequently, but</p>
+
+<p class="apiCode">// are changed infrequently</p>
+
+<p class="apiCode">//</p>
+
+<p class="apiCode">
+//////////////////////////////////////////////////////////////////////</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">#pragma once</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">#define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from 
+Windows headers</p>
+
+<p class="apiCode">#include &lt;stdio.h&gt;</p>
+
+<p class="apiCode">#include &lt;tchar.h&gt;</p>
+
+<p class="apiCode">#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS // some CString 
+constructors will be explicit</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">#include &lt;windows.h&gt;</p>
+
+<p class="apiCode">#include &lt;atlbase.h&gt; //Microsoft's ATL helper classes</p>
+
+<p class="apiCode">#include &lt;iostream&gt;</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">using namespace std; <!--kadov_tag{{<spaces>}}-->&nbsp;<!--kadov_tag{{</spaces>}}-->//Use 
+the standard C++ libraries for text output.</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">#import &quot;sldworks.tlb&quot; raw_interfaces_only, raw_native_types, 
+no_namespace, named_guids <!--kadov_tag{{<spaces>}}-->&nbsp;<!--kadov_tag{{</spaces>}}-->//the 
+SOLIDWORKS type library</p>
+
+<p class="apiCode">#import &quot;swconst.tlb&quot; <!--kadov_tag{{<spaces>}}-->&nbsp;<!--kadov_tag{{</spaces>}}-->raw_interfaces_only, 
+raw_native_types, no_namespace, named_guids <!--kadov_tag{{<spaces>}}-->&nbsp;<!--kadov_tag{{</spaces>}}-->//the 
+SOLIDWORKS constant type library</p>
+
+<p class="apiCode">&nbsp;</p>
+
+<p class="apiCode">// TODO: reference additional headers your program requires 
+here</p>
+
+</body>
+
+</html>

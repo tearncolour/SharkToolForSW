@@ -1,0 +1,116 @@
+<html>
+
+<head>
+<title>Get Guide Curves in Sweep Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,sweeps">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Guide Curves in Sweep Feature Example (VBA)</h1>
+<p>This example shows how to get the guide curves in a sweep feature.</p>
+
+<pre>'---------------------------------------------------
+' Preconditions: 
+' 1. Verify that the part template exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Creates a new part document.
+' 2. Creates a sweep feature.
+' 3. Gets the number of guide curves in the sweep
+'    feature.
+' 4. Accesses the guide curves in the sweep feature.
+' 5. Gets the feature types of the guide curves.
+' 6. Releases access of the sweep feature.
+' 7. Examine the Immediate window.
+'---------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swSketchMgr As SldWorks.SketchManager
+Dim swSketchSegment As SldWorks.SketchSegment
+Dim swFeature As SldWorks.Feature
+Dim swFeatureMgr As SldWorks.FeatureManager
+Dim swSweepFeatureData As SldWorks.SweepFeatureData
+Dim pointArray As Variant
+Dim points() As Double
+Dim guideCurves As Variant
+Dim guideCurve As Object
+Dim nbrGuideCurves As Long
+Dim status As Boolean
+Dim i As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Create new model document
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SolidWorks 2017\templates\Part.prtdot&quot;, 0, 0, 0)
+    Set swModelDocExt = swModel.<b>Extension</b>    </pre>
+<pre>    'Sketch an ellipse for sweep profile
+    swModel.<b>ClearSelection2</b> True
+    Set swSketchMgr = swModel.<b>SketchManager</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Top Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swSketchMgr.<b>InsertSketch</b> True
+    Set swSketchSegment = swSketchMgr.<b>CreateEllipse</b>(0, 0, 0, -0.064925207354862, 0, 0, 0, -3.60377802938881E-02, 0)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True       </pre>
+<pre>    'Sketch a line for sweep path
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swSketchMgr.<b>InsertSketch</b> True
+    Set swSketchSegment = swSketchMgr.<b>CreateLine</b>(0#, 0#, 0#, 0#, 0.059816, 0#)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True    </pre>
+<pre>    'Sketch a spline for sweep guide curve
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Front Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swSketchMgr.<b>InsertSketch</b> True    </pre>
+<pre>    ReDim points(0 To 5) As Double
+    points(0) = -0.064925207354862
+    points(1) = 0
+    points(2) = 0
+    points(3) = -5.76005360247873E-03
+    points(4) = 5.95205538922803E-02
+    points(5) = 0
+    pointArray = points
+    Set swSketchSegment = swSketchMgr.<b>CreateSpline</b>((pointArray))
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;Unknown&quot;, &quot;MANIPULATOR&quot;, -4.81685228359519E-02, 1.68573405240843E-02, 0, False, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    swSketchMgr.<b>InsertSketch</b> True
+    swModel.<b>ViewZoomtofit2</b>    </pre>
+<pre>    'Select the profile, path, and guide curve
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch3&quot;, &quot;SKETCH&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True   
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 1, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, 0, 0, 0, True, 4, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch3&quot;, &quot;SKETCH&quot;, 0, 0, 0, True, 2, Nothing, 0)    </pre>
+<pre>    'Create the sweep feature
+    Set swFeatureMgr = swModel.<b>FeatureManager</b>
+    Set swFeature = swFeatureMgr.<b>InsertProtrusionSwept4</b>(False, False, swTwistControlType_e.swTwistControlFollowPath, False, False, swTangencyType_e.swTangencyNone, swTangencyType_e.swTangencyNone, False, 0, 0, swThinWallType_e.swThinWallOneDirection, 0, True, True, True, 0, True, False, 0, 0)
+    Debug.Print &quot;Feature type: &quot; &amp; swFeature.<b>GetTypeName2</b></pre>
+<pre>    'Change the orientation of the view
+    swModel.<b>ShowNamedView2</b> &quot;*Isometric&quot;, 7    </pre>
+<pre>    'Access sweep feature data, get guide curves,
+    'get feature type of guide curves, and release
+    'access to sweep feature
+    Set swSweepFeatureData = swFeature.<b>GetDefinition</b>
+    nbrGuideCurves = swSweepFeatureData.<b>GetGuideCurvesCount</b>
+    Debug.Print (&quot;  Number of guide curves: &quot; &amp; nbrGuideCurves)
+    status = swSweepFeatureData.<b>AccessSelections</b>(swModel, Nothing)
+    Debug.Print (&quot;    Guide curve: &quot;)
+    guideCurves = swSweepFeatureData.<b>guideCurves</b>
+    For i = 0 To (nbrGuideCurves - 1)
+        Set guideCurve = guideCurves(i)
+        Debug.Print (&quot;      Type of feature as defined in swSelectType_e: &quot; &amp; swSweepFeatureData.<b>GetGuideCurvesType</b>(i))
+    Next i
+    swSweepFeatureData.<b>ReleaseSelectionAccess</b>    </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

@@ -1,0 +1,190 @@
+<html>
+
+<head>
+<title>Run Interference Detection Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+<style type="text/css">
+.auto-style1 {
+	color: #800000;
+}
+</style>
+</head>
+<meta name=MS-HKWD content="VB.NET examples,interference detection">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Run Interference Detection Example (VB.NET)</h1>
+<p>This example shows how to run interference detection and observe the 
+interferences in an assembly.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE">
+	<font color="#008000">'---------------------------------------------------------------------------<br>
+' Preconditions:<br>
+'&nbsp;1. Open <i>public_documents</i><b>\samples\tutorial\advdrawings\bowl 
+and chute.sldasm</b>.<br>' 2. Ensure <strong>c:\temp</strong> exists.<br>
+'&nbsp;3. Open the Immediate window.<br>
+'<br>
+' Postconditions: <br>
+	' 1. Opens the Interference Detection pane.<br>
+	' 2. Gets interferences.<br>
+' 3. Gets interfering components and transforms.<br>
+	' 4. Gets interference information.<br>
+	' 5. In the <b>Results</b> list on the Interference Detection pane, <br>
+	'&nbsp;&nbsp;&nbsp; click on each interference and observe it in the 
+	graphics area (red).<br>
+	' 6. To close the Interference Detection pane, right-click the graphics area
+	<br>
+	'&nbsp;&nbsp;&nbsp; and select <b>Cancel</b>.<br>
+' 7. Inspect the Immediate window and <strong>c:\temp\IntDetReport.xlsx</strong>.<br>
+'<br>
+' NOTE: Because the assembly is used elsewhere, do not save changes.<br>
+'---------------------------------------------------------------------------</font><font SIZE="2" COLOR="#0000ff"><br>
+	Imports</font><font SIZE="2"> SolidWorks.Interop.sldworks</font><font SIZE="2" COLOR="#0000ff"><br>
+	Imports</font><font SIZE="2"> SolidWorks.Interop.swconst</font><font SIZE="2" COLOR="#0000ff"><br>
+	Imports</font><font SIZE="2"> 
+	System.Runtime.InteropServices</font><font SIZE="2" COLOR="#0000ff"><br>
+	Imports</font><font SIZE="2"> System</font><font SIZE="2" COLOR="#0000ff"><br>
+	Imports</font><font SIZE="2"> System.Diagnostics</font><font SIZE="2" COLOR="#0000ff"><br>
+	Partial</font><font SIZE="2"> </font>
+	<font SIZE="2" COLOR="#0000ff">Class</font><font SIZE="2"> SolidWorksMacro</font></p>
+	<blockquote>
+		<p class="APICODE"><font SIZE="2" COLOR="#0000ff"><br>
+		Sub</font><font SIZE="2"> 
+		main()</font></p>
+		<blockquote>
+			<p class="APICODE"><font SIZE="2" COLOR="#0000ff"><br>
+			Dim</font><font SIZE="2"> 
+			swModelDoc </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2"> 
+			ModelDoc2<br>
+			</font><font SIZE="2" COLOR="#0000ff">Dim</font><font SIZE="2"> 
+			swAssemblyDoc </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2"> 
+			AssemblyDoc<br>
+			</font><font SIZE="2" COLOR="#0000ff">Dim</font><font SIZE="2"> 
+			pIntMgr </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2"> 
+			InterferenceDetectionMgr<br>
+			</font><font SIZE="2" COLOR="#0000ff">Dim</font><font SIZE="2"> 
+			vInts </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2">
+			</font><font SIZE="2" COLOR="#0000ff">Object<br>
+			Dim</font><font SIZE="2"> 
+			i </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2">
+			</font><font SIZE="2" COLOR="#0000ff">Long<br>
+			Dim</font><font SIZE="2"> 
+			j </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2">
+			</font><font SIZE="2" COLOR="#0000ff">Long<br>
+			Dim</font><font SIZE="2"> 
+			interference </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2"> 
+			IInterference<br>
+			</font><font SIZE="2" COLOR="#0000ff">Dim</font><font SIZE="2"> 
+			vComps </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2">
+			</font><font SIZE="2" COLOR="#0000ff">Object</font><font SIZE="2"> =
+			</font><font SIZE="2" COLOR="#0000ff">Nothing<br>
+			Dim</font><font SIZE="2"> 
+			comp </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2"> 
+			Component2<br>
+			</font><font SIZE="2" COLOR="#0000ff">Dim</font><font SIZE="2"> 
+			vol </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2">
+			</font><font SIZE="2" COLOR="#0000ff">Double<br>
+			Dim</font><font SIZE="2"> 
+			vTrans </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2">
+			</font><font SIZE="2" COLOR="#0000ff">Object</font><font SIZE="2"> =
+			</font><font SIZE="2" COLOR="#0000ff">Nothing<br>
+			Dim</font><font SIZE="2"> 
+			ret </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2">
+			</font><font SIZE="2" COLOR="#0000ff">Boolean</font></p>
+			<font SIZE="2">
+			<p class="APICODE"><br>
+			swModelDoc = swApp.<b>ActiveDoc</b><br>
+			swAssemblyDoc = swModelDoc<br>
+			<br>
+			<font color="#008000">'Open the Interference Detection pane</font><br>
+			swAssemblyDoc.<b>ToolsCheckInterference<br>
+			</b><br>
+			pIntMgr = swAssemblyDoc.<b>InterferenceDetectionManager</b></p>
+			<p class="APICODE"><br>
+			</font><font SIZE="2" COLOR="#008000">'Specify 
+			the interference detection settings and options</font><font SIZE="2"><br>
+			pIntMgr.<b>TreatCoincidenceAsInterference</b> =
+			</font><font SIZE="2" COLOR="#0000ff">False</font><font SIZE="2"><br>
+			pIntMgr.<b>TreatSubAssembliesAsComponents</b> =
+			</font><font SIZE="2" COLOR="#0000ff">False</font><font SIZE="2"><b><br>
+			pIntMgr.IncludeMultibodyPartInterferences</b> 
+			= 
+			</font><font SIZE="2" COLOR="#0000ff">True</font><font SIZE="2"><b><br>
+			pIntMgr.MakeInterferingPartsTransparent</b> =
+			<font color="#0000FF">True</font><br>
+			pIntMgr.<b>CreateFastenersFolder</b> = 
+			</font><font SIZE="2" COLOR="#0000ff">False</font><font SIZE="2"><br>
+			pIntMgr.<b>IgnoreHiddenBodies</b> = </font><font SIZE="2" COLOR="#0000ff">False</font><font SIZE="2"><br>
+			pIntMgr.<b>ShowIgnoredInterferences</b> = </font><font SIZE="2" COLOR="#0000ff">False</font><font SIZE="2"><br>
+			pIntMgr.<b>UseTransform</b> = </font><font SIZE="2" COLOR="#0000ff">False</font></p>
+			<font SIZE="2">
+			<p class="APICODE"><br>
+			</font><font SIZE="2" COLOR="#008000">'Specify 
+			how to display non-interfering components</font><font SIZE="2"><br>
+			pIntMgr.<b>NonInterferingComponentDisplay</b> = 
+			swNonInterferingComponentDisplay_e.swNonInterferingComponentDisplay_Wireframe</p>
+			<p class="APICODE"><br>
+			</font><font SIZE="2" COLOR="#008000">'Run 
+			interference detection</font><font SIZE="2"><br>
+			vInts = pIntMgr.<b>GetInterferences<br>
+			</b>Debug.Print(</font><font SIZE="2" COLOR="#a31515">&quot;# 
+			of interferences: &quot;</font><font SIZE="2"> &amp; pIntMgr.<b>GetInterferenceCount</b>)</font></p>
+			<p class="APICODE"><font SIZE="2" COLOR="#008000"><br>
+			'Get interfering 
+			components and transforms</font><font SIZE="2"><br>
+			ret = pIntMgr.<b>GetComponentsAndTransforms</b>(vComps, 
+			vTrans)</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">'Get 
+			interference information<br>
+			</font><font SIZE="2" COLOR="#0000ff">For</font><font SIZE="2"> 
+			i = 0 </font><font SIZE="2" COLOR="#0000ff">To</font><font SIZE="2"> 
+			UBound(vInts)</p>
+			<blockquote>
+				<p class="APICODE"><br>
+				Debug.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Interference 
+				&quot;</font><font SIZE="2"> &amp; (i + 1))<br>
+				interference = vInts(i)<br>
+				Debug.Print(</font><font SIZE="2" COLOR="#a31515">&quot;&nbsp; Number 
+				of components in this interference: &quot;</font><font SIZE="2"> &amp; 
+				interference.<b>GetComponentCount</b>)<br>
+				vComps = interference.<b>Components<br>
+				</b></font><font SIZE="2" COLOR="#0000ff">For</font><font SIZE="2"> 
+				j = 0 </font><font SIZE="2" COLOR="#0000ff">To</font><font SIZE="2"> 
+				UBound(vComps)</p>
+				<blockquote>
+					<p class="APICODE">comp = vComps(j)<br>
+					Debug.Print(</font><font SIZE="2" COLOR="#a31515">&quot;&nbsp;&nbsp; &quot;</font><font SIZE="2"> &amp; comp.<b>Name2</b>)</font></p>
+				</blockquote>
+				<p class="APICODE"><font SIZE="2" COLOR="#0000ff">Next</font><font SIZE="2"> 
+				j<br>
+				vol = interference.<b>Volume<br>
+				</b>Debug.Print(</font><font SIZE="2" COLOR="#a31515">&quot;&nbsp; Interference 
+				volume is &quot;</font><font SIZE="2"> &amp; (vol * 1000000000) &amp; </font>
+				<font SIZE="2" COLOR="#a31515">&quot; mm^3&quot;</font><font SIZE="2">)</font></p>
+			</blockquote>
+			<p class="APICODE"><font SIZE="2" COLOR="#0000ff">Next</font><font SIZE="2"> 
+			i<br><br>ret = pIntMgr.<strong>ExportResults</strong>(<span class="auto-style1">&quot;c:\temp\IntDetReport.xlsx&quot;</span>, 
+			True)</font></p>
+			<p class="APICODE"><font SIZE="2" COLOR="#008000"><br>
+			'Stop 
+			interference detection and close Interference Detection pane</font><font SIZE="2"><br>
+			<font color="#008000">'pIntMgr.<b>Done</b>()</font></font></p>
+		</blockquote>
+		<p class="APICODE"><font SIZE="2" COLOR="#0000ff">End</font><font SIZE="2">
+		</font><font SIZE="2" COLOR="#0000ff">Sub</font></p>
+	</blockquote>
+	<p class="APICODE"><font SIZE="2" COLOR="#0000ff">&nbsp;&nbsp;&nbsp; 
+	Public</font><font SIZE="2"> swApp </font><font SIZE="2" COLOR="#0000ff">As</font><font SIZE="2"> 
+	SldWorks</p>
+	</font><font SIZE="2" COLOR="#0000ff">
+	<p class="APICODE"><br>
+	End</font><font SIZE="2"> </font>
+	<font SIZE="2" COLOR="#0000ff">Class</font></p></div>
+
+</body>
+
+</html>

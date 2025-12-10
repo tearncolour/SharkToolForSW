@@ -1,0 +1,126 @@
+<html>
+
+<head>
+<title>Add Objects to Selection List Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,selections">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add Objects to Selection List Example (VBA)</h1>
+<p>This example shows how to populate the selection list with objects that have 
+not been pre-selected through the user interface.</p>
+<pre>'----------------------------------------------------------------------------
+' Preconditions:
+' 1. Open <em>Public_documents</em><strong>\SOLIDWORKS\SOLIDWORKS 2020\samples\tutorial\api\multi_local.sldprt</strong>.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Suspends the selection list containing <strong>Sketch2</strong>.
+' 2. Populates another selection list with six sketch objects.
+' 3. Gets the type of the last object in the selection list.
+' 4. Appends the last selection list of six objects to the previously suspended
+'    selection list that contains <strong>Sketch2</strong>, placing <strong>Sketch2</strong> at the top of the
+'    combined and resumed selection list.
+' 5. Places <strong>Sketch2</strong> in edit mode.
+' 6. Inspect the Immediate window and graphics area.
+' 7. Discard changes to the model.
+'
+' NOTE: Because the model is used elsewhere, do not save any changes.
+' ---------------------------------------------------------------------------
+Option Explicit</pre>
+<pre>
+Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim selMgr As SldWorks.SelectionMgr
+Dim selData As SldWorks.SelectData
+Dim featMgr As SldWorks.FeatureManager
+Dim feat As SldWorks.Feature
+Dim selObjs() As Object
+Dim selObj As Object
+Dim featCount As Long
+Dim i As Integer
+Dim typeName As String
+Dim j As Integer
+Dim numAdded As Long
+Dim boolstatus As Boolean
+Dim ret As Long
+Dim count As Long
+&nbsp;
+&nbsp;
+Sub main()
+&nbsp;
+    Set swApp = Application.SldWorks
+    Set swModel = swApp.<strong>ActiveDoc</strong>
+    Set selMgr = swModel.<strong>SelectionManager</strong>
+    Set selData = selMgr.<strong>CreateSelectData</strong>
+    Set featMgr = swModel.<strong>FeatureManager</strong>
+    
+&nbsp;
+    featCount = featMgr.<strong>GetFeatureCount</strong>(True)
+    Set feat = swModel.<strong>FirstFeature</strong>
+    j = 0
+    ReDim selObjs(j + 1)
+    For i = 0 To featCount
+        If Not feat Is Nothing Then
+        
+&nbsp;
+            typeName = feat.<strong>Name</strong>
+            typeName = UCase(typeName)
+            If &quot;SKETCH&quot; = Left(typeName, 6) Then
+                Set selObjs(j) = feat
+                j = j + 1
+                ReDim Preserve selObjs(j + 1)
+            End If
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Set feat = feat.<strong>GetNextFeature</strong>
+        End If
+    Next i
+    
+&nbsp;
+    ' Add one object to the current selection list
+    boolstatus = swModel.<strong>Extension</strong>.<strong>SelectByID2</strong>(&quot;Sketch2&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    
+&nbsp;
+    ' Start a new selection list
+    ret = selMgr.<strong>SuspendSelectionList</strong>
+    Debug.Print &quot;The current selection list with &quot; &amp; ret &amp; &quot; object (Sketch2) is suspended.&quot;
+    
+&nbsp;
+    ' Add six objects to the new selection list
+    numAdded = selMgr.<strong>AddSelectionListObjects</strong>((selObjs), selData)
+    Debug.Print &quot;A new selection list is started.&quot;
+    
+&nbsp;
+    ' Get number of objects in the new selection list (should be 6)
+    count = selMgr.<strong>GetSelectedObjectCount</strong>
+    Debug.Print &quot;The selection list now contains &quot; &amp; count &amp; &quot; objects.&quot;
+    
+&nbsp;
+    ' Get the last object in the new selection list
+    Set selobj = selMgr.<strong>GetSelectedObject6</strong>(count, -1)
+    Debug.Print &quot;The last object in the selection list is of swSelectType_e = &quot; &amp; selMgr.<strong>GetSelectedObjectType3</strong>(count, -1) &amp; &quot;.&quot;
+    
+&nbsp;
+    ' Resume the previously suspended selection list (Sketch2), appending the new selection list to it
+    selMgr.<strong>ResumeSelectionList2</strong> (True)
+    Debug.Print &quot;The previous selection list is resumed and appended with the new selection list.&quot;
+    
+&nbsp;
+    ' Get the number of objects in the selection list (should be 7)
+    count = selMgr.<strong>GetSelectedObjectCount</strong>
+    Debug.Print &quot;The selection list now contains &quot; &amp; count &amp; &quot; objects, including Sketch2, which is at the top of the selection list.&quot;
+   
+    ' Edit sketch2
+    swModel.<strong>EditSketch</strong>
+&nbsp;
+End Sub</pre>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

@@ -1,0 +1,189 @@
+<html>
+
+<head>
+<title>Get Corresponding Objects in Assembly Component Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,components">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=MS-HKWD content="VBA examples,objects">
+<meta name=MS-HKWD content="VBA examples,persistent reference IDs">
+<meta name=MS-HKWD content="VBA examples,object IDs">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Corresponding Objects in Assembly Component Example (VBA)</h1>
+<p>This example shows how to get the corresponding sketch contour, sketch 
+segments, and annotation for a component in the context of the assembly.</p>
+
+<pre>'------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that:
+'    * specified part and assembly templates
+'    * <b>C:\test</b>
+'    exist.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens a new part and creates a sketch containing
+'    a sketch arc, sketch line, and a note.
+' 2. Saves the part as <b>C:\test\part1.sldprt</b>.
+' 3. Makes an assembly using the part document and saves
+'    the assembly as <b>C:\test\assem1.sldasm</b>.
+' 4. Activates the part.
+'    a. Gets the persistent reference IDs of the sketch segments
+'       in the sketch contour.
+'    b. Gets the object ID of the note annotation.
+' 5. Activates the assembly.
+'    a. Gets the persistent reference IDs of the sketch
+'       segments in the sketch contour in the context
+'       of the assembly.
+'    b. Gets the object ID of the note annotation in the context
+'       of the assembly.
+' 6. Examine the Immediate window.
+'------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swAssembly As SldWorks.AssemblyDoc
+Dim swComponent As SldWorks.Component2
+Dim swSketchManager As SldWorks.SketchManager
+Dim swSketchSegment As SldWorks.SketchSegment
+Dim swNote As SldWorks.Note
+Dim swAnnotation As SldWorks.Annotation
+Dim swTextFormat As SldWorks.TextFormat
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFeature As SldWorks.Feature
+Dim swSketch As SldWorks.Sketch
+Dim swSketchContour As SldWorks.SketchContour
+Dim swSelectionMgr As SldWorks.SelectionMgr
+Dim swObject As Object
+Dim sketchSegments As Variant
+Dim sketchContours As Variant
+Dim nbrSketchContours As Long
+Dim nbrSketchSegments As Long
+Dim sketchSegmentIDs As Variant
+Dim sketchSegmentType As Long
+Dim annotationID As Long
+Dim annotationType As Long
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long
+Dim i As Long
+Dim j As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Create sketch containing a sketch arc,
+    'sketch line, and annotation
+    Set swModel = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SolidWorks 2016\templates\Part.prtdot&quot;, 0, 0, 0)
+    Set swSketchManager = swModel.<b>SketchManager</b>
+    Set swSketchSegment = swSketchManager.<b>CreateArc</b>(-0.0756, 0#, 0#, -0.020568, 0#, 0#, -0.130614, 0.001423, 0#, 1)
+    Set swSketchSegment = swSketchManager.<b>CreateLine</b>(-0.130614, 0.001423, 0#, -0.0756, -0.047042, 0#)
+    Set swNote = swModel.<b>InsertNote</b>(&quot;This is a sketch segment&quot;)
+    If Not swNote Is Nothing Then
+       swNote.<b>LockPosition</b> = False
+       swNote.<b>Angle</b> = 0
+       status = swNote.<b>SetBalloon</b>(0, 0)
+       Set swAnnotation = swNote.<b>GetAnnotation</b>()
+       If Not swAnnotation Is Nothing Then
+          errors = swAnnotation.<b>SetLeader3</b>(swLeaderStyle_e.swUNDERLINED, 0, True, False, False, False)
+          status = swAnnotation.<b>SetPosition2</b>(-0.002501468059071, 8.26874163970699E-02, 0)
+          status = swAnnotation.<b>SetTextFormat</b>(0, True, swTextFormat)
+       End If
+    End If
+    swModel.<b>ClearSelection2</b> True
+    swModel.<b>WindowRedraw</b>
+    swSketchManager.<b>InsertSketch</b> True
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SaveAs</b>(&quot;C:\test\Part1.SLDPRT&quot;, swSaveAsVersion_e.swSaveAsCurrentVersion, swSaveAsOptions_e.swSaveAsOptions_Silent, Nothing, errors, warnings)    </pre>
+<pre>    'Save part as assembly
+    Set swAssembly = swApp.<b>NewDocument</b>(&quot;C:\ProgramData\SolidWorks\SolidWorks 2016\templates\Assembly.asmdot&quot;, 0, 0, 0)
+    Set swComponent = swAssembly.<b>AddComponent5</b>(&quot;C:\test\Part1.SLDPRT&quot;, <font SIZE="2">swAddComponentConfigOptions_e.</font>swAddComponentConfigOptions_CurrentSelectedConfig, &quot;&quot;, False, &quot;&quot;, -1.60609059776107E-05, 0, 8.47512097834624E-06)
+    Set swModel = swAssembly
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SaveAs</b>(&quot;C:\test\Assem1.SLDASM&quot;, swSaveAsVersion_e.swSaveAsCurrentVersion, swSaveAsOptions_e.swSaveAsOptions_Silent, Nothing, errors, warnings)    </pre>
+<pre>    'Get persistent reference IDs of sketch segments in sketch contour in part
+    Set swModel = swApp.<b>ActivateDoc3</b>(&quot;Part1.SLDPRT&quot;, False, swRebuildOnActivation_e.swRebuildActiveDoc, errors)
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 0#, 0#, 0#, False, 0, Nothing, 0)
+    Set swSelectionMgr = swModel.<b>SelectionManager</b>
+    Set swFeature = swSelectionMgr<b>.GetSelectedObject6</b>(1, -1)
+    Set swSketch = swFeature.<b>GetSpecificFeature2</b>()
+    Debug.Print swModel.<b>GetPathName</b>
+    Debug.Print &quot;&quot;
+    If Not swSketch Is Nothing Then
+        sketchContours = swSketch.<b>GetSketchContours</b>()
+        nbrSketchContours = UBound(sketchContours) - LBound(sketchContours) + 1
+        Debug.Print &quot;  Number of sketch contours in &quot; &amp; swFeature.<b>Name</b> &amp; &quot; = &quot; &amp; nbrSketchContours
+        For i = LBound(sketchContours) To UBound(sketchContours)
+            Set swSketchContour = sketchContours(i)
+            If Not swSketchContour Is Nothing Then
+                status = swSketchContour.<b>Select2</b>(False, Nothing)
+            End If
+            sketchSegments = swSketchContour.<b>GetSketchSegments</b>()
+            nbrSketchSegments = UBound(sketchSegments) - LBound(sketchSegments) + 1
+                For j = LBound(sketchSegments) To UBound(sketchSegments)
+                    Set swSketchSegment = sketchSegments(j)
+                    If Not swSketchSegment Is Nothing Then
+                        sketchSegmentIDs = swSketchSegment.<b>GetID</b>
+                        sketchSegmentType = swSketchSegment.<b>GetType</b>
+                        Debug.Print &quot;  Persistent IDs = [&quot; &amp; sketchSegmentIDs(0) &amp; &quot;, &quot; &amp; sketchSegmentIDs(1) &amp; &quot;] and type = &quot; &amp; sketchSegmentType &amp; &quot; (0 = line; 1 = arc)&quot;
+                    End If
+                Next
+         Next
+    End If</pre>
+<pre>    'Get object ID of note annotation in part
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;DetailItem1@Annotations&quot;, &quot;NOTE&quot;, -6.50517330771608E-03, 5.68327787544409E-02, -0.035178659814812, False, 0, Nothing, 0)
+    Set swNote = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swAnnotation = swNote.<b>GetAnnotation</b>
+    annotationType = swAnnotation.<b>GetType</b>
+    annotationID = swModelDocExt.<b>GetObjectId</b>(swAnnotation)
+    Debug.Print &quot;&quot;
+    Debug.Print &quot;  Annotation ID = &quot; &amp; annotationID &amp; &quot; and type = &quot; &amp; annotationType &amp; &quot; (6 = note)&quot;</pre>
+<pre>    'Activate the assembly
+    Set swModel = swApp.<b>ActivateDoc3</b>(&quot;Assem1.SLDASM&quot;, False, swRebuildOnActivation_e.swRebuildActiveDoc, errors)
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Part1-1@Assem1&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swSelectionMgr = swModel.<b>SelectionManager</b>
+    Set swComponent = swSelectionMgr.<b>GetSelectedObject6</b>(1, -1)
+    Debug.Print &quot;&quot;
+    Debug.Print swModel.<b>GetPathName</b>
+    Debug.Print &quot;&quot;
+    'Get corresponding sketch contour and sketch segments
+    'and their persistent reference IDs in component
+    Set swObject = swComponent.<b>GetCorresponding</b>(swSketchContour)
+    Set swSketchContour = Nothing
+    Set swSketchContour = swObject
+    If Not swSketchContour Is Nothing Then
+        status = swSketchContour.<b>Select2</b>(False, Nothing)
+    End If
+    sketchSegments = swSketchContour.<b>GetSketchSegments</b>()
+    Debug.Print &quot;  Number of sketch contours in &quot; &amp; swFeature.<b>Name</b> &amp; &quot; = &quot; &amp; nbrSketchContours
+    nbrSketchSegments = UBound(sketchSegments) - LBound(sketchSegments) + 1
+    For j = 0 To UBound(sketchSegments)
+        Set swSketchSegment = sketchSegments(j)
+        If Not swSketchSegment Is Nothing Then
+            sketchSegmentIDs = swSketchSegment.<b>GetID</b>
+            sketchSegmentType = swSketchSegment.<b>GetType</b>
+            Debug.Print &quot;  Persistent IDs = [&quot; &amp; sketchSegmentIDs(0) &amp; &quot;, &quot; &amp; sketchSegmentIDs(1) &amp; &quot;] and type = &quot; &amp; sketchSegmentType &amp; &quot; (0 = line; 1 = arc)&quot;
+        End If
+    Next    </pre>
+<pre>    'Get object ID of corresponding note annotation in component
+    Set swObject = swComponent.<b>GetCorresponding</b>(swNote)
+    Set swNote = Nothing
+    Set swNote = swObject
+    If Not swNote Is Nothing Then
+        Set swAnnotation = swNote.<b>GetAnnotation</b>
+        annotationType = swAnnotation.<b>GetType</b>
+        annotationID = swModelDocExt.<b>GetObjectId</b>(swAnnotation)
+        Debug.Print &quot;&quot;
+        Debug.Print &quot;  Annotation ID = &quot; &amp; annotationID &amp; &quot; and type = &quot; &amp; annotationType &amp; &quot; (6 = note)&quot;
+    End If
+
+End Sub</pre>
+
+</body>
+
+</html>

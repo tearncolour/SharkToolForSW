@@ -1,0 +1,114 @@
+<html>
+
+<head>
+<title>Create SpeedPak for Subassemblies Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,subassemblies">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=MS-HKWD content="VBA examples,SpeedPak">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create SpeedPak for Subassemblies Example (VBA)</h1>
+<p>This example shows how to:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">create SpeedPak 
+	configurations for subassemblies.</font></li>
+	<li><font face="Verdana" style="font-size: 8pt">switch between the SpeedPak 
+	configuration and the parent configuration of the SpeedPak configuration.</font></li>
+</ul>
+
+<pre>'-------------------------------------------------------------------
+' Preconditions:
+'  1. Verify that the specified assembly to open exists.
+'  2. Open the Immediate window.
+'
+' Postconditions:
+'  1. Opens the specified assembly.
+'  2. Deletes the <b>Coordinate System1</b> feature to avoid errors.
+'  3. Selects the <b>arm1</b> and <b>arm2</b> subassemblies.
+'  4. Checks to see if either component has a SpeedPak configuration.
+'  5. Creates graphics-only SpeedPak for each selected component.
+'  6. At Stop, examine the FeatureManager design tree to verify that the
+'     icons for <b>arm1</b> and <b>arm2</b> indicate SpeedPak, then press F5.
+'  7. Switches SpeedPak to each selected component's parent configuration.
+'  8. At Stop, examine the FeatureManager design tree to verify that
+'     SpeedPak switched to the parent configuration of <b>arm1</b> and
+'     <b>arm2</b>, then press F5.
+'  9. Switches each component back to SpeedPak.
+' 10. Examine the Immediate window and FeatureManager design tree to verify
+'     that <b>arm1</b> and <b>arm2</b> are SpeedPak.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'--------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swAssembly As SldWorks.AssemblyDoc
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swComponent As SldWorks.Component2
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long
+Dim fileName As String
+Dim selComponents(1) As Object
+Dim i As Long
+Dim count As Long
+Dim speedPakExists As Boolean</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\wrench.sldasm&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocASSEMBLY, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swAssembly = swModel
+    Set swModelDocExt = swModel.<b>Extension</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>    </pre>
+<pre>    'Select and delete Coordinate System1 to avoid errors
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Coordinate System1&quot;, &quot;COORDSYS&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>EditDelete</b>    </pre>
+<pre>    'Select the two subassemblies for which to create SpeedPak configurations
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;arm1-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set selComponents(0) = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;arm2-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    Set selComponents(1) = swSelMgr.<b>GetSelectedObject6</b>(2, -1)
+    count = swSelMgr.<b>GetSelectedObjectCount2</b>(-1)    </pre>
+<pre>    'Get whether any of the selected components already
+    'have SpeedPak configurations
+     For i = 0 To count - 1
+        Set swComponent = selComponents(i)
+        speedPakExists = swComponent.<b>IsSpeedPak</b>
+        If (speedPakExists) Then
+             Debug.Print (&quot;SpeedPak already exists for component(&quot; &amp; i &amp; &quot;)&quot;)
+        End If
+    Next    </pre>
+<pre>    'Create graphics-only SpeedPak for the selected components
+    status = swAssembly.<b>CreateSpeedPak</b>(2)
+    Debug.Print (&quot;SpeedPak created for selected components? &quot; &amp; status)  
+  
+    Stop
+    'Examine the FeatureManager design tree to verify that the
+    'icons for arm1 and arm2 indicate SpeedPak, then press F5        </pre>
+<pre>    'Switch SpeedPak to the parent configurations of each selected components
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;arm1-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;arm2-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swAssembly.<b>SetSpeedPakToParent</b>
+    Debug.Print (&quot;SpeedPak switched to the parent configuration of each selected component? &quot; &amp; status)    </pre>
+<pre>    Stop
+    'Examine the FeatureManager design tree to verify 
+    'that SpeedPak switched to the parent configurations of arm1 and
+    'arm2    </pre>
+<pre>    'Switch the selected components to SpeedPak
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;arm1-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;arm2-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swAssembly.<b>UseSpeedPak</b>
+    Debug.Print (&quot;Switched the selected components to SpeedPak? &quot; &amp; status)    </pre>
+<pre>End Sub</pre>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

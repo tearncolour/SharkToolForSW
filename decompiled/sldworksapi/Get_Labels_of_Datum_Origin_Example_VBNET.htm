@@ -1,0 +1,121 @@
+<html>
+
+<head>
+<title>Get Labels of Datum Origin Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,datum origin">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Labels of Datum Origin Example (VB.NET)</h1>
+<p>This example shows how to insert a hole table annotation and get some of its 
+properties.</p>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color:green;">
+'---------------------------------------------------------------------------</span><br>
+<span style="color:green;">'&nbsp;Preconditions:</span><br>
+<span style="color:green;">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;files&nbsp;exist:</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;part&nbsp;document</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;drawing&nbsp;document&nbsp;template</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;hole&nbsp;table&nbsp;template</span><br>
+<span style="color:green;">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">'</span><br>
+<span style="color:green;">'&nbsp;Postconditions:</span><br>
+<span style="color:green;">'&nbsp;1.&nbsp;Opens&nbsp;the&nbsp;specified&nbsp;part&nbsp;document.</span><br>
+<span style="color:green;">'&nbsp;2.&nbsp;Creates&nbsp;a&nbsp;drawing&nbsp;of&nbsp;the&nbsp;part&nbsp;document.</span><br>
+<span style="color:green;">
+'&nbsp;3.&nbsp;Inserts&nbsp;a&nbsp;hole&nbsp;table&nbsp;annotation&nbsp;at&nbsp;the&nbsp;specified&nbsp;vertex.</span><br>
+<span style="color:green;">'&nbsp;4.&nbsp;Prints&nbsp;to&nbsp;the&nbsp;Immediate&nbsp;window:</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;the&nbsp;hole&nbsp;table's&nbsp;datum&nbsp;origin&nbsp;x&nbsp;and&nbsp;y&nbsp;labels</span><br>
+<span style="color:green;">
+'&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;whether&nbsp;to&nbsp;display&nbsp;hole&nbsp;sizes&nbsp;using&nbsp;ANSI&nbsp;inch&nbsp;letters</span><br>
+<span style="color:green;">'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;drill&nbsp;numbers</span><br>
+<span style="color:green;">'&nbsp;5.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;and&nbsp;drawing.<br>
+</span><font color="#008000">'<br>
+<font face="Courier New" size="2">
+' NOTE: Because the model is used elsewhere, do not save changes.</font></font><br>
+<span style="color:green;">
+'----------------------------------------------------------------------------</span><br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+<span style="color:blue;">Imports</span>&nbsp;System<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics<br>
+&nbsp;<br>
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDrawingDoc&nbsp;<span style="color:blue;">As</span>&nbsp;DrawingDoc<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swView&nbsp;<span style="color:blue;">As</span>&nbsp;View<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelView&nbsp;<span style="color:blue;">As</span>&nbsp;ModelView<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModelDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swSelectionMgr&nbsp;<span style="color:blue;">As</span>&nbsp;SelectionMgr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swHoleTableAnnotation&nbsp;<span style="color:blue;">As</span>&nbsp;HoleTableAnnotation<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swHoleTable&nbsp;<span style="color:blue;">As</span>&nbsp;HoleTable<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDatumOrigin&nbsp;<span style="color:blue;">As</span>&nbsp;DatumOrigin<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;drawingDocTemplate&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;holeTableTemplate&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Open&nbsp;part&nbsp;document&nbsp;and&nbsp;create&nbsp;drawing&nbsp;document</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\tolanalyst\minimum_clearance\top_plate.sldprt&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;drawingDocTemplate&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\ProgramData\SolidWorks\SolidWorks&nbsp;2016\templates\Drawing.drwdot&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawingDoc&nbsp;=&nbsp;swApp.<b>NewDocument</b>(drawingDocTemplate,&nbsp;swDwgPaperSizes_e.swDwgPaperBsize,&nbsp;0.2794,&nbsp;0.4318)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;swDrawingDoc.<b>CreateDrawViewFromModelView3</b>(fileName,&nbsp;<span style="color:#a31515;">&quot;*Front&quot;</span>,&nbsp;0.193046827497194,&nbsp;0.155595183164983,&nbsp;0)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Insert&nbsp;hole&nbsp;table&nbsp;annotation</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDrawingDoc&nbsp;=&nbsp;swModel<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelView&nbsp;=&nbsp;swModel.<b>ActiveView</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt&nbsp;=&nbsp;swModel.<b>Extension</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swDrawingDoc.<b>ActivateView</b>(<span style="color:#a31515;">&quot;Drawing&nbsp;View1&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;VERTEX&quot;</span>,&nbsp;0.216278249046016,&nbsp;0.198389907070707,&nbsp;0.0080000000000382,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.228097744219978,&nbsp;0.151927063973064,&nbsp;0.0040000000000191,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;VERTEX&quot;</span>,&nbsp;0.216278249046016,&nbsp;0.198389907070707,&nbsp;0.0080000000000382,&nbsp;<span style="color:blue;">True</span>,&nbsp;1,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExt.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;0.228097744219978,&nbsp;0.151927063973064,&nbsp;0.0040000000000191,&nbsp;<span style="color:blue;">True</span>,&nbsp;2,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swView&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObjectsDrawingView2</b>(1,&nbsp;-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;holeTableTemplate&nbsp;=&nbsp;<span style="color:#a31515;">&quot;C:\Program&nbsp;Files\SolidWorks&nbsp;Corp\SolidWorks\lang\english\standard&nbsp;hole&nbsp;table--letters.sldholtbt&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swHoleTableAnnotation&nbsp;=&nbsp;swView.<b>InsertHoleTable2</b>(<span style="color:blue;">False</span>,&nbsp;0.0540658670033671,&nbsp;0.253819263748597,&nbsp;1,&nbsp;<span style="color:#a31515;">&quot;A&quot;</span>,&nbsp;holeTableTemplate)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;hole&nbsp;table&nbsp;and&nbsp;its&nbsp;datum&nbsp;origin</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swHoleTable&nbsp;=&nbsp;swHoleTableAnnotation.<b>HoleTable</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDatumOrigin&nbsp;=&nbsp;swHoleTable.<b>DatumOrigin</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;datum&nbsp;origin's&nbsp;x&nbsp;and&nbsp;y&nbsp;labels</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;Datum&nbsp;origin:&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;X&nbsp;label:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDatumOrigin.<b>XLabel</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Y&nbsp;label:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swDatumOrigin.<b>YLabel</b>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'Get&nbsp;whether&nbsp;to&nbsp;display&nbsp;hole sizes 
+using&nbsp;ANSI&nbsp;inch&nbsp;letters&nbsp;and&nbsp;drill&nbsp;numbers</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;Display&nbsp;ANSI&nbsp;inch&nbsp;letter&nbsp;and&nbsp;drill&nbsp;number 
+sizes&nbsp;in&nbsp;the&nbsp;hole&nbsp;table?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swHoleTable.<b>ShowANSIInchLetterNumberDrillSizes</b>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks<br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span><br>
+&nbsp;</p>
+
+</body>
+
+</html>

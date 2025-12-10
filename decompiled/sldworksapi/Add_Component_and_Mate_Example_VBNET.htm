@@ -1,0 +1,190 @@
+<html>
+
+<head>
+<title>Add and Mate Component Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,mates">
+<meta name=MS-HKWD content="VB.NET examples,components">
+<meta name=MS-HKWD content="VB.NET examples,virtual component">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add and Mate Component Example (VB.NET)</h1>
+<p>This example shows how to add a component to an assembly and mate it.</p>
+
+<p class="APICODE"><font color="#008000">
+'---------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Verify that these documents exist in <i>public_documents</i><b>\samples\tutorial\toolbox:<br>
+'&nbsp;&nbsp;&nbsp; </b>*<b> lens_mount.sldasm<br>
+'&nbsp;&nbsp;&nbsp; </b>* <b>camtest.sldprt</b><br>
+' 2. Open the Immediate window.<br>
+'<br>
+' Postconditions:<br>
+' 1. Opens <b>lens_mount.sldasm</b>.<br>
+' 2. Adds the specified component, <b>camtest.sldprt</b>, to the assembly.<br>
+'&nbsp;3. Fires the <b>AddItemNotify</b> event.<br>
+' 4. Makes the specified component virtual by saving it to the <br>
+'&nbsp;&nbsp;&nbsp; assembly with a 
+new name.<br>
+'&nbsp;5. Fires the <b>RenameItemNotify</b> event.<br>
+' 6. Adds a mate between the selected planes to the assembly.<br>
+' 7. Inspect the Immediate window and FeatureManager design tree.<br>
+'<br>
+' NOTE: Because the models are used elsewhere, do not save changes.<br>
+'----------------------------------------------------------------------------</font></p>
+<p class="APICODE"><br>
+ 
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+<span style="color:blue;">Imports</span>&nbsp;System<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Collections<br>
+&nbsp;<br>
+ 
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;<span style="color:blue;">WithEvents</span>&nbsp;swAssemblyDoc&nbsp;<span style="color:blue;">As</span>&nbsp;AssemblyDoc<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swDocExt&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDocExtension<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;openAssem&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:#2b91af;">Hashtable</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;tmpPath&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;tmpObj&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;boolstat&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span>,&nbsp;stat&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;strings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Object</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swComponent&nbsp;<span style="color:blue;">As</span>&nbsp;Component2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;matefeature&nbsp;<span style="color:blue;">As</span>&nbsp;Feature<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;MateName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;FirstSelection&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;SecondSelection&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;strCompName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;AssemblyTitle&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;AssemblyName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;mateError&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer<br>
+&nbsp;&nbsp;&nbsp; Dim </span>fileName<span style="color:blue;"> as String</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;Main()<font face="Courier New">&nbsp;<br>
+&nbsp;</font></p><font SIZE="2">
+<p></font><font SIZE="2" COLOR="#008000" face="Courier New">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' Open assembly</font><font face="Courier New" size="2"><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; fileName = </font>
+<font SIZE="2" COLOR="#a31515" face="Courier New">
+&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\toolbox\lens_mount.sldasm&quot;</font><font face="Courier New" size="2"><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocASSEMBLY, swOpenDocOptions_e.swOpenDocOptions_Silent,
+</font><font SIZE="2" COLOR="#a31515" face="Courier New">&quot;&quot;</font><font SIZE="2"><font face="Courier New">, 
+errors, warnings)</font></font><font face="Courier New"><br>
+<br>
+&nbsp;<font size="2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Set&nbsp;up&nbsp;event</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swAssemblyDoc&nbsp;=&nbsp;swModel<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openAssem&nbsp;=&nbsp;<span style="color:blue;">New</span>&nbsp;<span style="color:#2b91af;">Hashtable</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventHandlers()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;title&nbsp;of&nbsp;assembly&nbsp;document</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AssemblyTitle&nbsp;=&nbsp;swModel.<b>GetTitle</b>()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Split&nbsp;the&nbsp;title&nbsp;into&nbsp;two&nbsp;strings&nbsp;using&nbsp;the&nbsp;period as&nbsp;the&nbsp;delimiter</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strings&nbsp;=&nbsp;Split(AssemblyTitle,&nbsp;<span style="color:#a31515;">&quot;.&quot;</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Use&nbsp;AssemblyName&nbsp;when&nbsp;mating&nbsp;the&nbsp;component&nbsp;with&nbsp;the&nbsp;assembly</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AssemblyName&nbsp;=&nbsp;strings(0)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(&quot;Name of assembly: &quot; &amp; AssemblyName)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstat&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;strCompModelname&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strCompModelname&nbsp;=&nbsp;<span style="color:#a31515;">&quot;camtest.sldprt&quot;</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Because&nbsp;the&nbsp;component&nbsp;resides&nbsp;in&nbsp;the&nbsp;same&nbsp;folder&nbsp;as&nbsp;the&nbsp;assembly,&nbsp;get</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;the&nbsp;assembly's&nbsp;path&nbsp;and&nbsp;use&nbsp;it&nbsp;when&nbsp;opening&nbsp;the&nbsp;component</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmpPath&nbsp;=&nbsp;Left(swModel.<b>GetPathName</b>,&nbsp;InStrRev(swModel.<b>GetPathName</b>,&nbsp;<span style="color:#a31515;">&quot;\&quot;</span>))<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Open&nbsp;the&nbsp;component</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmpObj&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(tmpPath&nbsp;+&nbsp;strCompModelname,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Check&nbsp;to&nbsp;see&nbsp;if&nbsp;the&nbsp;file&nbsp;is&nbsp;read-only&nbsp;or&nbsp;cannot&nbsp;be&nbsp;found;&nbsp;display&nbsp;error</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;messages&nbsp;if&nbsp;either</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;warnings&nbsp;=&nbsp;swFileLoadWarning_e.swFileLoadWarning_ReadOnly&nbsp;<span style="color:blue;">Then</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MsgBox(<span style="color:#a31515;">&quot;This&nbsp;file&nbsp;is&nbsp;read-only.&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstat&nbsp;=&nbsp;<span style="color:blue;">False</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">If</span>&nbsp;tmpObj&nbsp;<span style="color:blue;">Is</span>&nbsp;<span style="color:blue;">Nothing</span>&nbsp;<span style="color:blue;">Then</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MsgBox(<span style="color:#a31515;">&quot;Cannot&nbsp;locate&nbsp;the&nbsp;file.&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstat&nbsp;=&nbsp;<span style="color:blue;">False</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">If</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Activate&nbsp;the&nbsp;assembly&nbsp;so&nbsp;that&nbsp;you&nbsp;can&nbsp;add&nbsp;the&nbsp;component&nbsp;to&nbsp;it</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>ActivateDoc3</b>(AssemblyTitle,&nbsp;<span style="color:blue;">True</span>,&nbsp;swRebuildOnActivation_e.swUserDecision,&nbsp;errors)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Add&nbsp;the&nbsp;camtest&nbsp;part&nbsp;to&nbsp;the&nbsp;assembly&nbsp;document</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swComponent&nbsp;=&nbsp;swAssemblyDoc.<b>AddComponent5</b>(strCompModelname,&nbsp;swAddComponentConfigOptions_e.swAddComponentConfigOptions_CurrentSelectedConfig,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;-1,&nbsp;-1,&nbsp;-1)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Make&nbsp;the&nbsp;component&nbsp;virtual</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stat&nbsp;=&nbsp;swComponent.<b>MakeVirtual2</b>(<font color="#0000B9">True</font>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;the&nbsp;name&nbsp;of&nbsp;the&nbsp;component&nbsp;for&nbsp;the&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strCompName&nbsp;=&nbsp;swComponent.<b>Name2</b>()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Create&nbsp;the&nbsp;name&nbsp;of&nbsp;the&nbsp;mate&nbsp;and&nbsp;the&nbsp;names&nbsp;of&nbsp;the&nbsp;planes&nbsp;to&nbsp;use&nbsp;for&nbsp;the&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MateName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;top_coinc_&quot;</span>&nbsp;+&nbsp;strCompName<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FirstSelection&nbsp;=&nbsp;<span style="color:#a31515;">&quot;Top@&quot;</span>&nbsp;+&nbsp;strCompName&nbsp;&amp;&nbsp;<span style="color:#a31515;">&quot;@&quot;</span>&nbsp;+&nbsp;AssemblyName<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SecondSelection&nbsp;=&nbsp;<span style="color:#a31515;">&quot;Front@&quot;</span>&nbsp;+&nbsp;AssemblyName<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color:blue;">True</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDocExt&nbsp;=&nbsp;swModel.<b>Extension</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Select&nbsp;the&nbsp;planes&nbsp;for&nbsp;the&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstat&nbsp;=&nbsp;swDocExt.<b>SelectByID2</b>(FirstSelection,&nbsp;<span style="color:#a31515;">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">True</span>,&nbsp;1,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;swSelectOption_e.swSelectOptionDefault)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstat&nbsp;=&nbsp;swDocExt.<b>SelectByID2</b>(SecondSelection,&nbsp;<span style="color:#a31515;">&quot;PLANE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">True</span>,&nbsp;1,&nbsp;<span style="color:blue;">Nothing</span>,&nbsp;swSelectOption_e.swSelectOptionDefault)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Add&nbsp;the&nbsp;mate</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;matefeature&nbsp;=&nbsp;swAssemblyDoc.<b>AddMate5</b>(swMateType_e.swMateCOINCIDENT,&nbsp;swMateAlign_e.swMateAlignALIGNED,&nbsp;<span style="color:blue;">False</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color:blue;">False</span>,&nbsp;<span style="color:blue;">False</span>, 
+0, mateError)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;matefeature.<b>Name</b>&nbsp;=&nbsp;MateName<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="color:#2b91af;">Debug</span>.Print(&quot;Mate 
+added: &quot; &amp; matefeature.<b>Name</b>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ViewZoomtofit2</b>()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachEventHandlers()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachSWEvents()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;AttachSWEvents()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;swAssemblyDoc.<b>AddItemNotify</b>,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.swAssemblyDoc_AddItemNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">AddHandler</span>&nbsp;swAssemblyDoc.<b>RenameItemNotify</b>,&nbsp;<span style="color:blue;">AddressOf</span>&nbsp;<span style="color:blue;">Me</span>.swAssemblyDoc_RenameItemNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;swAssemblyDoc_AddItemNotify(<span style="color:blue;">ByVal</span>&nbsp;EntityType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;itemName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Component&nbsp;added:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;itemName)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Private</span>&nbsp;<span style="color:blue;">Function</span>&nbsp;swAssemblyDoc_RenameItemNotify(<span style="color:blue;">ByVal</span>&nbsp;EntityType&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;oldName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>,&nbsp;<span style="color:blue;">ByVal</span>&nbsp;NewName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span>)&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Virtual&nbsp;component&nbsp;name:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;NewName)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Function</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'''&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks<br>
+&nbsp;<br>
+&nbsp;<br>
+ 
+ 
+<span style="color:blue;">End</span>&nbsp;</font><span style="color:blue;"><font size="2">Class</font></span></p>
+
+</body>
+
+</html>

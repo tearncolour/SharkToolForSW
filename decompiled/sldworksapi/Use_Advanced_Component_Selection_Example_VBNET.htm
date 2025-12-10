@@ -1,0 +1,205 @@
+<html>
+
+<head>
+<title>Use Advanced Component Selection Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,advanced component selection">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Use Advanced Component Selection Example (VB.NET)</h1>
+
+<p>This example shows how to:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">load an advanced selection 
+	component query file.</font></li>
+	<li><font face="Verdana" style="font-size: 8pt">select, add, delete, and 
+	save a selection criteria.</font></li>
+</ul>
+<pre style="font-family: Consolas; font-size: 13; color: black; background: white"><font face="Courier New" style="font-size: 11pt"><span style="color: green">'-------------------------------------------------------</span>
+<span style="color: green">'&nbsp;Preconditions:&nbsp;</span>
+<span style="color: green">'&nbsp;1.&nbsp;An&nbsp;assembly&nbsp;document&nbsp;is&nbsp;active.</span>
+<span style="color: green">'&nbsp;2.&nbsp;A&nbsp;selection&nbsp;criteria&nbsp;query&nbsp;file&nbsp;named&nbsp;<b>c:\temp\QueryMassLess.02.sqy</b>&nbsp;</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;exists and&nbsp;contains&nbsp;one&nbsp;selection&nbsp;criteria.</span>
+<span style="color: green">'&nbsp;3.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'</span>
+<span style="color: green">'&nbsp;Postconditions:&nbsp;</span>
+<span style="color: green">'&nbsp;1.&nbsp;Adds&nbsp;a&nbsp;selection&nbsp;criteria&nbsp;to&nbsp;<b>c:\temp\QueryMassLess.02.sqy.</b></span>
+<span style="color: green">'&nbsp;2.&nbsp;Deletes&nbsp;first&nbsp;selection&nbsp;criteria&nbsp;from&nbsp;<b>c:\temp\QueryMassLess.02.sqy</b>.</span>
+<span style="color: green">'&nbsp;3.&nbsp;Saves&nbsp;selection&nbsp;criteria&nbsp;file&nbsp;<b>c:\temp\QueryNewCriteria.sqy</b>.</span>
+<span style="color: green">'&nbsp;4.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;and&nbsp;<b>c:\temp</b>.</span>
+<span style="color: green">'-------------------------------------------------------</span>
+ 
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color: blue">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color: blue">Imports</span>&nbsp;System
+<span style="color: blue">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color: blue">Partial</span>&nbsp;<span style="color: blue">Class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;<span style="color: blue">Sub</span>&nbsp;main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;ModelDoc2&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;=&nbsp;swApp.<b>ActiveDoc</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;DocType&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DocType&nbsp;=&nbsp;ModelDoc2.<b>GetType</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">If</span>&nbsp;DocType&nbsp;&lt;&gt;&nbsp;swDocumentTypes_e.swDocASSEMBLY&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;An&nbsp;assembly&nbsp;document&nbsp;is&nbsp;not&nbsp;active&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Exit&nbsp;Sub</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">If</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2.ClearSelection2(<span style="color: blue">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;AssemblyDoc&nbsp;<span style="color: blue">As</span>&nbsp;AssemblyDoc
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AssemblyDoc&nbsp;=&nbsp;ModelDoc2
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;AdvancedSelectionCriteria&nbsp;<span style="color: blue">As</span>&nbsp;AdvancedSelectionCriteria
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Get&nbsp;advanced&nbsp;component&nbsp;selection</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AdvancedSelectionCriteria&nbsp;=&nbsp;AssemblyDoc.<b>GetAdvancedSelection</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;Count&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Get&nbsp;number&nbsp;of&nbsp;advanced&nbsp;component&nbsp;selections&nbsp;before&nbsp;loading&nbsp;a&nbsp;query</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Should&nbsp;be&nbsp;0</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Count&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>GetItemCount</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Before&nbsp;loading&nbsp;a&nbsp;query,&nbsp;GetItemCount&nbsp;returned&nbsp;&quot;</span>&nbsp;&amp;&nbsp;Count)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;CriteriaFileName&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Query&nbsp;file</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CriteriaFileName&nbsp;=&nbsp;<span style="color: #a31515">&quot;c:\temp\QueryMassLess.02.sqy&quot;</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;LoadSuccess&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Load&nbsp;query&nbsp;file&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LoadSuccess&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>LoadCriteria</b>(CriteriaFileName)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Query&nbsp;&quot;</span>&nbsp;&amp;&nbsp;CriteriaFileName&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;load&nbsp;was&quot;</span>&nbsp;&amp;&nbsp;IIf(LoadSuccess&nbsp;=&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;NOT&nbsp;&quot;</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;&quot;</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;successful&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ReportAllValues(AdvancedSelectionCriteria)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;SelectSuccess&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Select&nbsp;selection&nbsp;criteria&nbsp;from&nbsp;query&nbsp;list</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectSuccess&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>Select</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Select&nbsp;was&quot;</span>&nbsp;&amp;&nbsp;IIf(SelectSuccess&nbsp;=&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;NOT&nbsp;&quot;</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;&quot;</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;successful&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;AddRetVal&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Add&nbsp;selection&nbsp;criteria&nbsp;to&nbsp;query&nbsp;list</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AddRetVal&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>AddItem</b>(<span style="color: #a31515">&quot;Document&nbsp;name&nbsp;--&nbsp;SW&nbsp;Special&quot;</span>,&nbsp;&amp;H4,&nbsp;<span style="color: #a31515">&quot;Gear&quot;</span>,&nbsp;<span style="color: blue">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;AddItem&nbsp;returned&nbsp;&quot;</span>&nbsp;&amp;&nbsp;AddRetVal)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Print&nbsp;values&nbsp;of&nbsp;advanced&nbsp;component&nbsp;selection&nbsp;criteria</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ReportAllValues(AdvancedSelectionCriteria)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Select&nbsp;first&nbsp;advanced&nbsp;component&nbsp;selection&nbsp;criteria&nbsp;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectSuccess&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>Select</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Select&nbsp;was&quot;</span>&nbsp;&amp;&nbsp;IIf(SelectSuccess&nbsp;=&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;NOT&nbsp;&quot;</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;&quot;</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;successful&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;DeleteStatus&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Delete&nbsp;first&nbsp;component&nbsp;selection&nbsp;criteria</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DeleteStatus&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>DeleteItem</b>(0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;DeleteItem&nbsp;was&quot;</span>&nbsp;&amp;&nbsp;IIf(DeleteStatus&nbsp;=&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;NOT&nbsp;&quot;</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;&quot;</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;successful&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ReportAllValues(AdvancedSelectionCriteria)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;SaveStatus&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Save&nbsp;query&nbsp;file</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SaveStatus&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>SaveCriteria</b>(<span style="color: #a31515">&quot;C:\temp\QueryNewCriteria.sqy&quot;</span>)&nbsp;<span style="color: green">'If&nbsp;wanted,&nbsp;need&nbsp;to&nbsp;specify&nbsp;extension</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;SaveCriteria&nbsp;was&quot;</span>&nbsp;&amp;&nbsp;IIf(SaveStatus&nbsp;=&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;NOT&nbsp;&quot;</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;&quot;</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;successful&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Load&nbsp;query&nbsp;file&nbsp;that&nbsp;was&nbsp;just&nbsp;saved</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LoadSuccess&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>LoadCriteria</b>(<span style="color: #a31515">&quot;C:\temp\QueryNewCriteria.sqy&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Query&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;c:\temp\QueryNewCriteria.sqy&quot;</span>&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;load&nbsp;was&quot;</span>&nbsp;&amp;&nbsp;IIf(LoadSuccess&nbsp;=&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;NOT&nbsp;&quot;</span>,&nbsp;<span style="color: #a31515">&quot;&nbsp;&quot;</span>)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;successful&quot;</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'&nbsp;Print&nbsp;contents&nbsp;query&nbsp;file</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ReportAllValues(AdvancedSelectionCriteria)
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Function</span>&nbsp;GetStringFromEnum(<span style="color: blue">ByVal</span>&nbsp;EnumVal&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>)&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'From&nbsp;enum&nbsp;swAdvSelecType_e</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">If</span>&nbsp;EnumVal&nbsp;=&nbsp;1&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;And&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;2&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;Or&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;16384&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;is&nbsp;yes&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;32768&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;is&nbsp;no&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;8&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;is&nbsp;not&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;16&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;contains&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;32&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;Is_Contained_By&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;64&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;Interferes_With&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;128&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;Does_Not_Interferes_With&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;4&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;is&nbsp;(exactly)&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;8192&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;not&nbsp;=&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;512&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;&lt;&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;2048&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;&lt;=&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;4096&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;=&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;1024&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;&gt;=&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">ElseIf</span>&nbsp;EnumVal&nbsp;=&nbsp;256&nbsp;<span style="color: blue">Then</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;&gt;&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Else</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GetStringFromEnum&nbsp;=&nbsp;<span style="color: #a31515">&quot;Condition&nbsp;NOT&nbsp;found&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">If</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Function</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Sub</span>&nbsp;ReportAllValues(<span style="color: blue">ByVal</span>&nbsp;AdvancedSelectionCriteria&nbsp;<span style="color: blue">As</span>&nbsp;AdvancedSelectionCriteria)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;Count&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Count&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>GetItemCount</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;GetItemCount&nbsp;returned&nbsp;&quot;</span>&nbsp;&amp;&nbsp;Count)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;i&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;aProperty&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>&nbsp;=&nbsp;<span style="color: #a31515">&quot;&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;Condition&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;Value&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>&nbsp;=&nbsp;<span style="color: #a31515">&quot;&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;IsAnd&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;Rindex&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;ConditionString&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;PrintString&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;IndexFmt&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;RindexFmt&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;AndOrFmt&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;PropertyFmt&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;ConditionFmt&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;ValueFmt&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">String</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IndexFmt&nbsp;=&nbsp;<span style="color: #a31515">&quot;!@@@@@@@@&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RindexFmt&nbsp;=&nbsp;<span style="color: #a31515">&quot;!@@@@@@@@@&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AndOrFmt&nbsp;=&nbsp;<span style="color: #a31515">&quot;!@@@@@@@@@&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PropertyFmt&nbsp;=&nbsp;<span style="color: #a31515">&quot;!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ConditionFmt&nbsp;=&nbsp;<span style="color: #a31515">&quot;!@@@@@@@@@@@@@@@&quot;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ValueFmt&nbsp;=&nbsp;<span style="color: #a31515">&quot;#.00&quot;</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Debug.Print</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PrintString&nbsp;=&nbsp;<span style="color: blue">String</span>.Format(<span style="color: #a31515">&quot;Index&quot;</span>,&nbsp;IndexFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(<span style="color: #a31515">&quot;Rindex&quot;</span>,&nbsp;RindexFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(<span style="color: #a31515">&quot;And/Or&quot;</span>,&nbsp;AndOrFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(<span style="color: #a31515">&quot;Property&quot;</span>,&nbsp;PropertyFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(<span style="color: #a31515">&quot;Condition&quot;</span>,&nbsp;ConditionFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;  &nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(<span style="color: #a31515">&quot;Value&quot;</span>,&nbsp;ValueFmt)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(PrintString)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color: blue">To</span>&nbsp;Count&nbsp;-&nbsp;1
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Rindex&nbsp;=&nbsp;AdvancedSelectionCriteria.<b>GetItem</b>(i,&nbsp;aProperty,&nbsp;Condition,&nbsp;Value,&nbsp;IsAnd)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ConditionString&nbsp;=&nbsp;GetStringFromEnum(Condition)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PrintString&nbsp;=&nbsp;<span style="color: blue">String</span>.Format(i,&nbsp;IndexFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(Rindex,&nbsp;RindexFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(IIf(IsAnd&nbsp;=&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: #a31515">&quot;OR&quot;</span>,&nbsp;<span style="color: #a31515">&quot;AND&quot;</span>),&nbsp;AndOrFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(aProperty,&nbsp;PropertyFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(ConditionString,&nbsp;ConditionFmt)&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;&nbsp;&quot;</span>&nbsp;&amp;&nbsp;<span style="color: blue">String</span>.Format(Value,&nbsp;ValueFmt)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(PrintString)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Next</span>&nbsp;i
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&quot;</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;swApp&nbsp;<span style="color: blue">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color: blue">End</span>&nbsp;<span style="color: blue">Class</span></font></pre>
+
+</body>
+
+</html>

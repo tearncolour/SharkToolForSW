@@ -1,0 +1,197 @@
+<html>
+
+<head>
+<title>Insert Structural Weldments Using Custom Weldment Profile Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,weldments">
+<meta name=MS-HKWD content="VBA examples,structural-member group">
+<meta name=MS-HKWD content="VBA examples,structural members">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Structural Weldments Using Custom Weldment Profile Example (VBA)</h1>
+<p>This example shows how to insert a structural weldment feature using a custom weldment profile 
+configuration and structural member groups.</p>
+<pre>'---------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified library feature exists.
+' 2. Verify that a valid pathname exists in <b>Parts</b> in <b>Tools &gt; Options &gt;</b> <b>
+'    System Options &gt; Default Templates</b>.
+' 3. Create <b>C:\Test\Pipes</b>.
+' 4. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the specified library feature, adds the <b>nxn </b>configuration, 
+'    saves the library feature as <b>nxn.sldlfp</b>, and closes the new library 
+'    feature, which is called a custom weldment profile when used to create
+'    structural weldment features.
+' 2. Creates a new part document that contains a sketch of two
+'    rectangles.
+' 3. Creates a weldment and two structural member features using the 
+'    sketch and the <b>nxn</b> configuration of the custom weldment profile created in
+'    step 1.
+' 4. Rotates <b>Pipes nxn(1)</b>.
+' 5. Examine the FeatureManager design tree, graphics area, and
+'    the Immediate window.
+'---------------------------------------------------------------------------</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFeatMgr As SldWorks.FeatureManager
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swSketchMgr As SldWorks.SketchManager
+Dim swFeatureMgr As SldWorks.FeatureManager
+Dim swConfigMgr As SldWorks.ConfigurationManager
+Dim swConfig As SldWorks.Configuration
+Dim swFeature As SldWorks.Feature
+Dim swStructuralMemberGroup1 As SldWorks.StructuralMemberGroup
+Dim swStructuralMemberGroup2 As SldWorks.StructuralMemberGroup
+Dim swWeldFeat As SldWorks.Feature
+Dim swStructuralMemberFeatData As SldWorks.StructuralMemberFeatureData
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long
+Dim libFeature As String
+Dim newLibFeature As String
+Dim macroFolder As String
+Dim template As String
+Dim sketchLines As Variant
+Dim segs1(1) As Object
+Dim groups1 As Variant
+Dim groupArray1(0) As Object
+Dim segs2(1) As Object
+Dim groups2 As Variant
+Dim groupArray2(0) As Object
+Dim group As SldWorks.StructuralMemberGroup
+Dim groups As Variant
+Dim segs As Variant
+Dim weldmentProfile As String
+Dim weldmentConfigurationName As String</pre>
+<pre>Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Open existing library feature, add nxn configuration,
+    'and save library feature as nxn.sldlfp
+    libFeature = &quot;C:\Program Files\SolidWorks Corp\SolidWorks\lang\english\weldment profiles\ansi inch\pipe\0.5 sch 40.sldlfp&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(libFeature, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;0.5 sch 40.SLDPRT&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>ClearSelection2</b> True
+    Set swConfigMgr = swModel.<b>ConfigurationManager</b>
+    Set swConfig = swConfigMgr.<b>AddConfiguration</b>(&quot;nxn&quot;, &quot;&quot;, &quot;&quot;, swConfigurationOptions2_e.swConfigOption_DontActivate, &quot;&quot;, &quot;&quot;)
+    newLibFeature = &quot;C:\Test\Pipes\nxn.sldlfp&quot;
+    status = swModelDocExt.<b>SaveAs</b>(newLibFeature, swSaveAsVersion_e.swSaveAsCurrentVersion, swSaveAsOptions_e.swSaveAsOptions_Silent, Nothing, errors, warnings)
+    Set swModel = Nothing
+    swApp.<b>CloseDoc</b> newLibFeature    </pre>
+<pre>    'Open new part document and
+    'create weldment and structural members
+    macroFolder = swApp.<b>GetCurrentMacroPathFolder</b>()
+    swApp.<b>SetCurrentWorkingDirectory</b> macroFolder
+    template = swApp.<b>GetUserPreferenceStringValue</b>(<font SIZE="2">swUserPreferenceStringValue_e.</font>swDefaultTemplatePart)
+    Set swModel = swApp.<b>NewDocument</b>(template, 0, 0, 0)
+    Set swFeatMgr = swModel.<b>FeatureManager</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b></pre>
+<pre>    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    Set swSketchMgr = swModel.<b>SketchManager</b>
+    sketchLines = swSketchMgr.<b>CreateCornerRectangle</b>(-0.1872393706766, 0.1133237194389, 0, -0.07003610048208, 0.009188409684237, 0)</pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    sketchLines = swSketchMgr.<b>CreateCornerRectangle</b>(0.06513561531715, 0.03369083550887, 0, 0.1807053904567, -0.08106219210316, 0)
+    swSketchMgr.<b>InsertSketch</b> True</pre>
+<pre>    swModel.<b>ViewZoomtofit2</b></pre>
+<pre>    Set swFeatureMgr = swModel.<b>FeatureManager</b>
+    Set swFeature = swFeatureMgr.<b>InsertWeldmentFeature</b>()</pre>
+<pre>    Set swStructuralMemberGroup1 = swFeatMgr.<b>CreateStructuralMemberGroup</b>    </pre>
+<pre>    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line1@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, -0.1495427140733, 0.1133237194389, 0, False, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line2@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, -0.1872393706766, 0.08238014634844, 0, True, 0, Nothing, 0)</pre>
+<pre>    Set segs1(0) = swSelMgr.<b>GetSelectedObject6</b>(1, 0)
+    Set segs1(1) = swSelMgr.<b>GetSelectedObject6</b>(2, 0)
+
+    swStructuralMemberGroup1.<b>segments</b> = segs1
+    swStructuralMemberGroup1.<b>Angle</b> = 0.785714285714286 'radians
+    swStructuralMemberGroup1.<b>ApplyCornerTreatment</b> = True
+    swStructuralMemberGroup1.<b>CornerTreatmentType</b> = <font SIZE="2">swSolidworksWeldmentEndCondOptions_e.</font>swEndConditionMiter
+    swStructuralMemberGroup1.<b>MirrorProfile</b> = True
+    swStructuralMemberGroup1.<b>MirrorProfileAxis</b> = <font SIZE="2">swMirrorProfileOrAlignmentAxis_e.</font>swMirrorProfileOrAlignmentAxis_Vertical</pre>
+<pre>    Set groupArray1(0) = swStructuralMemberGroup1
+    groups1 = groupArray1</pre>
+<pre>    weldmentProfile = &quot;C:\Test\Pipes\nxn.SLDLFP&quot;
+    weldmentConfigurationName = &quot;nxn&quot;
+    Set swFeature = swFeatureMgr.<b>InsertStructuralWeldment5</b>(weldmentProfile, swConnectedSegmentsOption_e.swConnectedSegments_SimpleCut, False, (groups1), weldmentConfigurationName)</pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    Set swStructuralMemberGroup2 = swFeatMgr.<b>CreateStructuralMemberGroup</b></pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line5@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, 0.1185825251083, 0.03369083550887, 0, False, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Line6@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, 0.06513561531715, -0.02774616865332, 0, True, 0, Nothing, 0)
+    Set segs2(0) = swSelMgr.<b>GetSelectedObject6</b>(1, 0)
+    Set segs2(1) = swSelMgr.<b>GetSelectedObject6</b>(2, 0)</pre>
+<pre>    swStructuralMemberGroup2.<b>segments</b> = segs2
+    swStructuralMemberGroup2.<b>AlignAxis</b> = swMirrorProfileOrAlignmentAxis_e.swMirrorProfileOrAlignmentAxis_Vertical</pre>
+<pre>    Set groupArray2(0) = swStructuralMemberGroup2
+    groups2 = groupArray2</pre>
+<pre>    Set swFeature = swFeatureMgr.<b>InsertStructuralWeldment5</b>(weldmentProfile, swConnectedSegmentsOption_e.swConnectedSegments_SimpleCut, False, (groups2), weldmentConfigurationName)</pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    'Get feature data for each structural member group
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Pipes nxn(1)&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swWeldFeat = swSelMgr.<b>GetSelectedObject6</b>(1, 0)
+    Set swStructuralMemberFeatData = swWeldFeat.<b>GetDefinition</b>
+    swStructuralMemberFeatData.<b>AccessSelections</b> swModel, Nothing</pre>
+<pre>    Debug.Print &quot;&quot;
+    Debug.Print &quot;Groups count: &quot; &amp; swStructuralMemberFeatData.<b>GetGroupsCount</b>
+    Debug.Print &quot;  Feature name: &quot; &amp; swWeldFeat.<b>Name
+    </b>Debug.Print &quot;    Custom weldment profile configuration name: &quot; &amp; swStructuralMemberFeatData.<b>ConfigurationName
+    </b>Debug.Print &quot;    Transfer material? &quot; &amp; swStructuralMemberFeatData.<b>TransferMaterial</b>
+    Debug.Print &quot;    Library material profile: &quot; &amp; swStructuralMemberFeatData.<b>LibraryProfileMaterial</b></pre>
+<pre>    groups = swStructuralMemberFeatData.<b>groups</b></pre>
+<pre>    Dim i As Long, j As Long
+        Debug.Print &quot;    Group:&quot;
+        For i = LBound(groups) To UBound(groups)
+           Set group = groups(i)
+            Debug.Print &quot;      Segment count: &quot; &amp; group.<b>GetSegmentsCount</b>
+            Debug.Print &quot;      Rotational angle: &quot; &amp; group.<b>Angle</b>
+            Debug.Print &quot;      Apply corner treatment: &quot; &amp; group.<b>ApplyCornerTreatment</b>
+            Debug.Print &quot;      Corner treatment type: &quot; &amp; group.<b>CornerTreatmentType</b>
+            Debug.Print &quot;      Mirror profile: &quot; &amp; group.<b>MirrorProfile</b>
+            Debug.Print &quot;      Mirror profile axis: &quot; &amp; group.<b>MirrorProfileAxis</b>
+            Debug.Print &quot;      Gap within: &quot; &amp; group.<b>GapWithinGroup</b>
+            segs = group.segments
+            For j = LBound(segs) To UBound(segs)
+                segs(j).<b>Select</b> False
+            Next j
+        Next i</pre>
+<pre>    swStructuralMemberFeatData.<b>ReleaseSelectionAccess</b></pre>
+<pre>    status = swModelDocExt.<b>SelectByID2</b>(&quot;Pipes nxn(2)&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swWeldFeat = swSelMgr.<b>GetSelectedObject6</b>(1, 0)
+    Set swStructuralMemberFeatData = swWeldFeat.<b>GetDefinition</b>
+    swStructuralMemberFeatData.<b>AccessSelections</b> swModel, Nothing</pre>
+<pre>    Debug.Print &quot;&quot;
+    Debug.Print &quot;Groups count: &quot; &amp; swStructuralMemberFeatData.<b>GetGroupsCount</b>
+    Debug.Print &quot;  Feature name: &quot; &amp; swWeldFeat.<b>Name
+    </b>Debug.Print &quot;    Custom weldment profile configuration name: &quot; &amp; swStructuralMemberFeatData.<b>ConfigurationName
+</b><b>    </b>Debug.Print &quot;    Transfer material? &quot; &amp; swStructuralMemberFeatData.<b>TransferMaterial</b>
+    Debug.Print &quot;    Library material profile: &quot; &amp; swStructuralMemberFeatData.<b>LibraryProfileMaterial</b></pre>
+<pre>    groups = swStructuralMemberFeatData.<b>groups</b>
+        Debug.Print &quot;    Group:&quot;
+        For i = LBound(groups) To UBound(groups)
+           Set group = groups(i)
+            Debug.Print &quot;      Segment count: &quot; &amp; group.<b>GetSegmentsCount</b>
+            Debug.Print &quot;      Rotational angle: &quot; &amp; group.<b>Angle</b>
+            Debug.Print &quot;      Apply corner treatment: &quot; &amp; group.<b>ApplyCornerTreatment</b>
+            Debug.Print &quot;      Corner treatment type: &quot; &amp; group.<b>CornerTreatmentType</b>
+            Debug.Print &quot;      Mirror profile: &quot; &amp; group.<b>MirrorProfile</b>
+            Debug.Print &quot;      Mirror profile axis: &quot; &amp; group.<b>MirrorProfileAxis</b>
+            Debug.Print &quot;      Gap within: &quot; &amp; group.<b>GapWithinGroup</b>
+            segs = group.segments
+            For j = LBound(segs) To UBound(segs)
+                segs(j).<b>Select</b> False
+            Next j
+        Next i</pre>
+<pre>    swStructuralMemberFeatData.<b>ReleaseSelectionAccess</b>
+    swModel.<b>ClearSelection2</b> True</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

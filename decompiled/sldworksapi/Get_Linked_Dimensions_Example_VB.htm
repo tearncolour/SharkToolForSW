@@ -1,0 +1,157 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Linked Dimensions Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,dimensions">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3184>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Get Linked Dimensions Example (VBA)</h1>
+
+<p>This example shows how to get the linked dimensions in a part document.</p>
+<pre>'---------------------------------------------
+' Preconditions:
+' 1. Open <i>public_documents</i><b>\samples\tutorial\lesson2\tutor1.sldprt</b>.
+' 2. Right-click <b>Annotations</b> and click <b>Show Feature Dimensions</b>.
+' 3. Right-click either <b>120</b> dimension and click <b>Link Values</b>.
+' 4. Type <b>AreaDimension</b> and click <b>OK</b>.
+' 5. Right-click the other <b>120</b> dimension and click <b>Link Values</b>.
+' 6. Type <b>AreaDimension</b> and click <b>OK</b>.
+' 7. Open the Immediate window.
+'
+' Postconditions:
+' 1. Examine the Immediate window.
+' 2. Click either <b>120</b> dimension, change <b>120</b> to <b>150</b>, and press Enter.
+' 3. Changes the other <b>120</b> dimension to <b>150</b> because the dimensions
+'    are linked.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'---------------------------------------------
+Option Explicit</pre>
+<pre>Private Type DimLink
+    Name As String
+    DimName() As String
+End Type</pre>
+<pre>Private Sub ProcessDimLinkList(ThisDimLinkList() As DimLink)
+    Dim i As Long
+    Dim j As Long</pre>
+<pre>    For i = 0 To UBound(ThisDimLinkList)
+        Debug.Print ThisDimLinkList(i).<b>Name</b>
+        For j = 0 To UBound(ThisDimLinkList(i).DimName)
+            Debug.Print &quot;  &quot; &amp; ThisDimLinkList(i).DimName(j)
+        Next j
+    Next i
+End Sub</pre>
+<pre>Private Sub AddToDimLinkList(ThisDimLink As DimLink, ThisDimLinkList() As DimLink)
+    Debug.Assert UBound(ThisDimLink.DimName) = 0
+    Dim i  As Long</pre>
+<pre>    For i = 0 To UBound(ThisDimLinkList)
+        If ThisDimLinkList(i).<b>Name</b> = ThisDimLink.<b>Name</b> Then
+        ReDim Preserve ThisDimLinkList(i).DimName(UBound(ThisDimLinkList(i).DimName) + 1)
+            ThisDimLinkList(i).DimName(UBound(ThisDimLinkList(i).DimName)) = ThisDimLink.DimName(0)
+            Exit Sub
+        End If
+    Next i</pre>
+<pre>    If 0 = UBound(ThisDimLinkList) And &quot;&quot; = ThisDimLinkList(0).Name Then
+        ThisDimLinkList(0).<b>Name</b> = ThisDimLink.Name
+        ThisDimLinkList(0).DimName(UBound(ThisDimLinkList(0).DimName)) = ThisDimLink.DimName(0)
+        Exit Sub
+    End If</pre>
+<pre>    ReDim Preserve ThisDimLinkList(UBound(ThisDimLinkList) + 1)
+    ReDim Preserve ThisDimLinkList(UBound(ThisDimLinkList)).DimName(0)</pre>
+<pre>    ThisDimLinkList(UBound(ThisDimLinkList)).<b>Name</b> = ThisDimLink.Name
+    ThisDimLinkList(UBound(ThisDimLinkList)).DimName(UBound(ThisDimLinkList(UBound(ThisDimLinkList)).DimName)) = ThisDimLink.DimName(0)
+End Sub</pre>
+<pre>Private Function IsInDimLinkList(ThisDimLink As DimLink, ThisDimLinkList() As DimLink) As Boolean
+    Dim i As Long
+    Dim j As Long</pre>
+<pre>    For i = 0 To UBound(ThisDimLinkList)
+        If ThisDimLinkList(i).<b>Name</b> = ThisDimLink.Name Then
+            For j = 0 To UBound(ThisDimLinkList(i).DimName)
+                If ThisDimLinkList(i).DimName(j) = ThisDimLink.DimName(0) Then
+                    IsInDimLinkList = True
+                    Exit Function
+                End If
+            Next j
+        End If
+    Next i
+End Function</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swFeat As SldWorks.Feature
+    Dim swDimen As SldWorks.Dimension
+    Dim swDispDim As SldWorks.DisplayDimension
+    Dim swDispDimAnn As SldWorks.Annotation
+    Dim OneDimLink As DimLink
+    Dim DimLinkList() As DimLink
+    Dim bRet As Boolean</pre>
+<pre>    ReDim DimLinkList(0)
+    ReDim DimLinkList(0).DimName(0)
+    ReDim OneDimLink.DimName(0)</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swFeat = swModel.<b>FirstFeature</b></pre>
+<pre>    Debug.Print &quot;File = &quot; &amp; swModel.<b>GetPathName</b>    
+</pre>
+<pre>    Do While Not swFeat Is Nothing
+        Set swDispDim = swFeat.<b>GetFirstDisplayDimension</b>
+        If Not swDispDim Is Nothing Then
+            Debug.Print &quot;  &quot; &amp; swFeat.<b>Name</b>
+        End If
+        Do While Not swDispDim Is Nothing
+            Set swDispDimAnn = swDispDim.<b>GetAnnotation</b>
+            Set swDimen = swDispDim.<b>GetDimension</b>
+            If swDispDim.<b>IsLinked</b> Then
+                OneDimLink.<b>Name</b> = swDispDim.<b>GetLinkedText</b>
+                OneDimLink.DimName(0) = swDimen.<b>FullName</b>
+                Debug.Print &quot;    &quot; &amp; swDispDimAnn.<b>GetName</b> &amp; &quot; [&quot; &amp; swDimen.<b>FullName</b> &amp; &quot;] -- &gt; &quot; &amp; swDispDim.<b>GetLinkedText</b></pre>
+<pre>                If Not IsInDimLinkList(OneDimLink, DimLinkList) Then
+                    AddToDimLinkList OneDimLink, DimLinkList
+                End If
+            End If
+            Set swDispDim = swFeat.<b>GetNextDisplayDimension</b>(swDispDim)
+        Loop
+        Set swFeat = swFeat.<b>GetNextFeature</b>
+    Loop</pre>
+<pre>    ProcessDimLinkList DimLinkList</pre>
+<pre>End Sub</pre>
+<pre> 
+</pre>
+
+</body>
+
+</html>

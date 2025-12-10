@@ -1,0 +1,247 @@
+<html>
+
+<head>
+<title>Create Plots and Get Values Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,motion studies">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Plots and Get Values Example (C#)</h1>
+<p>This example shows how to get the translational displacement and velocity 
+values of a selected face and how to plot these values.</p>
+
+<p class="APICODE"><font color="Green" size="-1" face="Courier New">
+//--------------------------------------------------------------------------<br>
+// Preconditions:<br>
+//&nbsp;1. Start SOLIDWORKS Premium, which includes SOLIDWORKS Motion.</font><font size="-1" face="Courier New"><font color="Green"><br>
+// 2. In SOLIDWORKS:<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;a. Start the SOLIDWORKS Motion Study add-in (in<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; SOLIDWORKS, click <b>Tools &gt; Add-Ins &gt; SOLIDWORKS Motion</b>).<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;b. Open<i> public_documents</i><b>\samples\tutorial\motionstudies\valve_cam.sldasm</b>.<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;c. Click the <b>1200</b> Motion Study tab in the lower-left corner of<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; the MotionManager.<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;d. Select <b>Motion Analysis</b> in the Type of Study list at the<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; upper-left corner of the MotionManager.<br>
+// 3. In the IDE:<br>
+//&nbsp;&nbsp;&nbsp; a. Add a reference to the SOLIDWORKS Motion Study primary interop 
+assembly <br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;(right-click the name of the project in the 
+Project Explorer &gt;<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; click <b>Add Reference</b> &gt; browse to <i>install_dir</i><b>\api\redist</b> 
+&gt;<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; click <b>SolidWorks.Interop.swmotionstudy.dll</b>).<br>
+//&nbsp;&nbsp;&nbsp; b. Open the Immediate window.<br>
+//<br>
+// Postconditions:<br>
+</font></font><font color="Green" size="-1" face="Courier New">// 1. Selects two 
+faces.<br>
+// 2. Calculates the motion analysis for the two selected faces.<br>
+// 3. Gets the translational displacement and translational velocity<br>
+//&nbsp;&nbsp;&nbsp; values for the first selected face.<br>
+// 4. Creates plots of the translational displacement and translational<br>
+//&nbsp;&nbsp;&nbsp; velocity.<br>
+// 5. Prints the names of the plot features to the Immediate window.<br>
+//<br>
+// NOTE: Because the assembly is used elsewhere, do not save changes.</font><font size="-1" face="Courier New"><font color="Green"><br>
+//-------------------------------------------------------------------------<br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.sldworks;<br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.swconst;<br>
+</font><font color="Blue">using</font><font color="Black"> 
+SolidWorks.Interop.swmotionstudy;<br>
+</font><font color="Blue">using</font><font color="Black"> System;<br>
+</font><font color="Blue">using</font><font color="Black"> System.Diagnostics;<br>
+</font><font color="Blue">using</font><font color="Black"> 
+System.Runtime.InteropServices;<br>
+<br>
+</font><font color="Blue">namespace</font><font color="Black"> 
+CreatePlotFeaturesCSharp.csproj<br>
+{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">partial</font><font color="Black"> </font>
+<font color="Blue">class</font><font color="Black"> </font>
+<font color="#2b91af">SolidWorksMacro<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font><font color="Black"> </font>
+<font color="Blue">void</font><font color="Black"> Main()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2 swModel = </font><font color="Blue">default</font><font color="Black">(ModelDoc2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr swSelMgr = </font><font color="Blue">default</font><font color="Black">(SelectionMgr);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDocExtension swModelDocExt = </font><font color="Blue">default</font><font color="Black">(ModelDocExtension);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionStudyManager MotionMgr = </font><font color="Blue">default</font><font color="Black">(MotionStudyManager);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionStudy MotionStudy = </font><font color="Blue">default</font><font color="Black">(MotionStudy);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CosmosMotionStudyResults MotionStudyResults = </font>
+<font color="Blue">default</font><font color="Black">(CosmosMotionStudyResults);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">bool</font><font color="Black"> status =
+</font><font color="Blue">false</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionPlotFeatureData swSimPlotFeatureData = </font>
+<font color="Blue">default</font><font color="Black">(MotionPlotFeatureData);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionPlotAxisFeatureData swSimPlotXAxisFeatureData = </font>
+<font color="Blue">default</font><font color="Black">(MotionPlotAxisFeatureData);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionPlotAxisFeatureData[] swSimPlotYAxisFeatureData = </font>
+<font color="Blue">new</font><font color="Black"> MotionPlotAxisFeatureData[2];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Face2 swFace = </font><font color="Blue">default</font><font color="Black">(Face2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Entity swEntity = </font><font color="Blue">default</font><font color="Black">(Entity);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">object</font><font color="Black">[] 
+swFaceArray = </font><font color="Blue">new</font><font color="Black"> </font>
+<font color="Blue">object</font><font color="Black">[1];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Entity[] swEntityArray = </font><font color="Blue">new</font><font color="Black"> 
+Entity[1];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionPlotFeatureOutput PlotOutput = </font><font color="Blue">
+default</font><font color="Black">(MotionPlotFeatureOutput);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Feature swPlotFeature1 = </font><font color="Blue">default</font><font color="Black">(Feature);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Feature swPlotFeature2 = </font><font color="Blue">default</font><font color="Black">(Feature);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">double</font><font color="Black">[] 
+swXData = </font><font color="Blue">null</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">double</font><font color="Black">[] 
+swYData = </font><font color="Blue">null</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">string</font><font color="Black">[] 
+nameYAxis = </font><font color="Blue">new</font><font color="Black"> </font>
+<font color="Blue">string</font><font color="Black">[2];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">int</font><font color="Black"> i = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">int</font><font color="Black"> j = 0;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = (ModelDoc2)swApp.<b>ActiveDoc</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr = (SelectionMgr)swModel.<b>SelectionManager</b>;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExt = (ModelDocExtension)swModel.<b>Extension</b>;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Select the faces for which to 
+calculate<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// motion 
+analysis, then calculate it and<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// get the 
+results<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ShowNamedView2</b>(</font><font color="#a31515">&quot;*Right&quot;</font><font color="Black">, 
+4);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status = swModelDocExt.<b>SelectByID2</b>(</font><font color="#a31515">&quot;&quot;</font><font color="Black">,
+</font><font color="#a31515">&quot;FACE&quot;</font><font color="Black">, 
+0.03426699306681, 0.03342024416822, 0.02599934303839, </font><font color="Blue">
+true</font><font color="Black">, 0, </font><font color="Blue">null</font><font color="Black">, 
+0);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status = swModelDocExt.<b>SelectByID2</b>(</font><font color="#a31515">&quot;&quot;</font><font color="Black">,
+</font><font color="#a31515">&quot;FACE&quot;</font><font color="Black">, 
+0.03047373686337, 0.006937653650944, 0.02566622869226, </font>
+<font color="Blue">true</font><font color="Black">, 0, </font>
+<font color="Blue">null</font><font color="Black">, 0);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionMgr = (MotionStudyManager)swModelDocExt.<b>GetMotionStudyManager</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionStudy = (MotionStudy)MotionMgr.<b>GetMotionStudy</b>(</font><font color="#a31515">&quot;1200&quot;</font><font color="Black">);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status = MotionStudy.<b>Calculate</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotionStudyResults = (CosmosMotionStudyResults)MotionStudy.<b>GetResults</b>(4);<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Create a plot feature data and 
+create 
+the&nbsp;&nbsp;x and y axes feature data<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotFeatureData = (MotionPlotFeatureData)MotionStudyResults.<b>CreatePlotFeatureData</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotXAxisFeatureData = (MotionPlotAxisFeatureData)MotionStudyResults.<b>CreatePlotXAxisFeatureData</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotYAxisFeatureData[0] = (MotionPlotAxisFeatureData)MotionStudyResults.<b>CreatePlotYAxisFeatureData</b>();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotYAxisFeatureData[1] = (MotionPlotAxisFeatureData)MotionStudyResults.<b>CreatePlotYAxisFeatureData</b>();<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Set the type of plots<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nameYAxis[0] = </font>
+<font color="#a31515">&quot;swMotionPlotAxisType_TRANS_DISP&quot;</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotYAxisFeatureData[0].<b>Type</b> = (</font><font color="Blue">int</font><font color="Black">)swMotionPlotAxisType_e.swMotionPlotAxisType_TRANS_DISP;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotYAxisFeatureData[0].<b>Component</b> = 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nameYAxis[1] = </font><font color="#a31515">&quot;swMotionPlotAxisType_TRANS_VELOCITY&quot;</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotYAxisFeatureData[1].<b>Type</b> = (</font><font color="Blue">int</font><font color="Black">)swMotionPlotAxisType_e.swMotionPlotAxisType_TRANS_VELOCITY;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotYAxisFeatureData[1].<b>Component</b> = 1;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Get the entity whose motion you want 
+analyzed<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFace = (Face2)swSelMgr.<b>GetSelectedObject6</b>(1, 
+-1);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEntity = (Entity)swFace;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEntityArray[0] = swEntity;</font><font color="Green"><br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotYAxisFeatureData[0].<b>Entities</b> 
+= swEntityArray;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSimPlotYAxisFeatureData[1].<b>Entities</b> = swEntityArray;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Get the plot's x-axis and y-axes 
+values<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">DispatchWrapper</font><font color="Black">[] 
+swYAxisArray = </font><font color="Blue">new</font><font color="Black"> </font>
+<font color="#2b91af">DispatchWrapper</font><font color="Black">[2];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swYAxisArray[0] = </font><font color="Blue">new</font><font color="Black">
+</font><font color="#2b91af">DispatchWrapper</font><font color="Black">(swSimPlotYAxisFeatureData[0]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swYAxisArray[1] = </font><font color="Blue">new</font><font color="Black">
+</font><font color="#2b91af">DispatchWrapper</font><font color="Black">(swSimPlotYAxisFeatureData[1]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PlotOutput = (MotionPlotFeatureOutput)MotionStudyResults.<b>GetValues</b>(swSimPlotFeatureData, 
+swSimPlotXAxisFeatureData, (swYAxisArray));<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swXData = (</font><font color="Blue">double</font><font color="Black">[])PlotOutput.<b>GetXAxis</b>();<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Print the x-axis values and the y-axis 
+translational<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// 
+displacement values and the y-axes translational velocity<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// values to 
+the Immediate window<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;&quot;</font><font color="Black">);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">string</font><font color="Black"> x =
+</font><font color="#a31515">&quot;&quot;</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">string</font><font color="Black"> y =
+</font><font color="#a31515">&quot;&quot;</font><font color="Black">;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">for</font><font color="Black"> (i = 0; i 
+&lt;= swYAxisArray.GetUpperBound(0); i++)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot;------ 
+YAxis Type : &quot;</font><font color="Black"> + nameYAxis[i]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swYData = (</font><font color="Blue">double</font><font color="Black">[])PlotOutput.<b>GetYAxis</b>(swSimPlotYAxisFeatureData[i]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">for</font><font color="Black"> (j = 0; 
+j &lt;= swXData.GetUpperBound(0); j++)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x = swXData[j].ToString();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;y = swYData[j].ToString();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="#2b91af">Debug</font><font color="Black">.Print(</font><font color="#a31515">&quot; 
+(x, y) : (&quot;</font><font color="Black"> + x + </font><font color="#a31515">&quot;, &quot;</font><font color="Black"> 
++ y + </font><font color="#a31515">&quot;)&quot;</font><font color="Black">);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Insert and display the translational 
+displacement plot<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlotFeature1 = (Feature)MotionStudyResults.<b>InsertPlotFeature</b>(swSimPlotFeatureData, 
+swSimPlotXAxisFeatureData, swSimPlotYAxisFeatureData[0]);</font></font></p>
+<p class="APICODE"><font face="Courier New" size="-1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<font color="#2B91AF">Debug</font>.Print(<font color="#A31515">&quot;Name of plot 
+feature: &quot;</font> + swPlotFeature1.<b>Name</b>);<font color="Black"><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">// Insert and display the translational 
+velocity plot<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swPlotFeature2 = (Feature)MotionStudyResults.<b>InsertPlotFeature</b>(swSimPlotFeatureData, 
+swSimPlotXAxisFeatureData, swSimPlotYAxisFeatureData[1]);<br>
+</font>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<font color="#2B91AF">Debug</font>.Print(<font color="#A31515">&quot;Name of plot 
+feature: &quot;</font> + swPlotFeature2.<b>Name</b>);<font color="Black"><br>
+<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green"> </font>
+<font color="Gray">&lt;summary&gt;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green"> 
+The SldWorks swApp variable is pre-assigned for you.<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Gray">///</font><font color="Green">
+</font><font color="Gray">&lt;/summary&gt;<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">public</font></font><font color="Black"><font size="-1" face="Courier New"> 
+SldWorks swApp;<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+}</font><font face="Monospace" size="-1"><br>
+<br>
+<br>
+<br>
+&nbsp;</font></font></p>
+
+</body>
+
+</html>

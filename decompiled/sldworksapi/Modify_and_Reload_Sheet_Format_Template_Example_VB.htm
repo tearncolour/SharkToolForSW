@@ -1,0 +1,126 @@
+<html>
+
+<head>
+<title>Modify and Reload Sheet Format Template Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,sheets">
+<meta name=MS-HKWD content="VBA examples,templates">
+<meta name=MS-HKWD content="VBA examples,drawing sheets">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Modify and Reload Sheet Format Template Example (VBA)</h1>
+<p>This example shows how to modify and reload a sheet format template.</p>
+<pre>'------------------------------------------------------------
+' Preconditions:
+' 1. Make a copy of:
+'    <b>C:\ProgramData\SolidWorks\SOLIDWORKS</b> <i>version</i><b>\lang\english\sheetformat\a0 - iso.slddrt</b>.
+' 2. Create a new blank drawing using standard sheet size <b>AO (ISO)</b>.
+' 3. Add another blank sheet to the drawing, for a total of two sheets.
+' 4. Open the Immediate window.
+'
+' Postconditions:
+' 1. Modifies the sheet format template to include a new
+'    note.
+' 2. Examine <b>Sheet1</b>, <b>Sheet2</b>, and the Immediate window.
+' 3. Delete:
+'    <b>C:\ProgramData\SolidWorks\SOLIDWORKS</b> <i>version</i><b>\lang\english\sheetformat\a0 - iso.slddrt</b>.
+' 4. Rename the copy that you made in Preconditions step 1 to:
+'    <b>C:\ProgramData\SolidWorks\SOLIDWORKS</b> <i>version</i><b>\lang\english\sheetformat\a0 - iso.slddrt</b>.
+'------------------------------------------------------------
+Option Explicit</pre>
+<pre>Const TEST_APPLY_CHANGES_TO_ALL = True</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Set swApp = Application.SldWorks    </pre>
+<pre>    Dim swModel As ModelDoc2
+    Set swModel = swApp.<b>ActiveDoc</b>    </pre>
+<pre>    If swModel Is Nothing Then 
+        Debug.Print &quot;Create a new empty drawing and add a second sheet to the drawing.&quot;
+        Exit Sub
+    End If
+
+    If swModel.<b>GetType</b> &lt;&gt; swDocDRAWING Then Exit Sub    </pre>
+<pre>    Dim swDrwng As DrawingDoc
+    Set swDrwng = swModel    </pre>
+<pre>    'Get the current sheet
+    Dim activeSheet As Sheet
+    Set activeSheet = swDrwng.<b>GetCurrentSheet</b>    </pre>
+<pre>    Debug.Print &quot;Active sheet name: &quot; &amp; activeSheet.<b>GetName</b>    </pre>
+<pre>    'Get the sheet format template
+    Dim templateName As String
+    templateName = activeSheet.<b>GetTemplateName</b>()
+    Debug.Print &quot;Sheet format template name to modify: &quot; &amp; templateName    </pre>
+<pre>    swDrwng.<b>EditTemplate</b>    </pre>
+<pre>    'Add a new note to the sheet format template
+    Dim swNote As Note
+    Set swNote = swModel.<b>InsertNote</b>(&quot;A New Note&quot;)
+    Dim swAnno As Annotation
+    Set swAnno = swNote.<b>GetAnnotation</b>
+    swAnno.<b>SetPosition2</b> 0, 0.2, 0
+    Dim txtFormat As TextFormat
+    Set txtFormat = swAnno.<b>GetTextFormat</b>(0)
+    txtFormat.<b>BackWards</b> = (txtFormat.<b>BackWards</b> = False)
+    txtFormat.<b>Bold</b> = True
+    txtFormat.<b>CharHeightInPts</b> = 10 * txtFormat.<b>CharHeightInPts</b>
+    swAnno.<b>SetTextFormat</b> 0, False, txtFormat    </pre>
+<pre>    swDrwng.<b>EditSheet</b>    </pre>
+<pre>    'At this point, the active sheet's format has changed    </pre>
+<pre>    If TEST_APPLY_CHANGES_TO_ALL Then    </pre>
+<pre>        'Save sheet format back to original sheet format template
+        activeSheet.<b>SaveFormat</b> templateName        </pre>
+<pre>        'Reload all other sheets from the updated sheet format template
+        Dim vSheetNames As Variant
+        vSheetNames = swDrwng.<b>GetSheetNames</b>()
+        Dim vName As Variant
+        For Each vName In vSheetNames
+            If Not vName = activeSheet.<b>GetName</b> Then
+                Debug.Print &quot;Other sheet name: &quot; &amp; vName
+                Dim otherSheet As Sheet
+                Set otherSheet = swDrwng.<b>Sheet</b>(vName)                </pre>
+<pre>                If otherSheet.<b>GetTemplateName</b> = templateName Then
+                    Dim reloadResult As swReloadTemplateResult_e                    </pre>
+<pre>                    'Keep modifications and and reload all other elements
+                    'from original sheet format template
+                    reloadResult = otherSheet.<b>ReloadTemplate</b>(True)                    </pre>
+<pre>                    'Discard modifications and reload all elements from
+                    'original sheet format template
+                    'reloadResult = otherSheet.<b>ReloadTemplate</b>(False)                    </pre>
+<pre>                    Debug.Print &quot;Reload sheet format for &lt;&quot; &amp; otherSheet.<b>GetName</b> &amp; &quot;&gt;: &quot; &amp; GetReloadResult(reloadResult)
+                End If
+            End If </pre>
+<pre>        Next      </pre>
+<pre>        swDrwng.<b>ActivateSheet</b> activeSheet.<b>GetName
+</b>
+    Else
+
+        'Discard the changes and reload the original sheet format template
+        reloadResult = activeSheet.<b>ReloadTemplate</b>(False)
+        Debug.Print &quot;Done - &quot; &amp; GetReloadResult(reloadResult)
+
+    End If
+
+End Sub</pre>
+<pre>Private Function GetReloadResult(ByVal result As swReloadTemplateResult_e) As String
+    Select Case result
+    Case swReloadTemplate_Success
+        GetReloadResult = &quot;Success&quot;
+    Case swReloadTemplate_UnknownError
+        GetReloadResult = &quot;FAIL - Unknown Error&quot;
+    Case swReloadTemplate_FileNotFound
+        GetReloadResult = &quot;FAIL - File Not Found&quot;
+    Case swReloadTemplate_CustomSheet
+        GetReloadResult = &quot;FAIL - Custom Sheet&quot;
+    Case swReloadTemplate_ViewOnly
+        GetReloadResult = &quot;FAIL - View Only&quot;
+    Case Else
+        GetReloadResult = &quot;FAIL - &lt;unrecognized error code - &quot; &amp; result &amp; &quot;&gt;&quot;
+    End Select
+End Function</pre>
+
+</body>
+
+</html>

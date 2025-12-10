@@ -1,0 +1,147 @@
+<html>
+
+<head>
+<title>Render Model (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples, render">
+<meta name=MS-HKWD content="VB.NET examples, PhotoView 360">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Render Model (VB.NET)</h1>
+<p>This example shows how to use a ray-trace rendering engine to render a model and save the 
+rendered image in BMP and HDR formats. You must have a SOLIDWORKS Premium 
+license to run this example.</p>
+<p><font face="Courier New" size="2">'----------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Verify that:<br>
+'&nbsp;&nbsp;&nbsp; * specified part exists.<br>
+'&nbsp;&nbsp;&nbsp; * <b>c:\temp</b> exists.<br>
+'&nbsp;&nbsp;&nbsp; * ray-trace rendering engine is loaded in SOLIDWORKS.<br>
+' 2. Open the Immediate window.<br>
+'<br>
+' Postconditions:<br>
+' 1. If prompted to use perspective views in renderings, click <br>
+'&nbsp;&nbsp;&nbsp; <b>Continue without Camera or Perspective</b>.<br>
+' 2. Changes the specified rendering options.<br>
+' 3. Creates <b>c:\temp\Filter_1.bmp</b> and <b>c:\temp\Filter_2.hdr</b> 
+containing <br>
+'&nbsp;&nbsp;&nbsp; rendered images of the part.<br>
+' 4. Examine the Immediate window and <b>c:\temp</b>.<br>
+'<br>
+' NOTE: Rendering can take several minutes to complete.<br>
+'---------------------------------------------------------------------------</body><br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.sldworks<br>
+<span style="color:blue;">Imports</span>&nbsp;SolidWorks.Interop.swconst<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Runtime.InteropServices<br>
+<span style="color:blue;">Imports</span>&nbsp;System<br>
+<span style="color:blue;">Imports</span>&nbsp;System.Diagnostics<br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">Partial</span>&nbsp;<span style="color:blue;">Class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swModel&nbsp;<span style="color:blue;">As</span>&nbsp;ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swRayTraceRenderer&nbsp;<span style="color:blue;">As</span>&nbsp;RayTraceRenderer<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;swRayTraceRenderOptions&nbsp;<span style="color:blue;">As</span>&nbsp;RayTraceRendererOptions<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;errors&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;warnings&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;fileName&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">String</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Dim</span>&nbsp;status&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Boolean</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Sub</span>&nbsp;main()<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName&nbsp;=&nbsp;<span style="color:#a31515;">&quot;</span></font><font SIZE="2" COLOR="#a31515" face="Courier New">C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 
+2018\samples\tutorial\routing-pipes\fittings\filter.sldprt</font><font face="Courier New" size="2"><span style="color:#a31515;">&quot;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>OpenDoc6</b>(fileName,&nbsp;swDocumentTypes_e.swDocPART,&nbsp;swOpenDocOptions_e.swOpenDocOptions_Silent,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;errors,&nbsp;warnings)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Access&nbsp;ray-trace 
+rendering engine</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' swRayTraceRenderer&nbsp;=&nbsp;swApp.<b>GetRayTraceRenderer</b>(swRayTraceRenderType_e.<em>ray_trace_rendering_engine_member</em>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;and&nbsp;set&nbsp;rendering&nbsp;options</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions&nbsp;=&nbsp;swRayTraceRenderer.<b>RayTraceRendererOptions</b><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Get&nbsp;current&nbsp;rendering&nbsp;values</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;Current&nbsp;rendering&nbsp;values&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Image&nbsp;height&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ImageHeight</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Image&nbsp;width&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ImageWidth</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Image&nbsp;format&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ImageFormat</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Preview&nbsp;render&nbsp;quality&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>PreviewRenderQuality</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Final&nbsp;render&nbsp;quality&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>FinalRenderQuality</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Bloom&nbsp;enabled?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>BloomEnabled</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Bloom&nbsp;threshold&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>BloomThreshold</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Bloom&nbsp;radius&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>BloomRadius</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Contour/cartoon&nbsp;enabled?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ContourCartoonRenderingEnabled</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Render 
+type =&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>RenderType</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Shaded&nbsp;contour?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ShadedContour</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Contour&nbsp;line&nbsp;thickness&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ContourLineThickness</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Contour&nbsp;line&nbsp;color&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ContourLineColor</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Use&nbsp;SOLIDWORKS&nbsp;view&nbsp;aspect&nbsp;ratio?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>UseSolidWorksViewAspectRatio</b>)</font><font SIZE="2"><br>
+<font face="Courier New">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print(</font></font><font SIZE="2" COLOR="#a31515" face="Courier New">&quot;&nbsp; Alpha output? &quot;</font><font SIZE="2"><font face="Courier New"> &amp; 
+swRayTraceRenderOptions.<b>AlphaOutput</b>)</font></font><font face="Courier New" size="2"><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&quot;</span>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Change&nbsp;rendering&nbsp;values</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;New&nbsp;rendering&nbsp;values&quot;</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>ImageHeight</b>&nbsp;=&nbsp;567<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Image&nbsp;height&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ImageHeight</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>ImageWidth</b>&nbsp;=&nbsp;678<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Image&nbsp;width&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ImageWidth</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>ImageFormat</b>&nbsp;=&nbsp;swRayTraceRenderImageFormat_e.swImageFormat_HDR<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Image&nbsp;format&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ImageFormat</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>PreviewRenderQuality</b>&nbsp;=&nbsp;swRayTraceRenderQuality_e.swRenderQuality_Better<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Preview&nbsp;render&nbsp;quality&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>PreviewRenderQuality</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>FinalRenderQuality</b>&nbsp;=&nbsp;swRayTraceRenderQuality_e.swRenderQuality_Best<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Final&nbsp;render&nbsp;quality&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>FinalRenderQuality</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>BloomEnabled</b>&nbsp;=&nbsp;<span style="color:blue;">False</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Bloom&nbsp;enabled?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>BloomEnabled</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>BloomThreshold</b>&nbsp;=&nbsp;70<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Bloom&nbsp;threshold&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>BloomThreshold</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>BloomRadius</b>&nbsp;=&nbsp;4<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Bloom&nbsp;radius&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>BloomRadius</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>ContourCartoonRenderingEnabled</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Contour/cartoon&nbsp;enabled?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ContourCartoonRenderingEnabled</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>RenderType</b>&nbsp;=&nbsp;swRayTraceRenderingType_e.swRayTraceContour<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Render 
+type =&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>RenderType</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>ShadedContour</b>&nbsp;=&nbsp;<span style="color:blue;">False</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Shaded&nbsp;contour?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ShadedContour</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>ContourLineThickness</b>&nbsp;=&nbsp;3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Contour&nbsp;line&nbsp;thickness&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ContourLineThickness</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>ContourLineColor</b>&nbsp;=&nbsp;255<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Contour&nbsp;line&nbsp;color&nbsp;=&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>ContourLineColor</b>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>UseSolidWorksViewAspectRatio</b>&nbsp;=&nbsp;<span style="color:blue;">True</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Use&nbsp;SOLIDWORKS&nbsp;view&nbsp;aspect&nbsp;ratio?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;swRayTraceRenderOptions.<b>UseSolidWorksViewAspectRatio</b>)<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Display&nbsp;the&nbsp;preview&nbsp;window</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'status&nbsp;=&nbsp;swRayTraceRenderer.<b>DisplayPreviewWindow</b></span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Display&nbsp;final&nbsp;render&nbsp;window</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'status&nbsp;=&nbsp;swRayTraceRenderer.<b>InvokeFinalRender</b></span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Render&nbsp;in&nbsp;HDR&nbsp;format</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swRayTraceRenderer.<b>RenderToFile</b>(<span style="color:#a31515;">&quot;c:\temp\Filter_2&quot;</span>,&nbsp;0,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Render&nbsp;in&nbsp;BMP&nbsp;format</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swRayTraceRenderOptions.<b>ImageFormat</b>&nbsp;=&nbsp;swRayTraceRenderImageFormat_e.swImageFormat_WindowsBmp<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swRayTraceRenderer.<b>RenderToFile</b>(<span style="color:#a31515;">&quot;c:\temp\Filter_1&quot;</span>,&nbsp;0,&nbsp;0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'&nbsp;Abort&nbsp;final&nbsp;render</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'status&nbsp;=&nbsp;swRayTraceRenderer.<b>AbortFinalRender<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </b>'&nbsp;Close&nbsp;preview&nbsp;and final render 
+windows</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">'status&nbsp;=&nbsp;swRayTraceRenderer.<b>CloseRayTraceRender</b></span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Sub</span><br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">Public</span>&nbsp;swApp&nbsp;<span style="color:blue;">As</span>&nbsp;SldWorks<br>
+&nbsp;<br>
+&nbsp;<br>
+<span style="color:blue;">End</span>&nbsp;<span style="color:blue;">Class</span></font></p>
+
+
+</html>

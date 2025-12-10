@@ -1,0 +1,170 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Parameters and Spline Points for Curve Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3420>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+<META NAME="MS-HKWD" CONTENT="VBA examples,curves">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Get Parameters and Spline Points for Curve Example (VBA)</h1>
+
+<p>This example shows how to get the parameters and spline points for the 
+ selected spline.</p>
+<pre>'----------------------------------------
+' Preconditions:
+' 1. Verify that the specified part to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the specified part document.
+' 2. Selects a spline in a sketch.
+' 3. Examine the Immediate window.
+'
+' NOTE: Because the part is used elsewhere, do not 
+' save changes.
+'-----------------------------------------
+Option Explicit 
+</pre>
+<pre>' Define two types
+Type DoubleRec
+    dValue As Double
+End Type</pre>
+<pre>Type Long2Rec
+    iLower As Long ' Assuming that a C integer has 4 bytes
+    iUpper As Long
+End Type</pre>
+<pre>' Extract two integer values out of a single double value
+' by assigning a DoubleRec to the double value,
+' copying the value over an Long2Rec, and
+' extracting the integer values
+Function ExtractFields(ByVal dValue As Double, iLower As Integer, iUpper As Integer)
+    Dim dr As DoubleRec
+    Dim i2r As Long2Rec    </pre>
+<pre>    ' Set the double value
+    dr.dValue = dValue    </pre>
+<pre>    ' Copy the values
+    LSet i2r = dr    </pre>
+<pre>    ' Extract the values
+    iLower = i2r.iLower
+    iUpper = i2r.iUpper
+End Function</pre>
+<pre>Sub DumpModelerSettings(swModeler As SldWorks.Modeler)</pre>
+<pre>    ' Dump modeler settings
+    Debug.Print &quot;Modeler Settings:&quot;
+    Debug.Print &quot;  BSCurveOutputTol                 = &quot; &amp; swModeler.<b>GetToleranceValue</b>(swBSCurveOutputTol)
+    Debug.Print &quot;  BSCurveNonRationalOutputTol      = &quot; &amp; swModeler.<b>GetToleranceValue</b>(swBSCurveNonRationalOutputTol)
+    Debug.Print &quot;  UVCurveOutputTol                 = &quot; &amp; swModeler.<b>GetToleranceValue</b>(swUVCurveOutputTol)
+    Debug.Print &quot;  SurfChordTessellationTol         = &quot; &amp; swModeler.<b>GetToleranceValue</b>(swSurfChordTessellationTol)
+    Debug.Print &quot;  SurfAngularTessellationTol       = &quot; &amp; swModeler.<b>GetToleranceValue</b>(swSurfAngularTessellationTol)
+    Debug.Print &quot;  CurveChordTessellationTol        = &quot; &amp; swModeler.<b>GetToleranceValue</b>(swCurveChordTessellationTol)
+    Debug.Print &quot;&quot;
+End Sub</pre>
+<pre>Sub DumpBCurveInfo(vBCurveParam As Variant)</pre>
+<pre>    Dim nDim As Integer
+    Dim nOrder As Integer
+    Dim nCtrlPoints As Integer
+    Dim nPeriodicity As Integer
+    Dim nNumKnots As Integer
+    Dim i As Integer</pre>
+<pre>    ExtractFields vBCurveParam(0), nDim, nOrder
+    ExtractFields vBCurveParam(1), nCtrlPoints, nPeriodicity</pre>
+<pre>    nNumKnots = nOrder + nCtrlPoints</pre>
+<pre>    Debug.Print &quot;  Dimension                 = &quot; &amp; nDim
+    Debug.Print &quot;  Order                     = &quot; &amp; nOrder
+    Debug.Print &quot;  Number Control Points     = &quot; &amp; nCtrlPoints
+    Debug.Print &quot;  Periodicity               = &quot; &amp; nPeriodicity
+    Debug.Print &quot;  Num Knots                 = &quot; &amp; nNumKnots</pre>
+<pre>    Debug.Print &quot;&quot;</pre>
+<pre>    For i = 0 To nNumKnots - 1
+        ' Knot weights should be increasing monotonically
+        Debug.Print &quot;  Knot(&quot; &amp; i &amp; &quot;)          = &quot; &amp; vBCurveParam(2 + i)
+    Next i</pre>
+<pre>    Debug.Print &quot;&quot;</pre>
+<pre>    If 3 = nDim Then
+        For i = 2 + nNumKnots To UBound(vBCurveParam) - 1 Step 3
+            Debug.Print &quot;  Ctrl(&quot; &amp; (i - 2 - nNumKnots) / 3 &amp; &quot;)          = (&quot; &amp; vBCurveParam(i + 0) * 1000# &amp; &quot;, &quot; &amp; vBCurveParam(i + 1) * 1000# &amp; &quot;, &quot; &amp; vBCurveParam(i + 2) * 1000# &amp; &quot;) mm&quot;
+        Next i
+    Else
+        For i = 2 + nNumKnots To UBound(vBCurveParam) - 1 Step 4
+            Debug.Print &quot;  Ctrl(&quot; &amp; (i - 2 - nNumKnots) / 4 &amp; &quot;)          = (&quot; &amp; vBCurveParam(i + 0) * 1000# &amp; &quot;, &quot; &amp; vBCurveParam(i + 1) * 1000# &amp; &quot;, &quot; &amp; vBCurveParam(i + 2) * 1000# &amp; &quot;) mm [&quot; &amp; vBCurveParam(i + 3) &amp; &quot;]&quot;
+        Next i
+    End If
+End Sub</pre>
+<pre>Sub DumpSplineInfo(vSplinePts As Variant)
+    Dim i As Long</pre>
+<pre>    For i = 0 To UBound(vSplinePts) Step 3
+        Debug.Print &quot;  SplinePt(&quot; &amp; i / 3 &amp; &quot;)     = (&quot; &amp; vSplinePts(i + 0) * 1000# &amp; &quot;, &quot; &amp; vSplinePts(i + 1) * 1000# &amp; &quot;, &quot; &amp; vSplinePts(i + 2) * 1000# &amp; &quot;) mm&quot;
+    Next i
+End Sub</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModeler As SldWorks.Modeler
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swModelDocExt As SldWorks.ModelDocExtension
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swSketch As SldWorks.Sketch
+    Dim swSketchSegment As SldWorks.SketchSegment
+    Dim swCurve As SldWorks.Curve
+    Dim vBCurveParam As Variant
+    Dim vSplinePts As Variant
+    Dim i As Long
+    Dim bRet As Boolean
+    Dim fileName As String
+    Dim errors As Long
+    Dim warnings As Long    </pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModeler = swApp.<b>GetModeler</b>
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\molds\telephone.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModelDocExt = swModel.<b>Extension</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    bRet = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>EditSketch</b>
+    swModel.<b>ClearSelection2</b> True
+    bRet = swModelDocExt.<b>SelectByID2</b>(&quot;Spline2&quot;, &quot;SKETCHSEGMENT&quot;, 6.21547510219904E-02, 0.111861721213803, 5.89464775348876E-02, False, 0, Nothing, 0)
+    Set swSketchSegment = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swCurve = swSketchSegment.<b>GetCurve</b></pre>
+<pre>    DumpModelerSettings swModeler</pre>
+<pre>    vBCurveParam = swCurve.<b>GetBCurveParams</b>(False)
+    vSplinePts = swCurve.<b>GetSplinePts</b>(vBCurveParam)</pre>
+<pre>    Debug.Print &quot;File = &quot; &amp; swModel.<b>GetPathName</b></pre>
+<pre>    DumpBCurveInfo vBCurveParam</pre>
+<pre>    Debug.Print &quot;  -------------------------------------------&quot;</pre>
+<pre>    Debug.Assert Not IsNull(vSplinePts)</pre>
+<pre>    DumpSplineInfo vSplinePts</pre>
+<pre>    Debug.Print &quot;  -------------------------------------------&quot;</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

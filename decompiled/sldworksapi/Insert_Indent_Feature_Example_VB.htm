@@ -1,0 +1,98 @@
+<html>
+
+<head>
+<title>Insert Indent Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,features">
+<meta name=MS-HKWD content="VBA examples,indent feature">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Indent Feature Example (VBA)</h1>
+<p>This example shows how to insert and modify an indent feature.</p>
+
+<pre>'---------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the part to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the specified part.
+' 2. Selects the boss-extrude body and a face on the
+'    extrude-thin body.
+' 3. Inserts an indent feature.
+' 4. Modifies the thickness of the indent feature.
+' 5. Examine the Immediate window, FeatureManager design tree,
+'    and graphics area.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'---------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFeatureMgr As SldWorks.FeatureManager
+Dim swSelectionMgr As SldWorks.SelectionMgr
+Dim swFeature As SldWorks.Feature
+Dim swIndentFeatureData As SldWorks.IndentFeatureData
+Dim targetBody As SldWorks.Body2
+Dim swFace As SldWorks.Face2
+Dim toolRegionBody As SldWorks.Body2
+Dim fileName As String
+Dim status As Boolean
+Dim errors As Long
+Dim warnings As Long
+Dim toolBodyRegions As Variant
+Dim toolBodyRegionType As Long
+Dim nbrBodies As Long
+Dim i As Long</pre>
+<pre>Sub main()    </pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    'Open part where to insert indent feature
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\multibody\multi_inter.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)</pre>
+<pre>    'Select solid body for target body,
+    'select face for tool body region, and
+    'and insert indent feature
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Boss-Extrude1&quot;, &quot;SOLIDBODY&quot;, 0, 0, 0, False, 1, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, -3.71343422566497E-02, -1.49999999999864E-02, 8.83053842352979E-02, True, 4, Nothing, 0)
+    Set swFeatureMgr = swModel.<b>FeatureManager</b>
+    Set swFeature = swFeatureMgr.<b>InsertIndent</b>(0.01, 0, True, True, False, False)    </pre>
+<pre>    'Access and modify indent feature
+    Debug.Print &quot;Indent feature name: &quot; &amp; swFeature.<b>Name</b>
+    Set swIndentFeatureData = swFeature.<b>GetDefinition</b>
+    swIndentFeatureData.<b>AccessSelections</b> swModel, Nothing
+    nbrBodies = swIndentFeatureData.<b>GetBodiesCount</b>
+    Debug.Print &quot;  Number of bodies: &quot; &amp; nbrBodies
+    Set targetBody = swIndentFeatureData.<b>targetBody</b>
+    Debug.Print &quot;  Name of target body: &quot; &amp; targetBody.<b>Name</b>
+    toolBodyRegions = swIndentFeatureData.<b>toolBodyRegion</b>
+    Debug.Print &quot;  Number of tool body regions: &quot; &amp; UBound(toolBodyRegions) + 1
+    For i = 0 To nbrBodies - 1
+        swModel.<b>ClearSelection2</b> True
+        Set swSelectionMgr = swModel.<b>SelectionManager</b>
+        status = swSelectionMgr.<b>AddSelectionListObject</b>(toolBodyRegions(i), Nothing)
+        toolBodyRegionType = swSelectionMgr.<b>GetSelectedObjectType3</b>(1, -1)
+        Debug.Print &quot;  Type of object selected for tool body region (2 = face; 3 = vertex): &quot; &amp; toolBodyRegionType
+        'If object selected for tool body region is a face,
+        'then get the name of its body
+        If toolBodyRegionType = 2 Then
+            Set swFace = toolBodyRegions(i)
+            Set toolRegionBody = swFace.<b>GetBody</b>
+            Debug.Print &quot;  Name of body of tool body region: &quot; &amp; toolRegionBody.<b>Name</b>
+        End If
+    Next i
+    Debug.Print &quot;  Original thickness: &quot; &amp; swIndentFeatureData.<b>Thickness</b>
+    'Change thickness
+    swIndentFeatureData.<b>Thickness</b> = 0.011
+    Debug.Print &quot;  Modified thickness: &quot; &amp; swIndentFeatureData.<b>Thickness</b>
+    status = swFeature.<b>ModifyDefinition</b>(swIndentFeatureData, swModel, Nothing)    </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

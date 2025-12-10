@@ -1,0 +1,228 @@
+<html>
+<head>
+<title>Check for Interference Between Two Bodies Example (VBA)</title>
+<meta content="en-us" http-equiv="Content-Language" />
+<meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
+<meta content="VBA examples,interference detection" name="MS-HKWD" />
+<link href="ApiHelp.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h1 style="font-weight:normal;font-size:7.5pt">SOLIDWORKS API Help</h1>
+<h1>Check for Interference Between Two Bodies Example (VBA)</h1>
+<p>This example shows how to check for interference between two bodies in an 
+assembly.</p>
+<p class="APICODE">
+'--------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' Open <i>public_documents</i><b>\samples\tutorial\api\Cube_Assem.sldasm</b>.<br>
+'<br>
+' Postconditions:<br>
+' 1. Gets the bodies of two components and transforms them in the<br>
+'&nbsp;&nbsp;&nbsp; context of the assembly.<br>
+' 2. Checks for interference between the two bodies.<br>
+' 3. Sketches lines around the faces involved in the interference.<br>
+' 4. Inspect the graphics area after selecting <b>3DSketch1</b> in the<br>
+'&nbsp;&nbsp;&nbsp; FeatureManager design tree.<br>
+'<br>
+' NOTE: Because the model is used elsewhere, do not save changes.<br>
+'--------------------------------------------------------------------------</p>
+<p class="APICODE">Option Explicit</p>
+<p class="APICODE">Dim swApp As SldWorks.SldWorks</p>
+<p class="APICODE">Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim swModel&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.ModelDoc2<br>
+&nbsp;&nbsp;&nbsp; Dim swComponent1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Component2<br>
+&nbsp;&nbsp;&nbsp; Dim swComponent2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Component2<br>
+&nbsp;&nbsp;&nbsp; Dim bValue&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Boolean<br>
+&nbsp;&nbsp;&nbsp; Dim swBody1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Body2<br>
+&nbsp;&nbsp;&nbsp; Dim swBody2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Body2<br>
+&nbsp;&nbsp;&nbsp; Dim swBodyCopy1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Body2<br>
+&nbsp;&nbsp;&nbsp; Dim swBodyCopy2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Body2<br>
+&nbsp;&nbsp;&nbsp; Dim vBodies&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim swModeler&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Modeler<br>
+&nbsp;&nbsp;&nbsp; Dim vFaces1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vFaces2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vFace&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim swFace&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Face2<br>
+&nbsp;&nbsp;&nbsp; Dim vEdges&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vEdge&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim swEdge&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Edge<br>
+&nbsp;&nbsp;&nbsp; Dim swVertex1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Vertex<br>
+&nbsp;&nbsp;&nbsp; Dim swVertex2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Vertex<br>
+&nbsp;&nbsp;&nbsp; Dim vPoint1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vPoint2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim swTransform1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.MathTransform<br>
+&nbsp;&nbsp;&nbsp; Dim swTransform2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.MathTransform<br>
+&nbsp;&nbsp;&nbsp; Dim lIdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lNumEdges&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lCoord&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lEpsilon&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Double</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; lEpsilon = 0.000000001</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; Set swModeler = swApp.<b>GetModeler</b><br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>ActiveDoc</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swModel.<b>ClearSelection2</b> True<br>
+&nbsp;&nbsp;&nbsp; bValue = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;Cube-2@Cube_Assem&quot;, &quot;COMPONENT&quot;, 0, 0, 0, 
+False, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; Set swComponent1 = swModel.<b>SelectionManager</b>.<b>GetSelectedObject6</b>(1, 
+-1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; bValue = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;Cube-3@Cube_Assem&quot;, &quot;COMPONENT&quot;, 0, 0, 0, 
+False, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; Set swComponent2 = swModel.<b>SelectionManager</b>.<b>GetSelectedObject6</b>(1, 
+-1)<br>
+&nbsp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Get transform of each component<br>
+&nbsp;&nbsp;&nbsp; Set swTransform1 = swComponent1.<b>Transform</b><br>
+&nbsp;&nbsp;&nbsp; Set swTransform2 = swComponent2.<b>Transform</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Get bodies of first component<br>
+&nbsp;&nbsp;&nbsp; vBodies = swComponent1.<b>GetBodies2</b>(swBodyType_e.swSolidBody)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swBody1 = vBodies(0)<br>
+&nbsp;&nbsp;&nbsp; Set swBodyCopy1 = swBody1.<b>Copy</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Get bodies of second component<br>
+&nbsp;&nbsp;&nbsp; vBodies = swComponent2.<b>GetBodies2</b>(swBodyType_e.swSolidBody)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swBody2 = vBodies(0)<br>
+&nbsp;&nbsp;&nbsp; Set swBodyCopy2 = swBody2.<b>Copy</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Apply transform to move copies to their 
+correct positions in the assembly<br>
+&nbsp;&nbsp;&nbsp; bValue = swBodyCopy1.<b>ApplyTransform</b>(swTransform1)<br>
+&nbsp;&nbsp;&nbsp; bValue = swBodyCopy2.<b>ApplyTransform</b>(swTransform2)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swModel.<b>EditRebuild3</b><br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; bValue = swModeler.<b>CheckInterferenceBetweenTwoBodies</b>(swBodyCopy1, 
+swBodyCopy2, False, vFaces1, vFaces2, vBodies)<br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Display edges of faces interfering in 
+first body<br>
+&nbsp;&nbsp;&nbsp; If (Not IsEmpty(vFaces1)) Then</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>SetAddToDB</b> 
+True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>Insert3DSketch2</b> False</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For Each vFace In 
+vFaces1</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swFace = vFace<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vEdges = 
+swFace.<b>GetEdges</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lNumEdges = (UBound(vEdges) - LBound(vEdges) + 1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For lIdx = 0 To (lNumEdges - 1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swEdge = vEdges(lIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swVertex1 = swEdge.<b>GetStartVertex</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swVertex2 = swEdge.<b>GetEndVertex</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vPoint1 = swVertex1.<b>GetPoint</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vPoint2 = swVertex2.<b>GetPoint</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For lCoord = 0 To 2</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If (Abs(vPoint1(lCoord)) &lt; lEpsilon) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vPoint1(lCoord) = 0#<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If (Abs(vPoint2(lCoord)) &lt; lEpsilon) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vPoint2(lCoord) = 0#<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next lCoord</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swModel.<b>CreateLine2</b> vPoint1(0), vPoint1(1), vPoint1(2), vPoint2(0), 
+vPoint2(1), vPoint2(2)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next lIdx</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next vFace</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>Insert3DSketch2</b> 
+True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>SetAddToDB</b> False</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Display edges of faces interfering in 
+second body<br>
+&nbsp;&nbsp;&nbsp; If (Not IsEmpty(vFaces2)) Then</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>SetAddToDB</b> 
+True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>Insert3DSketch2</b> False</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For Each vFace In 
+vFaces2</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swFace = vFace<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vEdges = 
+swFace.<b>GetEdges</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lNumEdges = (UBound(vEdges) - LBound(vEdges) + 1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For lIdx = 0 To (lNumEdges - 1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swEdge = vEdges(lIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swVertex1 = swEdge.<b>GetStartVertex</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swVertex2 = swEdge.<b>GetEndVertex</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vPoint1 = swVertex1.<b>GetPoint</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vPoint2 = swVertex2.<b>GetPoint</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For lCoord = 0 To 2</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If (Abs(vPoint1(lCoord)) &lt; lEpsilon) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vPoint1(lCoord) = 0#<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If (Abs(vPoint2(lCoord)) &lt; lEpsilon) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vPoint2(lCoord) = 0#<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next lCoord</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+swModel.<b>CreateLine2</b> vPoint1(0), vPoint1(1), vPoint1(2), vPoint2(0), 
+vPoint2(1), vPoint2(2)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next lIdx</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next vFace</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>Insert3DSketch2</b> 
+True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>SetAddToDB</b> False</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">End Sub</p>
+<p><font face="Courier New" size="2">
+&nbsp;</font></p>
+</body>
+</html>

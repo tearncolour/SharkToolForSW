@@ -1,0 +1,138 @@
+<html>
+
+<head>
+<title>Create Shell Feature Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,feature">
+<meta name=MS-HKWD content="C# examples,shell features">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Shell Feature Example (C#)</h1>
+<p>This example shows how to create a shell feature.</p>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color:green;">
+//---------------------------------------------------------------------------</span><br>
+<span style="color:green;">//&nbsp;Preconditions:</span><br>
+<span style="color:green;">
+//&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;model&nbsp;document&nbsp;exists.</span><br>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;an&nbsp;Immediate&nbsp;window.</span><br>
+<span style="color:green;">//</span><br>
+<span style="color:green;">//&nbsp;Postconditions:</span><br>
+<span style="color:green;">
+//&nbsp;1.&nbsp;Selects&nbsp;a&nbsp;face&nbsp;to&nbsp;remove&nbsp;from&nbsp;the&nbsp;model&nbsp;to&nbsp;create&nbsp;the&nbsp;shell.</span><br>
+<span style="color:green;">//&nbsp;2.&nbsp;Creates&nbsp;<b>Shell1</b>.</span><br>
+<span style="color:green;">
+//&nbsp;3.&nbsp;Inspect&nbsp;the&nbsp;Immediate&nbsp;window,&nbsp;graphics&nbsp;area,&nbsp;and</span><br>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;FeatureManager&nbsp;design&nbsp;tree.</span><br>
+<span style="color:green;">//</span><br>
+<span style="color:green;">
+//&nbsp;NOTE:&nbsp;Because&nbsp;the&nbsp;model&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span><br>
+<span style="color:green;">
+//----------------------------------------------------------------------------</span><br>
+<span style="color:blue;">using</span>&nbsp;Microsoft.VisualBasic;<br>
+<span style="color:blue;">using</span>&nbsp;System;<br>
+<span style="color:blue;">using</span>&nbsp;System.Collections;<br>
+<span style="color:blue;">using</span>&nbsp;System.Collections.Generic;<br>
+<span style="color:blue;">using</span>&nbsp;System.Data;<br>
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;<br>
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;<br>
+&nbsp;<br>
+<span style="color:blue;">namespace</span>&nbsp;CreateShellFeature_CSharp.csproj<br>
+{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr&nbsp;swSelMgr;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectData&nbsp;swSelData;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Feature&nbsp;swFeat;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ShellFeatureData&nbsp;swShell;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>[]&nbsp;vFaceRemArr;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>&nbsp;vFaceRem;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Face2&nbsp;swFaceRem;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>[]&nbsp;vMultiFaceArr;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">object</span>&nbsp;vMultiFace;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Face2&nbsp;swMultiFace;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Entity&nbsp;swEnt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;i;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">bool</span>&nbsp;bRet;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;longstatus;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;longwarnings;<br>
+&nbsp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()<br>
+	{<br>
+		swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>OpenDoc6</b>(<span style="color:#a31515;">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\api\\block20.sldprt&quot;</span>,&nbsp;1,&nbsp;0,&nbsp;<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;longstatus,&nbsp;<span style="color:blue;">ref</span>&nbsp;longwarnings);<br>
+		swApp.<b>ActivateDoc2</b>(<span style="color:#a31515;">&quot;block20&quot;</span>,&nbsp;<span style="color:blue;">false</span>,&nbsp;<span style="color:blue;">ref</span>&nbsp;longstatus);<br>
+		swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>ActiveDoc</b>;<br>
+&nbsp;<br>
+		bRet&nbsp;=&nbsp;swModel.<b>Extension</b>.<b>SelectByID2</b>(<span style="color:#a31515;">&quot;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;FACE&quot;</span>,&nbsp;-0.0150558029249623,&nbsp;0.0396239999999466,&nbsp;-0.018063862472502,&nbsp;<span style="color:blue;">false</span>,&nbsp;1,&nbsp;<span style="color:blue;">null</span>,&nbsp;0);<br>
+		swModel.<b>InsertFeatureShell</b>(0.00254,&nbsp;<span style="color:blue;">false</span>);<br>
+&nbsp;<br>
+		swSelMgr&nbsp;=&nbsp;(SelectionMgr)swModel.<b>SelectionManager</b>;<br>
+		swSelData&nbsp;=&nbsp;swSelMgr.<b>CreateSelectData</b>();<br>
+		swFeat&nbsp;=&nbsp;(Feature)swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1);<br>
+		swShell&nbsp;=&nbsp;(ShellFeatureData)swFeat.<b>GetDefinition</b>();<br>
+&nbsp;<br>
+		<span style="color:green;">//&nbsp;Get&nbsp;shell&nbsp;data</span><br>
+		Debug.Print(<span style="color:#a31515;">&quot;File&nbsp;=&nbsp;&quot;</span>&nbsp;+&nbsp;swModel.<b>GetPathName</b>());<br>
+		Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&quot;</span>&nbsp;+&nbsp;swFeat.<b>Name</b>);<br>
+		Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Direction:&nbsp;&quot;</span>&nbsp;+&nbsp;swShell.<b>Direction</b>);<br>
+		Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Thickness:&nbsp;&quot;</span>&nbsp;+&nbsp;swShell.<b>Thickness</b>&nbsp;*&nbsp;1000.0&nbsp;+&nbsp;<span style="color:#a31515;">&quot;&nbsp;mm&quot;</span>);<br>
+		Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Count&nbsp;of&nbsp;faces&nbsp;removed:&nbsp;&quot;</span>&nbsp;+&nbsp;swShell.<b>FacesRemovedCount</b>);<br>
+		Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Count&nbsp;of&nbsp;faces&nbsp;with&nbsp;alternative&nbsp;thicknesses:&nbsp;&quot;</span>&nbsp;+&nbsp;swShell.<b>GetMultipleThicknessFacesCount</b>());<br>
+&nbsp;<br>
+		bRet&nbsp;=&nbsp;swShell.<b>AccessSelections</b>(swModel,&nbsp;<span style="color:blue;">null</span>);<br>
+		swModel.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);<br>
+&nbsp;<br>
+		vFaceRemArr&nbsp;=&nbsp;(<span style="color:blue;">object</span>[])swShell.<b>FacesRemoved</b>;<br>
+&nbsp;<br>
+		<span style="color:blue;">for</span>&nbsp;(i&nbsp;=0;&nbsp;i&lt;&nbsp;vFaceRemArr.GetLength(0);&nbsp;i++)&nbsp;{<br>
+			vFaceRem&nbsp;=&nbsp;vFaceRemArr[i];<br>
+			swFaceRem&nbsp;=&nbsp;(Face2)vFaceRem;<br>
+			swEnt&nbsp;=&nbsp;(Entity)swFaceRem;<br>
+&nbsp;<br>
+			bRet&nbsp;=&nbsp;swEnt.<b>Select4</b>(<span style="color:blue;">true</span>,&nbsp;swSelData);<br>
+		}<br>
+&nbsp;<br>
+		swModel.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);<br>
+		vMultiFaceArr&nbsp;=&nbsp;(<span style="color:blue;">object</span>[])swShell.<b>MultipleThicknessFaces</b>;<br>
+&nbsp;<br>
+		<span style="color:blue;">foreach</span>&nbsp;(<span style="color:blue;">object</span>&nbsp;vMultiFace_loopVariable&nbsp;<span style="color:blue;">in</span>&nbsp;vMultiFaceArr)&nbsp;{<br>
+			vMultiFace&nbsp;=&nbsp;vMultiFace_loopVariable;<br>
+			swMultiFace&nbsp;=&nbsp;(Face2)vMultiFace;<br>
+			swEnt&nbsp;=&nbsp;(Entity)swMultiFace;<br>
+&nbsp;<br>
+			Debug.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;&nbsp;&nbsp;Alternative thickness 
+in mm at face (&quot;</span>&nbsp;+&nbsp;i&nbsp;+&nbsp;<span style="color:#a31515;">&quot;):&nbsp;&quot;</span>&nbsp;+&nbsp;swShell.<b>GetMultipleThicknessAtIndex</b>(i)&nbsp;*&nbsp;1000.0);<br>
+			i&nbsp;=&nbsp;i&nbsp;+&nbsp;1;<br>
+&nbsp;<br>
+			bRet&nbsp;=&nbsp;swEnt.<b>Select4</b>(<span style="color:blue;">true</span>,&nbsp;swSelData);<br>
+		}<br>
+&nbsp;<br>
+		swModel.<b>ClearSelection2</b>(<span style="color:blue;">true</span>);<br>
+		swShell.<b>ReleaseSelectionAccess</b>();<br>
+&nbsp;<br>
+&nbsp;<br>
+	}<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+}</p>
+
+</body>
+
+</html>

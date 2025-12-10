@@ -1,0 +1,249 @@
+<html>
+
+<head>
+<title>Fire Events for External Output Time Step Changes Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,motion studies">
+<meta name=MS-HKWD content="StreamWriter">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Fire Events for External Output Time Step Changes Example (VBA)</h1>
+<p><a name="top"></a>This example shows how to listen and catch events for external force and 
+motor output time step changes.</p>
+<pre>'---------------------------------------------------------------------
+' Preconditions:
+' 1. Start SOLIDWORKS Premium, which includes SOLIDWORKS Motion.
+' 2. Verify that the <b>c:\temp</b> folder exists.
+' 3. In SOLIDWORKS:
+'    a. Start the SOLIDWORKS Motion Study add-in (in
+'       SOLIDWORKS, click <b>Tools &gt; Add-Ins &gt; SOLIDWORKS Motion</b>).
+'    b. Open<i> public_documents</i><b>\samples\tutorial\api\simple-block.sldasm.</b>
+'    c. Click <b>MotionStudy1</b> and select <b>Motion Analysis </b>in the 
+'       Type of Study list at the upper-left corner of the 
+'       MotionManager.
+' 4. In the IDE:
+'    a. Reference the SOLIDWORKS MotionStudy type library.
+'    b. Copy and paste <a href="#Main">this code</a> in the main module.
+'    c. Click <b>Insert &gt; Class module</b> and copy and paste <a href="#Class">this code</a> in the
+'       class module.
+'
+' Postconditions:
+' 1. Calculates motion analysis.
+' 2. Opens <b>c:\temp\ForceAndMotorValuesVBA.txt</b> for output.
+' 3. Sets forces and motors to external.
+' 4. Recalculates motion analysis.
+' 5. Fires an event for every force and motor output time step change
+'    and recalculates and writes the force magnitude or motor speed
+'    to <b>c:\temp\ForceAndMotorValuesVBA.txt</b>.
+' 6. Open and examine <b>c:\temp\ForceAndMotorValuesVBA.txt</b>.
+'
+' NOTE: Because this model is used elsewhere, do not save changes.
+'------------------------------------------------------------------
+<a name="Main"></a>Main module</pre>
+<pre>Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swMotionMgr As swMotionStudy.MotionStudyManager
+Dim swMotionStudy As swMotionStudy.motionStudy
+Dim studyName As String
+Dim numStudies As Long
+Dim eventClass As Class1</pre>
+<pre>Sub Main()    </pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.ActiveDoc
+    Set swModelDocExt = swModel.<b>Extension</b>    </pre>
+<pre>    ' Motion study name
+    studyName = &quot;Motion Study 1&quot;    </pre>
+<pre>    ' Get the MotionManager
+    Set swMotionMgr = swModelDocExt.<b>GetMotionStudyManager</b>()
+    numStudies = swMotionMgr.<b>GetMotionStudyCount</b>()
+    Set swMotionStudy = swMotionMgr.<b>GetMotionStudy</b>(studyName)
+    If Not swMotionStudy.<b>IsActive</b> Then swMotionStudy.<b>Activate</b></pre>
+<pre>    'Calculate the motion study
+    swMotionStudy.<b>Calculate</b></pre>
+<pre>    ' Set up events
+    Set eventClass = New Class1
+    eventClass.Init swMotionStudy    </pre>
+<pre>    ' Open output file for writing force and motor values
+    Open &quot;c:\temp\ForceAndMotorValuesVBA.txt&quot; For Output As #1    </pre>
+<pre>    ' Set feature Force1 as external force
+    Call SetForceExternalFlag(&quot;Force1&quot;, True)    </pre>
+<pre>    ' Set feature LinearMotor1 as external motor
+    Call SetMotorExternalFlag(&quot;LinearMotor1&quot;, True)    </pre>
+<pre>    ' Fire event at every output time step
+    swMotionStudy.<b>SetFireOutputTimeStepEvents</b> (True)</pre>
+<pre>    'Recalculate the motion study
+    swMotionStudy.<b>Calculate</b></pre>
+<pre>    ' Close output file
+    Close #1    </pre>
+<pre>End Sub
+</pre>
+<pre>Private Sub SetForceExternalFlag(ByVal featureName As String, ByVal setFlag As Long)
+' Set forces to external; i.e., listen for events</pre>
+<pre>    Dim swFeature As SldWorks.Feature
+    Dim swSimulationFeatureData As SldWorks.SimulationForceFeatureData
+    Dim simTypeName As String
+    Dim motionFeatures As Variant
+    Dim ret As Boolean
+    Dim i As Long    </pre>
+<pre>    motionFeatures = swMotionStudy.<b>GetMotionFeatures</b>
+    For i = 0 To UBound(motionFeatures)
+        Set swFeature = motionFeatures(i)
+        simTypeName = swFeature.<b>GetTypeName</b>
+        If simTypeName = &quot;AEMLinearForce&quot; Or simTypeName = &quot;AEMTorque&quot; Then
+            If swFeature.<b>Name</b> = featureName Then
+                Set swSimulationFeatureData = swFeature.<b>GetDefinition</b>
+                swSimulationFeatureData.<b>ExternalState</b> = setFlag
+                ret = swFeature.<b>ModifyDefinition</b>(swSimulationFeatureData, swModel, Nothing)
+                Write #1, &quot;Feature: &quot; &amp; swFeature.<b>Name</b>
+                Write #1, &quot;  Listen for events: &quot; &amp; swSimulationFeatureData.<b>ExternalState</b>
+                Write #1, &quot; &quot;
+            End If
+        End If
+    Next i
+End Sub
+</pre>
+<pre>Private Sub SetMotorExternalFlag(ByVal featureName As String, ByVal setFlag As Long)
+' Set motors to external; i.e., listen for events</pre>
+<pre>    Dim swFeature As SldWorks.Feature
+    Dim swSimulationFeatureData As SldWorks.SimulationMotorFeatureData
+    Dim simTypeName As String
+    Dim motionFeatures As Variant
+    Dim i As Long
+    Dim ret As Boolean    </pre>
+<pre>    motionFeatures = swMotionStudy.<b>GetMotionFeatures</b>
+    For i = 0 To UBound(motionFeatures)
+        Set swFeature = motionFeatures(i)
+        simTypeName = swFeature.<b>GetTypeName</b>
+        If simTypeName = &quot;AEMLinearMotor&quot; Or simTypeName = &quot;AEMRotationalMotor&quot; Then
+            If swFeature.<b>Name</b> = featureName Then
+                Set swSimulationFeatureData = swFeature.<b>GetDefinition</b>
+                swSimulationFeatureData.<b>ExternalState</b> = setFlag
+                ret = swFeature.<b>ModifyDefinition</b>(swSimulationFeatureData, swModel, Nothing)
+                Write #1, &quot;Feature name: &quot; &amp; swFeature.<b>Name</b>
+                Write #1, &quot;  Listen for events: &quot; &amp; swSimulationFeatureData.<b>ExternalState</b>
+                Write #1, &quot; &quot;
+            End If
+        End If
+    Next i
+End Sub</pre>
+<div align="center">
+	<pre><a href="#top">Back to top</a></pre>
+</div>
+<h2><span style="font-weight: 400"><a name="Class"></a>
+<font face="Courier New" size="2">'Class module</font></span></h2>
+<pre>Dim WithEvents motionStudy As swMotionStudy.motionStudy</pre>
+<pre>Private Sub Class_Initialize()
+End Sub</pre>
+<pre>Sub Init(study As swMotionStudy.motionStudy)
+    Set motionStudy = study
+End Sub</pre>
+<pre>Private Function motionStudy_<b>ForceOutputTimeStepChangeNotify(</b>ByVal Time As Double, ByVal ForceNames As Variant, ByVal Disp As Variant, ByVal Velocity As Variant, ByVal Acceleration As Variant, ByVal ForceOrTorque As Variant, ForceTorqueValue As Variant) As Long
+' Fire event for every external force or torque output time step change
+    Dim swMotionStudyProperties As swMotionStudy.motionStudyProperties
+    Dim frameRate As Double
+    Dim numForces As Long
+    Dim deltaT As Double
+    Dim pi As Double
+    Dim w As Double
+    Dim A As Double    </pre>
+<pre>    pi = 3.14159265358979    </pre>
+<pre>    Set swMotionStudyProperties = motionStudy.<b>GetProperties</b>(swMotionStudyTypeCosmosMotion)
+    frameRate = swMotionStudyProperties.<b>GetFrameRate</b>()
+    deltaT = 1 / frameRate
+    numForces = motionStudy.<b>GetNumOfExternalForces</b>            </pre>
+<pre>    For i = 0 To numForces - 1    </pre>
+<pre>        A = Acceleration(i)        </pre>
+<pre>        If (ForceNames(i) = &quot;Force1&quot; Or ForceNames(i) = &quot;Force2&quot; Or ForceNames(i) = &quot;Force3&quot;) Then
+            Write #1, &quot;  &quot; &amp; ForceNames(i)
+            A = 0.8
+            w = 2 * pi / 1.5
+        ElseIf (ForceNames(i) = &quot;Torque1&quot; Or ForceNames(i) = &quot;Torque2&quot; Or ForceNames(i) = &quot;Torque3&quot;) Then
+            Write #1, &quot;  &quot; &amp; ForceNames(i)
+            A = 0.005
+            w = pi
+        ElseIf (ForceNames(i) = &quot;Action Reaction Force1&quot; Or ForceNames(i) = &quot;Action Reaction Force2&quot; Or ForceNames(i) = &quot;Action Reaction Force3&quot;) Then
+            Write #1, &quot;  &quot; &amp; ForceNames(i)
+            A = 0.002
+            w = 2 * pi
+        Else
+            Write #1, &quot;  &quot; &amp; ForceNames(i)
+            A = 0
+            w = 0
+        End If        </pre>
+<pre>        ' Compute the return value
+        ForceTorqueValue(i) = A * Sin(w * (Time + deltaT))
+        Write #1, &quot;    Force or torque magnitude: &quot; &amp; ForceTorqueValue(i)</pre>
+<pre>    Next i     </pre>
+<pre>End Function</pre>
+<pre>Private Function motionStudy_<b>MotorOutputTimeStepChangeNotify</b>(ByVal Time As Double, ByVal MotorNames As Variant, ByVal Position As Variant, ByVal Velocity As Variant, ByVal Acceleration As Variant, ByVal ForceOrTorque As Variant, MotorValue As Variant) As Long
+' Fire event for every external motors at every output time step change
+    Dim numMotors as Long
+    Dim swMotionStudyProperties As swMotionStudy.motionStudyProperties
+    Dim frameRate As Double
+    Dim deltaT As Double
+    Dim pi As Double
+    Dim w As Double
+    Dim A As Double</pre>
+<pre>    pi = 3.14159265358979    </pre>
+<pre>    Set swMotionStudyProperties = motionStudy.<b>GetProperties</b>(swMotionStudyTypeCosmosMotion)
+    frameRate = swMotionStudyProperties.<b>GetFrameRate</b>()
+    deltaT = 1 / frameRate
+    numMotors = motionStudy.<b>GetNumOfExternalMotors</b>       </pre>
+<pre>    For i = 0 To numMotors - 1               </pre>
+<pre>        If (MotorNames(i) = &quot;RotaryMotor1&quot; Or MotorNames(i) = &quot;RotaryMotor2&quot;) Then
+            Write #1, &quot;  &quot; &amp; MotorNames(i)
+            A = (pi / 4)
+            w = (pi / 2)
+        ElseIf (MotorNames(i) = &quot;LinearMotor1&quot;) Then
+            Write #1, &quot;  &quot; &amp; MotorNames(i)
+            A = 0.05
+            w = 2 * pi / 3
+        ElseIf (MotorNames(i) = &quot;LinearMotor2&quot;) Then
+            Write #1, &quot;  &quot; &amp; MotorNames(i)
+            A = 0.025
+            w = 2 * pi
+        ElseIf (MotorNames(i) = &quot;LinearMotor3&quot;) Then
+            Write #1, &quot;  &quot; &amp; MotorNames(i)
+            A = 1.0472
+            w = 2 * pi
+        Else
+            Write #1, &quot;  LinearMotor&quot;
+            A = 0
+            w = 0
+        End If        </pre>
+<pre>        'Compute the return value
+        MotorValue(i) = A * Sin(w * (Time + deltaT))
+        Write #1, &quot;    Motor speed: &quot; &amp; MotorValue(i)
+    Next i
+End Function</pre>
+<pre>Private Function motionStudy_<b>OutputTimeStepChangeNotify</b>(ByVal Time As Double) As Long
+' Fire event at every output step
+    myTime = Time
+End Function</pre>
+<pre>Private Function motionStudy_<b>StartCalculateNotify</b>(ByVal Time As Double) As Long
+' Fire event when recalculation starts
+    Write #1, &quot;Recalculation started...&quot;
+    Write #1, &quot; &quot;
+    myTime = Time
+End Function</pre>
+<pre>Private Function motionStudy_<b>StopCalculateNotify</b>(ByVal Time As Double) As Long
+' Fire event when recalculation stops
+    Write #1, &quot; &quot;
+    Write #1, &quot;Recalculation stopped...&quot;
+    myTime = Time
+End Function</pre>
+<div align="center">
+	<pre><a href="#top">Back to top</a></pre>
+
+</div>
+
+</body>
+
+</html>

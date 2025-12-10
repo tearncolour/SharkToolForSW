@@ -1,0 +1,96 @@
+<html>
+
+<head>
+<title>Fire Events When PropertyManager Page Opened and Canceled Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,PropertyManager pages">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Fire Events When PropertyManager Page Opened and Canceled Example (VBA)</h1>
+<p>This example shows how to get the SOLIDWORKS command ID, PropertyManager 
+title, and whether the user interface is active. Events are fired before the PropertyManager page is opened and when it is 
+canceled.</p>
+<pre>'------------------------------------------
+' Preconditions:
+' 1. Copy <a href="#Main">Main</a> into the macro.
+' 2. Click <b>Insert &gt; Class Module</b> and copy <a href="#Class">Class1</a>
+'    into the module.
+' 2. Add a reference to <b>SOLIDWORKS </b>&lt;<i>version</i>&gt; 
+'    <b>commands type library</b>.
+' 3. Open the Immediate window.
+' 4. Verify that the part to open exists.
+'
+' Postconditions:
+' 1. Opens the part.
+' 2. Fires the CommandOpenPreNotify event; click
+'    <b>OK</b> to close the message box.
+' 3. Opens the Fillet PropertyManager page.
+' 4. Gets the title of the PropertyManager page, whether the
+'    user interface is active, and whether the command ID
+'    is a fillet.
+' 5. Click <b>X</b> on the Fillet PropertyManager
+'    page to cancel it.
+' 6. Fires the CommandCloseNotify event; click <b>OK</b>
+'    to close the message box.
+' 7. Examine the Immediate window.
+'--------------------------------------------
+<a name="Main"></a>'Main</pre>
+<pre>Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim modelName As String
+Dim errors As Long
+Dim warnings As Long
+Dim commandID As Long
+Dim pmpTitle As String
+Dim isUIActive As Boolean
+Dim swAppEvents As New Class1</pre>
+<pre>Sub main()</pre>
+<pre>Set swApp = Application.SldWorks</pre>
+<pre>' Set up event
+Set swAppEvents.swApp = swApp</pre>
+<pre>' Open the model
+modelName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\fillets\knob.sldprt&quot;
+Set swModel = swApp.<b>OpenDoc6</b>(modelName, swDocPART, swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+Set swModelDocExt = swModel.<b>Extension</b></pre>
+<pre>' Open the Fillet PropertyManager Page,
+' which causes the CommandOpenPreNotify event
+' to fire
+swModelDocExt.<b>RunCommand</b> swCommands_Fillet, &quot;Fillet&quot;</pre>
+<pre>' Get the command ID if the command is a fillet,
+' get the PropertyManager page title if one is active,
+' and get whether the user interface is active
+swApp.<b>GetRunningCommandInfo</b> commandID, pmpTitle, isUIActive
+If pmpTitle &lt;&gt; &quot;&quot; Then Debug.Print &quot;Title of PropertyManager page: &quot; &amp; pmpTitle
+Debug.Print &quot;Is user interface active? &quot; &amp; isUIActive
+If (commandID = 9) Then
+    Debug.Print &quot;Command ID: &quot; &amp; &quot;swCommands_Fillet&quot;
+Else
+    Debug.Print &quot;Command ID: &quot; &amp; &quot;Not a fillet.&quot;
+End If</pre>
+<pre>    
+End Sub</pre>
+<p>&nbsp;</p>
+<p><a name="Class"></a><font face="Courier New" size="2">Class1</font></p>
+<pre>Option Explicit</pre>
+<pre>Public WithEvents swApp As SldWorks.SldWorks</pre>
+<pre>Private Function swApp_<b>CommandOpenPreNotify</b>(ByVal command As Long, ByVal userCommand As Long) As Long
+    'Send message when the Fillet PropertyManager page is about to open
+    If (command = swCommands_e.swCommands_Fillet) Then MsgBox &quot;Fillet PropertyManager page is about to open.&quot;
+End Function</pre>
+<pre>Private Function swApp_<b>CommandCloseNotify</b>(ByVal command As Long, ByVal reason As Long) As Long
+    'Send message because the Fillet PropertyManager page was canceled by clicking the X button
+    MsgBox &quot;Fillet PropertyManager page was canceled.&quot;
+End Function</pre>
+<p><br>
+&nbsp;</p>
+
+</body>
+
+</html>

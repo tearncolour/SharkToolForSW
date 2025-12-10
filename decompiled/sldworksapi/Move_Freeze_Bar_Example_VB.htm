@@ -1,0 +1,187 @@
+<html>
+
+<head>
+<title>Move Freeze Bar Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,frozen features">
+<meta name=MS-HKWD content="VBA examples,hidden-lock features">
+<meta name=MS-HKWD content="VBA examples,rebuild">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Move Freeze Bar Example (VBA)</h1>
+<p>This example shows how to move the freeze bar to another location in the 
+FeatureManager design tree.</p>
+
+<p class="APICODE">
+'----------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Open <i>public_documents</i><b>\samples\tutorial\api\FreezeBarNeedsRebuild2.sldprt</b>.<br>
+' 2. Inspect the FeatureManager design tree:<br>
+'&nbsp;&nbsp;&nbsp; * The rebuild indicator is displayed in the FeatureManager 
+design tree.<br>
+'&nbsp;&nbsp;&nbsp; * The freeze bar is below Boss-Extrude1 in the FeatureManager design tree.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 is frozen in the FeatureManager design tree.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude2 is unfrozen in the FeatureManager design 
+tree.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 has freeze updates pending.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude2 has no freeze updates pending.<br>
+'&nbsp;&nbsp;&nbsp; * The model needs to be rebuilt.<br>
+'<br>
+' Postconditions:<br>
+' 1. Removes the rebuild indicator from the part.<br>
+' 2. Inspect the Immediate window to see which features have hidden locks.<br>
+' 3.&nbsp;Press F5 to continue.<br>
+'&nbsp;&nbsp;&nbsp; * Freeze bar moved to the top of the FeatureManager design tree.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 is unfrozen.<br>
+' 4. Press F5 to continue.<br>
+'&nbsp;&nbsp;&nbsp; * Freeze bar moved to the bottom of the FeatureManager design tree.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 and Boss-Extrude2 are frozen.<br>
+' 5. Press F5 to continue.<br>
+'&nbsp;&nbsp;&nbsp; * Freeze bar moved to after Boss-Extrude2.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 and Boss-Extrude2 are frozen.<br>
+' 6. Press F5 to continue.<br>
+'&nbsp;&nbsp;&nbsp; * Freeze bar moved to the top of the FeatureManager design tree.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 and Boss-Extrude2 are unfrozen.<br>
+' 7. Press F5 to continue.<br>
+'&nbsp;&nbsp;&nbsp; * The model does not need to be rebuilt.<br>
+'&nbsp;&nbsp;&nbsp; * Boss-Extrude1 and Boss-Extrude2 have no freeze updates 
+pending.<br>
+' 8. Press F5 to close the model.<br>
+' 9. Inspect the Immediate window.<br>
+'<br>
+' NOTE: Because the model is used elsewhere,<br>
+' do not save changes when closing it.<br>
+' ---------------------------------------------------------------------------</p>
+<p class="APICODE">Option Explicit</p>
+<p class="APICODE">Dim swApp As SldWorks.SldWorks<br>
+Dim swModel As SldWorks.ModelDoc2<br>
+Dim swModDocExt As SldWorks.ModelDocExtension<br>
+Dim lRet As Long<br>
+Dim featMgr As SldWorks.FeatureManager<br>
+Dim selMgr As SldWorks.SelectionMgr<br>
+Dim featFrozen As SldWorks.Feature<br>
+Dim featUnFrozen As SldWorks.Feature<br>
+Dim feat As SldWorks.Feature<br>
+Dim boolstatus As Boolean<br>
+Dim bRetVal As Boolean<br>
+Dim vfeats As Variant<br>
+Dim vfeat As Variant</p>
+<p class="APICODE">Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.<b>SldWorks</b><br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; Set swModDocExt = swModel.<b>Extension</b><br>
+&nbsp;&nbsp;&nbsp; Set featMgr = swModel.<b>FeatureManager</b><br>
+&nbsp;&nbsp;&nbsp; Set selMgr = swModel.<b>SelectionManager</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swApp.<b>SetUserPreferenceToggle</b> 
+swUserEnableFreezeBar, True<br>
+&nbsp;&nbsp;&nbsp; swModDocExt.<b>ShowPartRebuildIndicators</b> = False</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Number of Features is &quot; &amp; 
+swModel.<b>GetFeatureCount</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; vfeats = featMgr.<b>GetFeatures</b>(True)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; For Each vfeat In vfeats<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set feat = vfeat<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Feature name from FeatureManager 
+design tree is &quot; &amp; feat.<b>Name</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print feat.<b>Name</b> &amp; &quot; has a 
+hidden lock? &quot; &amp; feat.<b>IsHiddenLock</b><br>
+&nbsp;&nbsp;&nbsp; Next<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; boolstatus = 
+swModDocExt.<b>SelectByID2</b>(&quot;Boss-Extrude1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, 
+Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModDocExt.<b>SelectByID2</b>(&quot;Boss-Extrude2&quot;, &quot;BODYFEATURE&quot;, 
+0, 0, 0, True, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set feat = featMgr.<b>GetFreezeLocation</b><br>
+&nbsp;&nbsp;&nbsp; If Not feat Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Freeze bar location is 
+after &quot; &amp; feat.<b>Name</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print feat.<b>Name</b> &amp; &quot; is frozen? 
+&quot; &amp; feat.<b>IsFrozen</b><br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; bRetVal = swModDocExt.<b>NeedsRebuild2</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Needs rebuild? &quot; &amp; bRetVal<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set featFrozen = 
+selMgr.<b>GetSelectedObject6</b>(1, -1)<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Feature &quot; &amp; featFrozen.<b>Name</b> &amp; &quot; 
+has freeze updates pending? &quot; &amp; featFrozen.<b>HasFrozenUpdatePending</b><br>
+&nbsp;&nbsp;&nbsp; Set featUnFrozen = selMgr.<b>GetSelectedObject6</b>(2, -1)<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Feature &quot; &amp; featUnFrozen.<b>Name</b> &amp; &quot; 
+has freeze updates pending? &quot; &amp; featUnFrozen.<b>HasFrozenUpdatePending</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&quot;<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swModel.<b>ClearSelection2</b> True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If (featFrozen.<b>HasFrozenUpdatePending</b>) 
+Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToBeforeFeature, 
+featFrozen.<b>Name</b>, True, True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Freeze bar moved to the 
+top of the FeatureManager design tree. Press F5.&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToEnd, 
+&quot;&quot;, True, True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Freeze bar moved to the 
+bottom of the FeatureManager design tree. Press F5.&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToAfterFeature, 
+featUnFrozen.<b>Name</b>, True, True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Freeze bar moved to 
+after Boss-Extrude2. Press F5.&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToTop, 
+&quot;&quot;, True, True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Freeze bar moved to the 
+top of the FeatureManager design tree. Press F5.&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToBeforeFeature, 
+featFrozen.<b>Name</b>, True, True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToEnd, 
+&quot;&quot;, True, True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToBeforeFeature, 
+featUnFrozen.<b>Name</b>, True, True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToAfterFeature, 
+featUnFrozen.<b>Name</b>, True, True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lRet = featMgr.<b>EditFreeze2</b>(swMoveFreezeBarToTop, 
+&quot;&quot;, True, True)<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;&quot;<br>
+&nbsp;&nbsp;&nbsp; bRetVal = swModDocExt.<b>NeedsRebuild2</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Needs rebuild? &quot; &amp; bRetVal<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Feature &quot; &amp; featFrozen.<b>Name</b> &amp; 
+&quot; has freeze updates pending? &quot; &amp; featFrozen.<b>HasFrozenUpdatePending</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Feature &quot; &amp; featUnFrozen.<b>Name</b> &amp; &quot; 
+has freeze updates pending? &quot; &amp; featUnFrozen.<b>HasFrozenUpdatePending</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set feat = featMgr.<b>GetFreezeLocation</b> ' 
+feat = Nothing if freeze bar is at the top of FeatureManager design tree<br>
+&nbsp;&nbsp;&nbsp; If Not feat Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print feat.<b>Name</b> &amp; &quot; is frozen?&quot; 
+&amp; feat.<b>IsFrozen</b><br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Press F5 to close the model.&quot;<br>
+&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swApp.<b>CloseDoc</b> (&quot;&quot;)</p>
+<p class="APICODE">End Sub</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

@@ -1,0 +1,477 @@
+<html>
+
+<head>
+<title>Get Polyline Data from Drawing View Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,views">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Polyline Data from Drawing View Example (VBA)</h1>
+<p>This example shows how to retrieve the defining data of arcs, circles, 
+ellipses, splines, and lines in a 
+drawing view.</p>
+
+<p class="APICODE">' 
+-----------------------------------------------------------------------------<br>
+' Preconditions: Open a drawing of a part.<br>
+'<br>
+' Postconditions: Inspect the Immediate window for edge and geometry data.<br>
+' -----------------------------------------------------------------------------</p>
+<p class="APICODE">Option Explicit</p>
+<p class="APICODE">Dim swApp As SldWorks.SldWorks<br>
+Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim swModel&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.ModelDoc2<br>
+&nbsp;&nbsp;&nbsp; Dim swDrawing&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.DrawingDoc<br>
+&nbsp;&nbsp;&nbsp; Dim swView&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.View<br>
+&nbsp;&nbsp;&nbsp; Dim swSheetView&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.View<br>
+&nbsp;&nbsp;&nbsp; Dim swSketch&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As SldWorks.Sketch<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; ' Get SOLIDWORKS application.<br>
+&nbsp;&nbsp;&nbsp; Set swApp = Application.<b>SldWorks</b><br>
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get active document.<br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; ' Downcast model to a drawing.<br>
+&nbsp;&nbsp;&nbsp; Set swDrawing = swModel<br>
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' The first view is the drawing sheet.<br>
+&nbsp;&nbsp;&nbsp; Set swSheetView = swDrawing.<b>GetFirstView</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; ' Print its contents.<br>
+&nbsp;&nbsp;&nbsp; PrintView swSheetView<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; ' Get the sketch for the drawing sheet view.<br>
+&nbsp;&nbsp;&nbsp; Set swSketch = swSheetView.<b>GetSketch</b><br>
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Print its contents.<br>
+&nbsp;&nbsp;&nbsp; PrintSketch swSketch<br>
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; '<br>
+&nbsp;&nbsp;&nbsp; ' Traverse all &quot;real&quot; views on the sheet.<br>
+&nbsp;&nbsp;&nbsp; '</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' First view on the sheet.<br>
+&nbsp;&nbsp;&nbsp; Set swView = swSheetView.<b>GetNextView</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Do While Not swView Is Nothing<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PrintView swView<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swSketch = 
+swView.<b>GetSketch</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PrintSketch 
+swSketch<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Go to next view 
+on the sheet.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swView = swView.<b>GetNextView</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Loop<br>
+</p>
+<p class="APICODE">End Sub<br>
+</p>
+<p class="APICODE">Function PrintView(swView As SldWorks.View) As Boolean</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vEdges As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vPolyLinesBuffer&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; As 
+Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vLines&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim lNumGeomData&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim i&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Integer<br>
+&nbsp;&nbsp;&nbsp; Dim iGeomIndex&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Integer<br>
+&nbsp;&nbsp;&nbsp; Dim lNumLines&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lItemType&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lBufferSize&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lBufferIdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lGeomDataSize&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim dGeomData(11)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Double<br>
+&nbsp;&nbsp;&nbsp; Dim lLineData(3)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lLayerData(1)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lNumPoints&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim dPoint(2)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Double<br>
+&nbsp;&nbsp;&nbsp; Dim lGeomDataIdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lLineDataIdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lLayerDataIdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lStartIdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lEndIdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lLineDataSize&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lLayerDataSize&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lNumProjectedElements&nbsp; As Long<br>
+&nbsp;&nbsp;&nbsp; Dim lNumSketchedElements&nbsp;&nbsp; As Long</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If swView Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Exit Function<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;View = &quot; + swView.Name</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; '<br>
+&nbsp;&nbsp;&nbsp; ' Report projected model geometry.<br>
+&nbsp;&nbsp;&nbsp; '<br>
+&nbsp;&nbsp;&nbsp; ' Initialize the number of projected elements for data is 
+contained in the buffer.<br>
+&nbsp;&nbsp;&nbsp; lNumProjectedElements = 0</p>
+<p class="APICODE">&nbsp;<br>
+&nbsp;&nbsp;&nbsp; ' Get the edges and put all the polyline data into a buffer.<br>
+&nbsp;&nbsp;&nbsp; ' - no cross-hatch lines.<br>
+&nbsp;&nbsp;&nbsp; vEdges = swView.<b>GetPolylines7</b>(1, vPolyLinesBuffer)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If Not IsEmpty(vEdges) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Number of edges: &quot; &amp; (UBound(vEdges) 
+- LBound(vEdges) + 1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Any polyline data present ?<br>
+&nbsp;&nbsp;&nbsp; If Not IsEmpty(vPolyLinesBuffer) Then</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Entries for line data and layer 
+data have a fixed size.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lLineDataSize = 4<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lLayerDataSize = 2<br>
+&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Get the total 
+buffer size.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lBufferSize = UBound(vPolyLinesBuffer) 
+- LBound(vPolyLinesBuffer) + 1</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' We start to traverse the buffer at 
+index 0.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lBufferIdx = 0</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Traverse the buffer, consuming data 
+elements.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Do While lBufferIdx &lt; lBufferSize<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' Determine type.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lItemType = 
+vPolyLinesBuffer(lBufferIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lBufferIdx = 
+lBufferIdx + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' We have 
+found another projected element.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lNumProjectedElements = lNumProjectedElements + 1</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Handle type 
+specific data.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If lItemType 
+= 0 Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' HERE: polylines</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp; polyline&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' Get GeomDataSize:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' - should be zero, but consume it anyway.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lGeomDataSize = vPolyLinesBuffer(lBufferIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lBufferIdx = lBufferIdx + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' Ignore GeomData.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' HERE: arc:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' - next to the piecewise linear approximation of the projected model geometry,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+'&nbsp;&nbsp; the buffer also contains the arc definining the model geometry 
+projection.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp; arc&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' Get GeomDataSize:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' - should be 12.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lGeomDataSize = vPolyLinesBuffer(lBufferIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lBufferIdx = lBufferIdx + 1</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' Get GeomData.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lGeomDataIdx = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lStartIdx = lBufferIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lEndIdx = lStartIdx + (lGeomDataSize - 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For lBufferIdx = lStartIdx To lEndIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+dGeomData(lGeomDataIdx) = vPolyLinesBuffer(lBufferIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lGeomDataIdx = lGeomDataIdx + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next lBufferIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; center pt = (&quot; &amp; dGeomData(0) * 
+1000# &amp; &quot;, &quot; &amp; dGeomData(1) * 1000# &amp; &quot;, &quot; &amp; dGeomData(2) * 1000# &amp; &quot;) mm&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; start&nbsp; pt = (&quot; &amp; dGeomData(3) * 
+1000# &amp; &quot;, &quot; &amp; dGeomData(4) * 1000# &amp; &quot;, &quot; &amp; dGeomData(5) * 1000# &amp; &quot;) mm&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; end&nbsp;&nbsp;&nbsp; pt = (&quot; &amp; 
+dGeomData(6) * 1000# &amp; &quot;, &quot; &amp; dGeomData(7) * 1000# &amp; &quot;, &quot; &amp; dGeomData(8) * 1000# 
+&amp; &quot;) mm&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; normal&nbsp;&nbsp;&nbsp; = (&quot; &amp; 
+dGeomData(9) &amp; &quot;, &quot; &amp; dGeomData(10) &amp; &quot;, &quot; &amp; dGeomData(11) &amp; &quot;)&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Get line 
+data.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lLineDataIdx 
+= 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lStartIdx = 
+lBufferIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lEndIdx = 
+lStartIdx + (lLineDataSize - 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For lBufferIdx = lStartIdx To lEndIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lLineData(lLineDataIdx) = vPolyLinesBuffer(lBufferIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lLineDataIdx = lLineDataIdx + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next lBufferIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Get 
+layer data.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lLayerDataIdx 
+= 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lStartIdx = 
+lBufferIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lEndIdx = 
+lStartIdx + (lLayerDataSize - 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For lBufferIdx = lStartIdx To lEndIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lLayerData(lLayerDataIdx) = vPolyLinesBuffer(lBufferIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lLayerDataIdx = lLayerDataIdx + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next lBufferIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Get point 
+data.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lNumPoints = 
+vPolyLinesBuffer(lBufferIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #points = &quot; &amp; CStr(lNumPoints)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lBufferIdx = lBufferIdx + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lStartIdx = 
+lBufferIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lEndIdx = 
+lStartIdx + lNumPoints * 3 - 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For lBufferIdx = lStartIdx To lEndIdx Step 3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+dPoint(0) = vPolyLinesBuffer(lBufferIdx)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+dPoint(1) = vPolyLinesBuffer(lBufferIdx + 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+dPoint(2) = vPolyLinesBuffer(lBufferIdx + 2)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next lBufferIdx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Loop</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; <br>
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Report the number of projected elements 
+we found.<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp; #projected elements = &quot; &amp; 
+CStr(lNumProjectedElements)<br>
+<br>
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; '<br>
+&nbsp;&nbsp;&nbsp; ' Report sketched geometry; only show lines.<br>
+&nbsp;&nbsp;&nbsp; '<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Initialize to zero.<br>
+&nbsp;&nbsp;&nbsp; lNumSketchedElements = 0<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; lNumLines = swView.<b>GetLineCount2</b>(1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If lNumLines &lt;&gt; 0 Then</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vLines = swView.<b>GetLines4</b>(1)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If Not 
+IsEmpty(vLines) Then<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+For i = 0 To lNumLines - 1<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp; line[&quot; &amp; i &amp; &quot;]&quot;<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; start pt = (&quot; &amp; vLines(i * 12 + 6) * 
+1000# &amp; &quot;, &quot; &amp; vLines(i * 12 + 7) * 1000# &amp; &quot;, &quot; &amp; vLines(i * 12 + 8) * 1000# &amp; 
+&quot;) mm&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; end&nbsp;&nbsp; pt = (&quot; &amp; vLines(i * 
+12 + 9) * 1000# &amp; &quot;, &quot; &amp; vLines(i * 12 + 10) * 1000# &amp; &quot;, &quot; &amp; vLines(i * 12 + 
+11) * 1000# &amp; &quot;) mm&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Next i<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; End If<br>
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; lNumSketchedElements = 
+lNumSketchedElements + lNumLines<br>
+&nbsp;&nbsp;&nbsp; lNumSketchedElements = lNumSketchedElements + swView.<b>GetArcCount</b><br>
+&nbsp;&nbsp;&nbsp; lNumSketchedElements = lNumSketchedElements + swView.<b>GetEllipseCount</b><br>
+&nbsp;&nbsp;&nbsp; lNumSketchedElements = lNumSketchedElements + swView.<b>GetParabolaCount</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Report the number of sketched elements 
+found.<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp; #sketched elements = &quot; &amp; 
+CStr(lNumSketchedElements)<br>
+</p>
+<p class="APICODE">End Function<br>
+</p>
+<p class="APICODE">Function PrintSketch(swSketch As SldWorks.Sketch) As Boolean</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vSegments&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim lNumSegments&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Long<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; If swSketch Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;No Sketch&quot;<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; ' Get the sketch segments.<br>
+&nbsp;&nbsp;&nbsp; vSegments = swSketch.<b>GetSketchSegments</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; ' Determine number of segments.<br>
+&nbsp;&nbsp;&nbsp; If Not IsEmpty(vSegments) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lNumSegments = UBound(vSegments) - 
+LBound(vSegments) + 1<br>
+&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lNumSegments = 0<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Sketch = &quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp; #points&nbsp;&nbsp; = &quot; &amp; CStr(swSketch.<b>GetUserPointsCount</b>())<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp; #segments = &quot; &amp; CStr(lNumSegments)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get count of specific sketch segments.<br>
+&nbsp;&nbsp;&nbsp; If lNumSegments &gt; 0 Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp; 
+#arcs&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = &quot; &amp; CStr(swSketch.<b>GetArcCount</b>())<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp; 
+#lines&nbsp;&nbsp;&nbsp;&nbsp; = &quot; &amp; CStr(swSketch.<b>GetLineCount2</b>(1))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp; 
+#ellipses&nbsp; = &quot; &amp; CStr(swSketch.<b>GetEllipseCount</b>())<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp; 
+#parabolas = &quot; &amp; CStr(swSketch.<b>GetParabolaCount</b>())<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; <br>
+</p>
+<p class="APICODE">End Function</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

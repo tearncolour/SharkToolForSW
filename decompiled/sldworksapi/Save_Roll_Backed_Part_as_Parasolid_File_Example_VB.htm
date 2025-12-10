@@ -1,0 +1,143 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Save Roll Backed Part as Parasolid File Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,parts">
+<meta name=MS-HKWD content="VBA examples,Parasolid files">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3989>
+<meta name=layout-width content=786>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Save Rolled Backed Part as Parasolid File Example (VBA)</h1>
+
+<p>This example shows how to save a part in a rolled backed state as a 
+ Parasolid file.</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-weight: bold;">NOTE:</span> When a part is in a rolled 
+ back state, you cannot export the part to any other format until the model 
+ has been rolled forward. This example shows how to use various geometry-related 
+ and topology-related method to create a temporary part that you can then 
+ export to any other format, in this example, Parasolid.</p>
+
+<pre>'------------------------------------------------------------------
+' Preconditions:
+' 1. Open <i>public_documents</i><b>\samples\tutorial\api\box.sldprt</b>.
+' 2. Drag the rollback bar to just below <b>Boss-Extrude1</b>.
+' 3. Open the Immediate window.
+'
+' Postconditions:
+' 1. Saves the Parasolid file to the same folder as the part,
+'    overwriting any existing file of the same name; the
+'    Parasolid file has same geometry as the part in the rolled back
+'    state.
+' 2. Examine the Immediate window.
+' 3. Open <i>public_documents</i><b>\samples\tutorial\api\box.x_t</b>.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'-----------------------------------------------------------------
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swPart As SldWorks.PartDoc
+    Dim swNewPart As SldWorks.PartDoc
+    Dim swNewModel As SldWorks.ModelDoc2
+    Dim sNewModelName As String
+    Dim vBodyArr As Variant
+    Dim vBody As Variant
+    Dim swBody As SldWorks.Body2
+    Dim swCopyBody As SldWorks.Body2
+    Dim swFeat As SldWorks.Feature
+    Dim sPathName As String
+    Dim nOldVal As Long
+    Dim nErrors As Long
+    Dim nWarnings As Long
+    Dim nRetval As Long
+    Dim i As Long
+    Dim bRet As Boolean</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swPart = swModel
+    Set swNewPart = swApp.<b>NewPart</b>
+    Set swNewModel = swNewPart</pre>
+<pre>    sNewModelName = swNewModel.<b>GetTitle</b>
+    </pre>
+<pre>    Debug.Print &quot;Parasolid settings:&quot;</pre>
+<pre>    ' Current Parasolid settings
+    Debug.Print &quot;  Current:&quot;
+    Debug.Print &quot;    swUserPreferenceIntegerValue_e.ParasolidOutputVersion (0 = swParasolidOutputVersion_e.swParasolidOutputVersion_latest) = &quot; + Str(swApp.<b>GetUserPreferenceIntegerValue</b>(swParasolidOutputVersion))
+    Debug.Print &quot;    swUserPreferenceStringValue_e.SaveAsCoordinateSystem (empty string signifies that the default coordinate system that does not require a transform) = &quot; + swModel.<b>GetUserPreferenceStringValue</b>(swFileSaveAsCoordinateSystem)</pre>
+<pre>    ' Strip off SOLIDWORKS file extension (sldxxx)
+    ' and add Parasolid extension (x_b)
+    sPathName = swModel.<b>GetPathName</b>
+    sPathName = Left(sPathName, Len(sPathName) - 6)
+    sPathName = sPathName + &quot;x_t&quot;
+        </pre>
+<pre>    ' Store existing Parasolid export version and change to v10.0
+    nOldVal = swApp.<b>GetUserPreferenceIntegerValue</b>(swParasolidOutputVersion)
+    bRet = swApp.<b>SetUserPreferenceIntegerValue</b>(swParasolidOutputVersion, swParasolidOutputVersion_100)
+    Debug.Print &quot;  Modified: &quot;
+    Debug.Print &quot;    swUserPreferenceIntegerValue_e.ParasolidOutputVersion (4 = swParasolidOutputVersion_e.swParasolidOutputVersion_100) = &quot; + Str(swApp.<b>GetUserPreferenceIntegerValue</b>(swParasolidOutputVersion))
+</pre>
+<pre>    ' Create temporary part with bodies from existing part
+    For i = 0 To 5
+        vBodyArr = swPart.<b>GetBodies2</b>(i, False)
+        If Not IsEmpty(vBodyArr) Then
+            For Each vBody In vBodyArr
+                Set swBody = vBody
+                Set swCopyBody = swBody.<b>Copy</b>
+                Set swFeat = swNewPart.<b>CreateFeatureFromBody3</b>(swCopyBody, False, swCreateFeatureBodyCheck + swCreateFeatureBodySimplify)
+            Next vBody
+        End If
+    Next i</pre>
+<pre>    ' Export temporary part to Parasolid
+    bRet = swNewModel.<b>SaveAs4</b>(sPathName, swSaveAsCurrentVersion, swSaveAsOptions_Silent, nErrors, nWarnings)</pre>
+<pre>    If bRet = False Then
+        nRetval = swApp.<b>SendMsgToUser2</b>(&quot;Problems saving file.&quot;, swMbWarning, swMbOk)
+    End If</pre>
+<pre>    ' Get rid of temporary file
+    swApp.<b>QuitDoc</b> sNewModelName</pre>
+<pre>    ' Restore old Parasolid export version
+    bRet = swApp.<b>SetUserPreferenceIntegerValue</b>(swParasolidOutputVersion, nOldVal)
+    Debug.Print &quot;  Restored:&quot;
+    Debug.Print &quot;    swUserPreferenceIntegerValue_e.ParasolidOutputVersion (0 = swParasolidOutputVersion_e.swParasolidOutputVersion_latest) = &quot; + Str(swApp.<b>GetUserPreferenceIntegerValue</b>(swParasolidOutputVersion))
+</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

@@ -1,0 +1,195 @@
+<html>
+
+<head>
+<title>Add and Delete Appearances from Specific Display States Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,display states">
+<meta name=MS-HKWD content="VBA examples,appearances">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add and Delete Appearances from Specific Display States Example (VBA)</h1>
+<p>This example shows how to add an appearance to and delete an appearance from specific 
+display states.</p>
+
+<p class="APICODE">
+'---------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Specified model exists.<br>
+' 2. Specified appearance exists.<br>
+' 3. Open an Immediate window.<br>
+'<br>
+' Postconditions:<br>
+' 1. Creates Display State 2 and Display State 3 for the active<br>
+'&nbsp;&nbsp;&nbsp; configuration.<br>
+' 2. Applies specified appearance to all display states of the active<br>
+'&nbsp;&nbsp;&nbsp; configuration.<br>
+' 3. Press F5.<br>
+' 4. Deletes specified appearance from all display states of the active<br>
+'&nbsp;&nbsp;&nbsp; configuration.<br>
+' 5. Press F5.<br>
+' 6. Closes document.<br>
+'---------------------------------------------------------------------------<br>
+Option Explicit<br>
+Dim swApp As SldWorks.SldWorks<br>
+Dim swModel As SldWorks.ModelDoc2<br>
+Dim swConfig As SldWorks.Configuration<br>
+Dim swModelDocExt As SldWorks.ModelDocExtension<br>
+Dim swEntity As SldWorks.Entity<br>
+Dim swSelMgr As SldWorks.SelectionMgr<br>
+Dim swRenderMaterial As SldWorks.RenderMaterial<br>
+Dim displayStateNames As Variant<br>
+Dim status As Boolean<br>
+Dim modelName As String<br>
+Dim materialName As String<br>
+Dim errors As Long<br>
+Dim warnings As Long<br>
+Dim nbrDisplayStates As Long<br>
+Dim i As Long<br>
+Dim k As Long<br>
+Dim nbrMaterials As Long<br>
+Dim materialID1 As Long<br>
+Dim materialID2 As Long<br>
+Dim materialID1_ToDelete(0) As Long<br>
+Dim materialID2_ToDelete(0) As Long</p>
+<p class="APICODE">Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; modelName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\dimxpert\bracket_auto_manual.sldprt&quot;<br>
+&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>OpenDoc6</b>(modelName, swDocPART, 
+swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)<br>
+&nbsp;&nbsp;&nbsp; Set swModelDocExt = swModel.<b>Extension</b></p>
+<p class="APICODE"><br>
+&nbsp;&nbsp;&nbsp; ' Get active configuration and create a new display<br>
+&nbsp;&nbsp;&nbsp; ' state for this configuration<br>
+&nbsp;&nbsp;&nbsp; Set swConfig = swModel.<b>GetActiveConfiguration</b><br>
+&nbsp;&nbsp;&nbsp; status = swConfig.<b>CreateDisplayState</b>(&quot;Display State 2&quot;)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swModel.<b>ForceRebuild3</b> True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get active configuration and create 
+another new<br>
+&nbsp;&nbsp;&nbsp; ' display state for this configuration<br>
+&nbsp;&nbsp;&nbsp; Set swConfig = swModel.<b>GetActiveConfiguration</b><br>
+&nbsp;&nbsp;&nbsp; status = swConfig.<b>CreateDisplayState</b>(&quot;Display State 3&quot;)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swModel.<b>ForceRebuild3</b> True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Create appearance<br>
+&nbsp;&nbsp;&nbsp; materialName = &quot;C:\Program Files\SolidWorks Corp\SolidWorks\data\graphics\materials\metal\steel\stainless steel 
+treadplate.p2m&quot;<br>
+&nbsp;&nbsp;&nbsp; Set swRenderMaterial = 
+swModelDocExt.<b>CreateRenderMaterial</b>(materialName)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Select a face and add the appearance to 
+that face<br>
+&nbsp;&nbsp;&nbsp; status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 
+0.07151920610502, 0.0952597996959, 0.009524999999996, False, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; Set swSelMgr = swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp; Set swEntity = swSelMgr.<b>GetSelectedObject6</b>(1, -1)<br>
+&nbsp;&nbsp;&nbsp; status = swRenderMaterial.<b>AddEntity</b>(swEntity)<br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get the names of display states<br>
+&nbsp;&nbsp;&nbsp; displayStateNames = swConfig.<b>GetDisplayStates</b><br>
+&nbsp;&nbsp;&nbsp; nbrDisplayStates = swConfig.<b>GetDisplayStatesCount</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;This configuration's display states =&quot;<br>
+&nbsp;&nbsp;&nbsp; For i = 0 To (nbrDisplayStates - 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp; Display state 
+name = &quot; &amp; displayStateNames(i)<br>
+&nbsp;&nbsp;&nbsp; Next i<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Add appearance to all of the display 
+states<br>
+&nbsp;&nbsp;&nbsp; status = 
+swModelDocExt.<b>AddDisplayStateSpecificRenderMaterial</b>(swRenderMaterial, 
+swAllDisplayState, displayStateNames, materialID1, materialID2)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get the appearance IDs and names<br>
+&nbsp;&nbsp;&nbsp; swRenderMaterial.<b>GetMaterialIds</b> materialID1, materialID2<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp; Appearance IDs:&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ID1 = &quot; &amp; 
+materialID1<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ID2 = &quot; &amp; 
+materialID2<br>
+&nbsp;&nbsp;&nbsp; nbrMaterials = 
+swModelDocExt.<b>GetRenderMaterialsCount2</b>(swAllDisplayState, Nothing)<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp; Number of appearances: &quot; &amp; nbrMaterials<br>
+&nbsp;&nbsp;&nbsp; For k = 0 To (nbrMaterials - 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Name of appearance &quot; &amp; (k + 1) &amp; &quot;: &quot; &amp; swModel.<b>MaterialIdName</b><br>
+&nbsp;&nbsp;&nbsp; Next k<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim xcoord As Double<br>
+&nbsp;&nbsp;&nbsp; Dim ycoord As Double<br>
+&nbsp;&nbsp;&nbsp; Dim zcoord As Double<br>
+&nbsp;&nbsp;&nbsp; swRenderMaterial.<b>GetCenterPoint2</b> xcoord, ycoord, zcoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Texture-based appearance data:&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;X coordinate of center point: &quot; &amp; xcoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Y coordinate of center point: &quot; &amp; ycoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Z coordinate of center point: &quot; &amp; zcoord<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swRenderMaterial.<b>GetUDirection2</b> xcoord, 
+ycoord, zcoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;X coordinate of U direction: &quot; &amp; xcoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Y coordinate of U direction: &quot; &amp; ycoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Z coordinate of U direction: &quot; &amp; zcoord<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swRenderMaterial.<b>GetVDirection2</b> xcoord, 
+ycoord, zcoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;X coordinate of V direction: &quot; &amp; xcoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Y coordinate of V direction: &quot; &amp; ycoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Z coordinate of V direction: &quot; &amp; zcoord<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&quot;<br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swModel.<b>ClearSelection2</b> True<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>ForceRebuild3</b> True<br>
+&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Model has an appearance: &quot; &amp; 
+swModelDocExt.<b>HasMaterialPropertyValues</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim dispStates As Variant<br>
+&nbsp;&nbsp;&nbsp; status = 
+swRenderMaterial.<b>SetLinkedDisplayStates</b>(swAllDisplayState, displayStateNames)<br>
+&nbsp;&nbsp;&nbsp; dispStates = swRenderMaterial.<b>GetLinkedDisplayStates</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim renderMaterials As Variant<br>
+&nbsp;&nbsp;&nbsp; renderMaterials = 
+swModelDocExt.<b>GetRenderMaterials2</b>(swAllDisplayState, Nothing)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Examine the display states of the active 
+configuration<br>
+&nbsp;&nbsp;&nbsp; ' to ensure that the specified appearance was applied to all<br>
+&nbsp;&nbsp;&nbsp; ' display states (click the ConfigurationManager tab and 
+switch<br>
+&nbsp;&nbsp;&nbsp; ' display states at bottom of the Configuration pane)<br>
+&nbsp;&nbsp;&nbsp; ' Continue running the macro after your examination<br>
+&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Delete the appearance from the part<br>
+&nbsp;&nbsp;&nbsp; materialID1_ToDelete(0) = materialID1<br>
+&nbsp;&nbsp;&nbsp; materialID2_ToDelete(0) = materialID2<br>
+&nbsp;&nbsp;&nbsp; swModelDocExt.<b>DeleteDisplayStateSpecificRenderMaterial</b> 
+(materialID1_ToDelete), (materialID2_ToDelete)<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>ForceRebuild3</b> True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Examine the display states of the active 
+configuration<br>
+&nbsp;&nbsp;&nbsp; ' to ensure that the specified appearance was deleted from all<br>
+&nbsp;&nbsp;&nbsp; ' display states (click the ConfigurationManager tab and 
+switch<br>
+&nbsp;&nbsp;&nbsp; ' display states at bottom of the Configuration pane)<br>
+&nbsp;&nbsp;&nbsp; ' Continue running the macro after your examination<br>
+&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Close the part without saving changes<br>
+&nbsp;&nbsp;&nbsp; modelName = swModel.<b>GetTitle</b><br>
+&nbsp;&nbsp;&nbsp; swApp.<b>QuitDoc</b> modelName<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">End Sub</p>
+
+</body>
+
+</html>

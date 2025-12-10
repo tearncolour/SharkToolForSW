@@ -1,0 +1,171 @@
+<html>
+
+<head>
+<title>Save Solid Body to File Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,save to file">
+<meta name=MS-HKWD content="VBA examples,weldments">
+<meta name=MS-HKWD content="VBA examples,files">
+<meta name=MS-HKWD content="VBA examples,cut lists">
+<meta name=MS-HKWD content="VBA examples,weldment cut lists">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Save Solid Body to File Example (VBA)</h1>
+<p>This example shows how to save a weldment member to another 
+part document.</p>
+
+<pre>'----------------------------------------------------------------------------
+' Preconditions: Open <i>public_documents</i><b>\samples\tutorial\api\weldment_box3.sldprt</b>.
+'
+' Postconditions:
+' 1. Updates the cut list in the weldment part.
+' 2. Saves the first weldment member in the FeatureManager design tree to
+'    <b>RefWeldment1.sldprt</b>, and saves the cut list properties in the parent part
+'    to the cut list of the new part.
+' 3. Opens <b>RefWeldment1.sldprt</b> and updates its cut list. (This step could
+'    take a few minutes to complete.)
+' 4. At Stop, press F5.
+' 5. Closes <b>RefWeldment1.sldprt</b>.
+' 6. To verify steps 2 and 3, open and inspect <b>RefWeldment1.sldprt</b>, which resides in
+'    the same folder as this macro.
+'
+' NOTE: Because <b>weldment_box3.sldprt</b> is used elsewhere, do not save changes.
+'---------------------------------------------------------------------------
+Dim Swapp As SldWorks.SldWorks<br>
+Dim swFeat As SldWorks.Feature<br>
+Dim swBodyFolder As SldWorks.BodyFolder<br>
+Dim updateBoolstatus As Boolean<br>
+Dim boolstatus As Boolean<br>
+Dim longstatus As Long<br>
+Dim longWarnings As Long<br>
+Dim currentModel As SldWorks.ModelDoc2<br>
+Dim swModel As SldWorks.ModelDoc2<br>
+Dim modelType As Long<br>
+Dim modelTitle As String</pre>
+<p class="APICODE">Option Explicit<br>
+Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set Swapp = Application.<b>SldWorks</b><br>
+&nbsp;&nbsp;&nbsp; Set currentModel = Swapp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; modelTitle = currentModel.<b>GetTitle</b><br>
+&nbsp;&nbsp;&nbsp; modelType = currentModel.<b>GetType</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swFeat = currentModel.<b>FirstFeature</b><br>
+&nbsp;&nbsp;&nbsp; If swFeat Is Nothing Then ErrorMsg Swapp, &quot;Failed to get 
+first feature&quot;<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Do While Not swFeat Is Nothing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If swFeat.<b>GetTypeName2</b> = &quot;SolidBodyFolder&quot; 
+Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set 
+swBodyFolder = swFeat.<b>GetSpecificFeature2</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If 
+swBodyFolder Is Nothing Then ErrorMsg Swapp, &quot;Failed to get body folder&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+boolstatus = swBodyFolder.<b>SetAutomaticCutList</b>(True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+boolstatus = swBodyFolder.<b>UpdateCutList</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Exit Do<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swFeat = swFeat.<b>GetNextFeature</b><br>
+&nbsp;&nbsp;&nbsp; Loop<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; updateBoolstatus = False<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swFeat = currentModel.<b>FirstFeature</b><br>
+&nbsp;&nbsp;&nbsp; If swFeat Is Nothing Then ErrorMsg Swapp, &quot;Failed to get 
+first feature&quot;<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Do While Not swFeat Is Nothing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If swFeat.<b>GetTypeName2</b> = &quot;WeldMemberFeat&quot; 
+Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; boolstatus = 
+swFeat.<b>Select2</b>(False, 0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If boolstatus 
+= False Then ErrorMsg Swapp, &quot;Failed to select feature&quot;<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' Save the selected solid body weldment member to another part,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' 
+transferring the solid body's cut list properties to the new part's cut list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' 
+automatically creates a weldment and cut list folder<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; boolstatus = 
+currentModel.<b>SaveToFile3</b>(Swapp.<b>GetCurrentMacroPathFolder</b> + 
+&quot;\RefWeldment1&quot; + &quot;.sldprt&quot;, 1, <span style="color:Black">
+swCutListTransferOptions_CutListProperties</span>, False, &quot;&quot;, longstatus, longWarnings)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If boolstatus 
+= False Then ErrorMsg Swapp, &quot;Failed to insert weldment member into new part&quot;<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swModel = Swapp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If swModel Is 
+Nothing Then ErrorMsg Swapp, &quot;Failed to set open model as active document&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+updateBoolstatus = True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Exit Do<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swFeat = swFeat.<b>GetNextFeature</b><br>
+&nbsp;&nbsp;&nbsp; Loop<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If updateBoolstatus = True Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swFeat = currentModel.<b>FirstFeature</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If swFeat Is Nothing Then ErrorMsg 
+Swapp, &quot;Failed to get first feature&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Do While Not 
+swFeat Is Nothing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If swFeat.<b>GetTypeName2</b> 
+= &quot;SolidBodyFolder&quot; Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swBodyFolder = swFeat.<b>GetSpecificFeature2</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If swBodyFolder Is Nothing Then ErrorMsg Swapp, &quot;Failed to get body folder&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+boolstatus = swBodyFolder.<b>SetAutomaticCutList</b>(True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If boolstatus = False Then ErrorMsg Swapp, &quot;Failed to set cut list to automatic&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+boolstatus = swBodyFolder.<b>UpdateCutList</b>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If boolstatus = False Then ErrorMsg Swapp, &quot;Failed to update cut list&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Swapp.CloseDoc swModel.<b>GetTitle</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Exit Do<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swFeat = 
+swFeat.<b>GetNextFeature</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Loop<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">End Sub</p>
+<p class="APICODE">Function ErrorMsg(Swapp As Object, Message As String)<br>
+&nbsp;&nbsp;&nbsp; Swapp.<b>SendMsgToUser2</b> Message, 0, 0<br>
+&nbsp;&nbsp;&nbsp; Swapp.<b>RecordLine</b> &quot;'*** WARNING - General&quot;<br>
+&nbsp;&nbsp;&nbsp; Swapp.<b>RecordLine</b> &quot;'*** &quot; &amp; Message<br>
+&nbsp;&nbsp;&nbsp; Swapp.<b>RecordLine</b> &quot;&quot;<br>
+End Function</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

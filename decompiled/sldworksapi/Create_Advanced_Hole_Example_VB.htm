@@ -1,0 +1,291 @@
+<html>
+
+<head>
+<title>Create Advanced Hole Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples, Advanced Holes">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Advanced Hole Feature Example (VBA)</h1>
+<p>This example shows how to create an Advanced Hole feature.</p>
+
+<p><font face="Courier New" size="2">
+'----------------------------------------------------------------------------
+<br>
+' Preconditions: <br>
+' 1. Verify that the specified part document exists.<br>
+' 2. Open the Immediate window.<br>
+' <br>
+' Postconditions:<br>
+' 1. Selects near and far side faces of the Advanced Hole. <br>
+' 2. Defines an Advanced Hole at a sketch point on the edge of the block <br>
+'&nbsp;&nbsp;&nbsp; with the following:<br>
+'&nbsp;&nbsp;&nbsp; * Countersink near side element<br>
+'&nbsp;&nbsp;&nbsp; * Straight tap near side element<br>
+'&nbsp;&nbsp;&nbsp; * Counterbore far side element<br>
+'&nbsp;&nbsp;&nbsp; * Straight hole far side element<br>
+' 3. Gets some near and far side element data for the Advanced Hole.<br>
+' 4. Modifies the near side element array to contain a tapered tap element.<br>
+' 5. Deletes the Advanced Hole's defining sketch point on the edge of the block.<br>
+' 6. Adds two sketch points and creates two Advanced Holes at those locations<br>
+'&nbsp;&nbsp;&nbsp; using the previously defined Advanced Hole.<br>
+' 7. Inspect the Immediate window and graphics area.<br>
+'<br>
+' NOTE: Because the model is used elsewhere, do not save changes.<br>
+'----------------------------------------------------------------------------&nbsp;
+</font></p>
+
+<p class="APICODE">Option Explicit</p>
+<p class="APICODE"><br>
+Dim swApp As SldWorks.SldWorks<br>
+Dim swModel As SldWorks.ModelDoc2<br>
+Dim feat As Feature<br>
+Dim boolstatus As Boolean<br>
+Dim swAdvHole_Near_1 As AdvancedHoleElementData<br>
+Dim swAdvHole_Near_2 As AdvancedHoleElementData<br>
+Dim swAdvHole_Near_3 As AdvancedHoleElementData<br>
+Dim swAdvHole_Far_1 As AdvancedHoleElementData<br>
+Dim swAdvHole_Far_2 As AdvancedHoleElementData<br>
+Dim swCounterSinkNear As CountersinkElementData<br>
+Dim swCounterBoreFar As CounterboreElementData<br>
+Dim swStraightHoleFar As StraightElementData<br>
+Dim swStraightTapNear As StraightTapElementData<br>
+Dim swTaperedTapNear As TaperedTapElementData<br>
+Dim swFeatureMgr As FeatureManager<br>
+Dim ConvFactorAngle, ConvFactorLength As Double<br>
+Dim advHoleNearArr(1) As AdvancedHoleElementData<br>
+Dim advHoleFarArr(1) As AdvancedHoleElementData<br>
+Dim featdata As AdvancedHoleFeatureData<br>
+Dim newNearArr(1) As AdvancedHoleElementData<br>
+Dim newFarArr(1) As AdvancedHoleElementData<br>
+Dim swSketchFeature As Feature<br>
+Dim swSelectionManager As SelectionMgr<br>
+Dim swSketch As Sketch<br>
+Dim swSketchPointArray As Variant<br>
+Dim swMaxPointNumber As Long<br>
+Dim skPoint As Object<br>
+Dim swSketchPoint As Object<br>
+Dim swCurrentPointNumber As Long<br>
+Dim errors As Long, warnings As Long<br>
+Dim jtr As Long<br>
+Dim ResultArray As Variant<br>
+Dim CalloutString As String<br>
+Dim StrDiam As String<br>
+Dim strDepth As String<br>
+Dim retVal as Boolean<br>
+&nbsp;</p>
+<p class="APICODE">Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>OpenDoc6</b>(&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 
+2018\samples\tutorial\api\block20.sldprt&quot;, swDocPART, swOpenDocOptions_Silent, &quot;&quot;, 
+errors, warnings)<br>
+&nbsp;&nbsp;&nbsp; Set swFeatureMgr = swModel.<b>FeatureManager<br>
+</b><br>
+&nbsp;&nbsp;&nbsp; ConvFactorLength = 25.4 / 1000 'inches to meters<br>
+&nbsp;&nbsp;&nbsp; ConvFactorAngle = (22 / 7) / 180 'degrees to radians<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Select the near and far side faces<br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModel.<b>Extension</b>.<b>SelectByRay</b>(-5.89202612791269E-02, 
+2.60626824463657E-02, 5.60000000000969E-02, -0.400036026779312, 
+-0.515038074910024, -0.758094294050284, 7.22831189342222E-04, 2, False, 256, 0) 
+'Near side<br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModel.<b>Extension</b>.<b>SelectByRay</b>(-1.10716643645077E-02, 
+2.11784489308116E-02, -6.39370439421896E-02, 0.18261953966356, 
+-0.612697461661826, 0.76892907618728, 9.36301020408163E-04, 2, False, 512, 0) 
+'Far side<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Define near and far side hole elements<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Near side countersink<br>
+&nbsp;&nbsp;&nbsp; Set swAdvHole_Near_1 = 
+swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(swAdvWzdGeneralHoleTypes_e.swAdvWzdCounterSink)<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_1.<b>Orientation</b> = swHoleElementOrientation_e.swHoleElementOrientation_Nearside<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_1.<b>Size</b> = &quot;#4&quot;<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_1.<b>Standard</b> = swWzdHoleStandards_e.swStandardAnsiInch<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_1.<b>FastenerType</b> = 
+swWzdHoleStandardFastenerTypes_e.swStandardAnsiInchFlatHead100<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_1.<b>Diameter</b> = ConvFactorLength * 0.225<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_1.<b>BlindDepth</b> = 0.02055794 * ConvFactorLength<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_1.<b>EndCondition</b> = swEndConditions_e.swEndCondBlind<br>
+&nbsp;&nbsp;&nbsp; Set swCounterSinkNear = swAdvHole_Near_1<br>
+&nbsp;&nbsp;&nbsp; swCounterSinkNear.<b>EndConditionOverride</b> = True<br>
+&nbsp;&nbsp;&nbsp; swCounterSinkNear.<b>AngleOverride</b> = False<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Near side straight tap<br>
+&nbsp;&nbsp;&nbsp; Set swAdvHole_Near_2 = 
+swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(swAdvWzdGeneralHoleTypes_e.swAdvWzdStraightTap)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swAdvHole_Near_2.<b>Orientation</b> = 
+swHoleElementOrientation_e.swHoleElementOrientation_Nearside<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_2.<b>Size</b> = &quot;#4-40&quot;<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_2.<b>Standard</b> = swWzdHoleStandards_e.swStandardAnsiInch<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_2.<b>FastenerType</b> = swWzdHoleStandardFastenerTypes_e.swStandardAnsiInchBottomingTappedHole<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_2.<b>Diameter</b> = ConvFactorLength * 0.089<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_2.<b>EndCondition</b> = swEndConditions_e.swEndCondUpToNext<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_2.<b>DiameterOverride</b> = True<br>
+&nbsp;&nbsp;&nbsp; Set swStraightTapNear = swAdvHole_Near_2<br>
+&nbsp;&nbsp;&nbsp; swStraightTapNear.<b>CustomSizing</b> = 
+swStraightTapHoleCustomSizing_e.swStraightTapHoleCustomSizing_TapDrillDiameter<br>
+&nbsp;&nbsp;&nbsp; swStraightTapNear.<b>ThreadClass</b> = 
+swStraightTapHoleThreadClass_e.swStraightTapHoleThreadClass_1B<br>
+&nbsp;&nbsp;&nbsp; swStraightTapNear.<b>ThreadClassOverride</b> = True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Near side tapered tap<br>
+&nbsp;&nbsp;&nbsp; Set swAdvHole_Near_3 = 
+swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(swAdvWzdGeneralHoleTypes_e.swAdvWzdTaperTap)<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_3.<b>Orientation</b> = swHoleElementOrientation_e.swHoleElementOrientation_Nearside<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_3.<b>Size</b> = &quot;1/16&quot;<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_3.<b>Standard</b> = swWzdHoleStandards_e.swStandardAnsiInch<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_3.<b>FastenerType</b> = swWzdHoleStandardFastenerTypes_e.swStandardAnsiInchTaperedPipeTap<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_3.<b>Diameter</b> = ConvFactorLength * 0.266<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_2.<b>BlindDepth</b> = 0.205 * ConvFactorLength<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_3.<b>EndCondition</b> = swEndConditions_e.swEndCondBlind<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Near_3.<b>DiameterOverride</b> = True<br>
+&nbsp;&nbsp;&nbsp; Set swTaperedTapNear = swAdvHole_Near_3<br>
+&nbsp;&nbsp;&nbsp; swTaperedTapNear.<b>CustomSizing</b> = 
+swTaperedTapCustomSizing_e.swTaperedTapCustomSizing_MinorDiameterwithCosmeticThread<br>
+&nbsp;&nbsp;&nbsp; swTaperedTapNear.<b>ThreadClass</b> = 
+swTaperedTapThreadClass_e.swTaperedTapThreadClass_1<br>
+&nbsp;&nbsp;&nbsp; swTaperedTapNear.<b>ThreadClassOverride</b> = True<br>
+&nbsp;&nbsp;&nbsp; swTaperedTapNear.<b>EndConditionOverride</b> = True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Far side counterbore<br>
+&nbsp;&nbsp;&nbsp; Set swAdvHole_Far_1 = 
+swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(swAdvWzdGeneralHoleTypes_e.swAdvWzdCounterBore)<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_1.<b>Orientation</b> = swHoleElementOrientation_e.swHoleElementOrientation_Farside<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_1.<b>Size</b> = &quot;#8&quot;<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_1.<b>Standard</b> = swWzdHoleStandards_e.swStandardAnsiInch<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_1.<b>FastenerType</b> = swWzdHoleStandardFastenerTypes_e.swStandardAnsiInchBinding<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_1.<b>Diameter</b> = ConvFactorLength * 0.375<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_1.<b>BlindDepth</b> = 0.105 * ConvFactorLength<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_1.<b>EndCondition</b> = swEndConditions_e.swEndCondBlind<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_1.<b>DiameterOverride</b> = True<br>
+&nbsp;&nbsp;&nbsp; Set swCounterBoreFar = swAdvHole_Far_1<br>
+&nbsp;&nbsp;&nbsp; swCounterBoreFar.<b>EndConditionOverride</b> = True<br>
+&nbsp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Far side straight hole<br>
+&nbsp;&nbsp;&nbsp; Set swAdvHole_Far_2 = 
+swModel.<b>Extension</b>.<b>CreateAdvancedHoleElementData</b>(swAdvWzdGeneralHoleTypes_e.swAdvWzdStraight)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>Orientation</b> = 
+swHoleElementOrientation_e.swHoleElementOrientation_Farside<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>Size</b> = &quot;1/16&quot;<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>Standard</b> = swWzdHoleStandards_e.swStandardAnsiInch<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>FastenerType</b> = swWzdHoleStandardFastenerTypes_e.swStandardAnsiInchAllDrillSizes<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>Diameter</b> = ConvFactorLength * 0.0625<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>BlindDepth</b> = 0.2711 * ConvFactorLength<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>EndCondition</b> = swEndConditions_e.swEndCondBlind<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>DiameterOverride</b> = True<br>
+&nbsp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Customize the hole callout for this 
+straight element<br>
+&nbsp;&nbsp;&nbsp; StrDiam = swModel.<b>Extension</b>.<b>GetCalloutVariableString</b>(swCalloutVariable_AH_Straight_Diameter)<br>
+&nbsp;&nbsp;&nbsp; strDepth = swModel.<b>Extension</b>.<b>GetCalloutVariableString</b>(swCalloutVariable_AH_Straight_Depth)<br>
+&nbsp;&nbsp;&nbsp; CalloutString = &quot;&lt;MOD-DIAM&gt; &quot; &amp; StrDiam &amp; &quot; &quot; &amp; &quot;&lt;HOLE-DEPTH&gt; 
+&quot; &amp; strDepth<br>
+&nbsp;&nbsp;&nbsp; swAdvHole_Far_2.<b>CalloutString</b> = CalloutString<br>
+&nbsp;&nbsp;&nbsp; Set swStraightHoleFar = swAdvHole_Far_2<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Set the near and far side arrays; stack 
+ordering is from the near and far side faces<br>
+&nbsp;&nbsp;&nbsp; Set advHoleNearArr(0) = swCounterSinkNear<br>
+&nbsp;&nbsp;&nbsp; Set advHoleNearArr(1) = swStraightTapNear<br>
+&nbsp;&nbsp;&nbsp; Set advHoleFarArr(0) = swCounterBoreFar<br>
+&nbsp;&nbsp;&nbsp; Set advHoleFarArr(1) = swStraightHoleFar<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set feat = 
+swFeatureMgr.<b>AdvancedHole2</b>((advHoleNearArr), (advHoleFarArr), False, True, 
+False, ResultArray)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Get the near and far side element data<br>
+&nbsp;&nbsp;&nbsp; Set featdata = feat.<b>GetDefinition</b><br>
+&nbsp;&nbsp;&nbsp; featdata.<b>AccessSelections</b> swModel, Nothing<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Number of near side hole elements: &quot; &amp; 
+featdata.<b>NearSideElementsCount</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Number of far side hole elements: &quot; &amp; 
+featdata.<b>FarSideElementsCount</b><br>
+&nbsp;&nbsp;&nbsp; Set swCounterSinkNear = featdata.<b>GetNearSideElements</b>(0)<br>
+&nbsp;&nbsp;&nbsp; Set swCounterBoreFar = featdata.<b>GetFarSideElements</b>(0)<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;Near side countersink:&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Hole element type as defined in 
+swAdvWzdGeneralHoleTypes_e: &quot; &amp; swCounterSinkNear.<b>ElementType</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Size as defined on the Advanced 
+Hole PropertyManager page: &quot; &amp; swCounterSinkNear.<b>Size</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Standard as defined in 
+swWzdHoleStandards_e: &quot; &amp; swCounterSinkNear.<b>Standard</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Fastener type as defined in 
+swWzdHoleStandardFastenerTypes_e: &quot; &amp; swCounterSinkNear.<b>FastenerType</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Diameter in m: &quot; &amp; 
+swCounterSinkNear.<b>Diameter</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Blind depth in m: &quot; &amp; 
+swCounterSinkNear.<b>BlindDepth</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Orientation as defined in 
+swHoleElementOrientation_e: &quot; &amp; swCounterSinkNear.<b>Orientation</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; End condition as defined in 
+swEndConditions_e: &quot; &amp; swCounterSinkNear.<b>EndCondition<br>
+&nbsp;</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Print &quot;Far side straight:&quot;<br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Hole element type as defined in 
+swAdvWzdGeneralHoleTypes_e: &quot; &amp; swStraightHoleFar.<b>ElementType</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Size as defined on the Advanced 
+Hole PropertyManager page: &quot; &amp; swStraightHoleFar.<b>Size</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Standard as defined in 
+swWzdHoleStandards_e: &quot; &amp; swStraightHoleFar.<b>Standard</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Fastener type as defined in 
+swWzdHoleStandardFastenerTypes_e: &quot; &amp; swStraightHoleFar.<b>FastenerType</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Diameter in m: &quot; &amp; 
+swStraightHoleFar.<b>Diameter<br>
+</b>&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Diameter override? &quot; &amp; 
+swStraightHoleFar.<b>DiameterOverride</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Blind depth in m: &quot; &amp; 
+swStraightHoleFar.<b>BlindDepth<br>
+</b>&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Orientation as defined in 
+swHoleElementOrientation_e: &quot; &amp; swStraightHoleFar.<b>Orientation</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; End condition as defined in 
+swEndConditions_e: &quot; &amp; swStraightHoleFar.<b>EndCondition</b><br>
+&nbsp;&nbsp;&nbsp; Debug.Print &quot;&nbsp;&nbsp; Customized hole callout: &quot; &amp; 
+swStraightHoleFar.<b>CalloutString</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; 'Modify the near and far side element 
+arrays<br>
+&nbsp;&nbsp;&nbsp; Set newNearArr(0) = swTaperedTapNear<br>
+&nbsp;&nbsp;&nbsp; Set newNearArr(1) = swStraightTapNear<br>
+&nbsp;&nbsp;&nbsp; 'Set newFarArr(0) = swCounterBoreFar<br>
+&nbsp;&nbsp;&nbsp; 'Set newFarArr(1) = swStraightHoleFar<br>
+&nbsp;&nbsp;&nbsp; featdata.<b>SetNearSideElements</b> newNearArr<br>
+&nbsp;&nbsp;&nbsp; 'featdata.<b>SetFarSideElements</b> newFarArr<br>
+&nbsp;&nbsp;&nbsp; feat.<b>ModifyDefinition</b> featdata, swModel, Nothing<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Delete the first point used to define the 
+Advanced Hole<br>
+&nbsp;&nbsp;&nbsp; Set swSketchFeature = feat.<b>GetFirstSubFeature</b><br>
+&nbsp;&nbsp;&nbsp; swSketchFeature.<b>Select2</b> False, 0<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>EditSketch</b><br>
+&nbsp;&nbsp;&nbsp; Set swSelectionManager = swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp; Set swSketch = swSketchFeature.<b>GetSpecificFeature2</b>()<br>
+&nbsp;&nbsp;&nbsp; swSketchPointArray = swSketch.<b>GetSketchPoints2</b>()<br>
+&nbsp;&nbsp;&nbsp; swMaxPointNumber = UBound(swSketchPointArray)<br>
+&nbsp;&nbsp;&nbsp; For swCurrentPointNumber = 0 To swMaxPointNumber Step 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swSketchPoint = 
+swSketchPointArray(swCurrentPointNumber)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; retval = 
+swSelectionManager.<b>AddSelectionListObject</b>(swSketchPoint, Nothing)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>EditDelete</b><br>
+&nbsp;&nbsp;&nbsp; Next swCurrentPointNumber<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Create points for multiple Advanced Hole 
+locations<br>
+&nbsp;&nbsp;&nbsp; Set skPoint = swModel.<b>SketchManager</b>.<b>CreatePoint</b>(-3.19158789518497E-02, 
+3.44489966898323E-02, 0.05600000000004)<br>
+&nbsp;&nbsp;&nbsp; Set skPoint = swModel.<b>SketchManager</b>.<b>CreatePoint</b>(-4.94104502066557E-02, 
+8.0156770060853E-03, 5.60000000000969E-02)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swModel.<b>SketchManager</b>.<b>InsertSketch</b> True</p>
+<p class="APICODE">End Sub</p>
+
+</body>
+
+</html>

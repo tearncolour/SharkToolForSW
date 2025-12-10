@@ -1,0 +1,91 @@
+<html>
+
+<head>
+<title>Get Data for Surface-flatten Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,surface-flatten features">
+<meta name=MS-HKWD content="VBA examples,features">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Data for Surface-flatten Feature Example (VBA)</h1>
+<p>This example shows how to insert a surface-flatten feature and get its data.</p>
+
+<pre>'-------------------------------------------------------
+' Preconditions:
+' 1. Verify that the part to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the part.
+' 2. Inserts a surface-flatten feature.
+' 3. Gets surface-flatten feature data.
+' 4. Examine the graphics area and FeatureManager design
+'    tree.
+'
+' NOTE: Because this part is used elsewhere, do not save
+' changes.
+'--------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFeatureManager As SldWorks.FeatureManager
+Dim swFeature As SldWorks.Feature
+Dim swSurfaceFlattenFeatureData As SldWorks.SurfaceFlattenFeatureData
+Dim swEdge As SldWorks.Edge
+Dim status As Boolean
+Dim warnings As Long
+Dim errors As Long
+Dim fileName As String
+Dim edges As Variant
+Dim nbrTearEdges As Long
+Dim i As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\Hemisphere.SLDPRT&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModelDocExt = swModel.<b>Extension</b></pre>
+<pre>    ' Select face, point, and curves for surface-flatten feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 5.46207138008786E-03, -3.73996629648742E-02, 1.30049636270216E-02, False, 1, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;VERTEX&quot;, 0, -4.00014251170795E-02, -5.4185036618795E-04, True, 16, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 0.011047389592717, -6.23453597697887E-06, 3.82739927527045E-02, True, 8, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 1.08290857690036E-02, -2.62767618508641E-02, 2.80128973987478E-02, True, 8, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 9.07918330954303E-03, 2.86363967873063E-02, 2.62553195430037E-02, True, 8, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 1.57595492108076E-02, 2.40950142317162E-02, -2.72880335909787E-02, True, 8, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 1.43808110794609E-02, -2.81074423709366E-02, -2.40578702886196E-02, True, 8, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 0.01886657492451, 2.48139106812095E-05, -0.035004838468241, True, 8, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 1.40143161426676E-02, -3.74399859522778E-02, 1.23652313243445E-04, True, 8, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;EDGE&quot;, 1.64192327552536E-02, 3.63245554251959E-02, -9.58561062339106E-05, True, 8, Nothing, 0)</pre>
+<pre>    ' Create surface-flatten feature
+    Set swFeatureManager = swModel.<b>FeatureManager</b>
+    Set swFeature = swFeatureManager.<b>InsertFlattenSurface2</b>(8, True)
+    </pre>
+<pre>    ' Get surface-flatten feature data
+    Set swSurfaceFlattenFeatureData = swFeature.<b>GetDefinition</b>
+    swSurfaceFlattenFeatureData.<b>AccessSelections</b> swModel, Nothing
+    Debug.Print &quot;Feature = &quot; &amp; swFeature.<b>Name</b>
+    Debug.Print &quot;   Accuracy of flattened triangle mesh =  &quot; &amp; swSurfaceFlattenFeatureData.<b>AccuracyFactor</b>
+    Debug.Print &quot;   Keep internal control curves? &quot; &amp; swSurfaceFlattenFeatureData.<b>KeepInternalControlCurves</b>
+    If swSurfaceFlattenFeatureData.<b>ShouldMakeTears</b> = True Then
+        Debug.Print &quot;   Tear edges: &quot;
+        edges = swSurfaceFlattenFeatureData.<b>TearEdges</b>
+        nbrTearEdges = UBound(edges) + 1
+        Debug.Print &quot;      Number of tear edges: &quot; &amp; nbrTearEdges
+        For i = 0 To UBound(edges)
+            Set swEdge = edges(i)
+            Dim swSelMgr As SldWorks.SelectionMgr
+            Set swSelMgr = swModel.<b>SelectionManager</b>
+            status = swSelMgr.<b>AddSelectionListObject</b>(swEdge, Nothing)
+            Debug.Print &quot;            Type of object (51 = swSelREFEDGES): &quot; &amp; swSelMgr.<b>GetSelectedObjectType3</b>(1, -1)
+        Next i
+    End If
+    swSurfaceFlattenFeatureData.<b>ReleaseSelectionAccess</b>    </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

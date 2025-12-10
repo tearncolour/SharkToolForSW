@@ -1,0 +1,204 @@
+<html>
+
+<head>
+<title>Get Corresponding Entities Between Parts and Drawing Views Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,parts">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=MS-HKWD content="VBA examples,entities">
+<meta name=MS-HKWD content="VBA examples,objects">
+<meta name=MS-HKWD content="VBA examples,drawing views">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Corresponding Entities Between Parts and Drawing Views Example (VBA)</h1>
+<p>This example shows how to get corresponding entities or objects between a 
+part and its drawing.<font face="Courier New" size="2">
+</font></p>
+<p class="APICODE">
+'----------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Ensure that the specified part and drawing exist.<br>
+' 2. Open the Immediate window.<br>
+' 3. Run either subroutine.<br>
+' 4. At the pause, select a face, edge, vertex, feature, annotation,<br>
+'&nbsp;&nbsp;&nbsp; or sketch segment.<br>
+' 5. Press F5.<br>
+'<br>
+' Postconditions:<br>
+' 1. Inspect the Immediate window.<br>
+' 2. If a corresponding face, edge, or vertex is found, it is selected in the<br>
+'&nbsp;&nbsp;&nbsp; underlying part or drawing.<br>
+'<br>
+' NOTE: Because the models are used elsewhere, do not save changes.<br>
+'----------------------------------------------------------------------------<br>
+Option Explicit<br>
+Dim swApp As SldWorks.SldWorks<br>
+Dim docSpec As SldWorks.DocumentSpecification<br>
+Dim swModelPart As SldWorks.ModelDoc2<br>
+Dim swModelDrawing As SldWorks.ModelDoc2<br>
+Dim swDrawing As SldWorks.DrawingDoc<br>
+Dim swView As SldWorks.View<br>
+Dim lErr As Long<br>
+Dim selMgr As SldWorks.SelectionMgr<br>
+Dim inputEntity As SldWorks.Entity<br>
+Dim outputEntity As SldWorks.Entity<br>
+Dim bSelected As Boolean<br>
+Dim inputObject As Object<br>
+Dim outputObject As Object<br>
+Dim drComp As SldWorks.DrawingComponent</p>
+<p class="APICODE">Sub PartToView()<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set docSpec = swApp.<b>GetOpenDocSpec</b>(&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 
+2018\samples\tutorial\api\clamp1.SLDPRT&quot;)<br>
+&nbsp;&nbsp;&nbsp; Set swModelPart = swApp.<b>OpenDoc7</b>(docSpec)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set docSpec = swApp.<b>GetOpenDocSpec</b>(&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 
+2018\samples\tutorial\api\clamp1.SLDDRW&quot;)<br>
+&nbsp;&nbsp;&nbsp; Set swModelDrawing = swApp.<b>OpenDoc7</b>(docSpec)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swDrawing = swModelDrawing<br>
+&nbsp;&nbsp;&nbsp; Set swView = swDrawing.<b>FeatureByName</b>(&quot;Drawing View1&quot;).<b>GetSpecificFeature</b>()<br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swApp.<b>ActivateDoc3</b> swModelPart.<b>GetTitle</b>, 
+True, swRebuildOnActivation_e.swUserDecision, lErr<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set selMgr = swModelPart.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp; swModelPart.<b>ClearSelection2</b> True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Assert False ' Select something in 
+the model and press F5<br>
+<br>
+&nbsp;&nbsp;&nbsp; Select Case selMgr.<b>GetSelectedObjectType3</b>(1, -1)<br>
+&nbsp;&nbsp;&nbsp; Case swSelFACES, swSelEDGES, swSelVERTICES<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set inputEntity = 
+selMgr.<b>GetSelectedObject6</b>(1, -1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Using 
+IView::GetCorrespondingEntity()&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set outputEntity = 
+swView.<b>GetCorrespondingEntity</b>(inputEntity)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If outputEntity Is 
+Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;No corresponding entity found in the drawing view&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;Corresponding entity found....selecting in drawing&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swApp.<b>ActivateDoc3</b> 
+swModelDrawing.<b>GetTitle</b>, False, 
+swRebuildOnActivation_e.swDontRebuildActiveDoc, lErr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bSelected = 
+outputEntity.<b>Select4</b>(False, Nothing)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Case swSelNOTHING<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Case Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set inputObject = 
+selMgr.<b>GetSelectedObject6</b>(1, -1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Using 
+IView::GetCorresponding()&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set outputObject = 
+swView.<b>GetCorresponding</b>(inputObject)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If outputObject Is 
+Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;No corresponding object found in the drawing view&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;Corresponding object found in the drawing view&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; End Select</p>
+<p class="APICODE">End Sub</p>
+<p class="APICODE">Sub ViewToPart()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set docSpec = swApp.<b>GetOpenDocSpec</b>(&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 
+2018\samples\tutorial\api\clamp1.SLDPRT&quot;)<br>
+&nbsp;&nbsp;&nbsp; Set swModelPart = swApp.<b>OpenDoc7</b>(docSpec)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set docSpec = swApp.<b>GetOpenDocSpec</b>(&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 
+2018\samples\tutorial\api\clamp1.SLDDRW&quot;)<br>
+&nbsp;&nbsp;&nbsp; Set swModelDrawing = swApp.<b>OpenDoc7</b>(docSpec)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swDrawing = swModelDrawing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swApp.<b>ActivateDoc3</b> swModelDrawing.<b>GetTitle</b>, 
+False, swRebuildOnActivation_e.swDontRebuildActiveDoc, lErr<br>
+&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set selMgr = swModelDrawing.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp; swModelDrawing.<b>ClearSelection2</b> True<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Debug.Assert False ' Select something in 
+the drawing and press F5<br>
+&nbsp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swView = swDrawing.<b>FeatureByName</b>(&quot;Drawing 
+View1&quot;).<b>GetSpecificFeature</b>()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Select Case selMgr.<b>GetSelectedObjectType3</b>(2, 
+-1)<br>
+&nbsp;&nbsp;&nbsp; Case swSelFACES, swSelEDGES, swSelVERTICES<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set inputEntity = 
+selMgr.<b>GetSelectedObject6</b>(2, -1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set drComp = selMgr.<b>GetSelectedObjectsComponent4</b>(2, 
+-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Using 
+IModelDocExtension::GetCorrespondingEntity2()&quot;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set outputEntity = 
+swModelPart.<b>Extension</b>.<b>GetCorrespondingEntity2</b>(inputEntity)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If outputEntity Is 
+Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;No corresponding entity found in the part&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;Corresponding entity found...selecting in part&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swApp.<b>ActivateDoc3</b> 
+swModelPart.<b>GetTitle</b>, False, 
+swRebuildOnActivation_e.swDontRebuildActiveDoc, lErr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bSelected = 
+outputEntity.<b>Select4</b>(False, Nothing)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Case swSelNOTHING<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Case Else</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set inputObject = 
+selMgr.<b>GetSelectedObject6</b>(2, -1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set drComp = selMgr.<b>GetSelectedObjectsComponent4</b>(2, 
+-1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Using 
+IModelDocExtension::GetCorresponding2()&quot;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set outputObject = 
+swModelPart.<b>Extension</b>.<b>GetCorresponding2</b>(inputObject)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If outputObject Is 
+Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;No corresponding object found in the part&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print 
+&quot;Corresponding object found in the part&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; End Select</p>
+<p class="APICODE">End Sub</p>
+
+</body>
+
+</html>

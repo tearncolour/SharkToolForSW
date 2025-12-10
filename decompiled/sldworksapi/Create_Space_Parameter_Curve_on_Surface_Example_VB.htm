@@ -1,0 +1,186 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Create Space Parameter Curve on Surface Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=3831>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+<META NAME="MS-HKWD" CONTENT="VBA examples,curves">
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Create Space Parameter Curve on Surface Example (VBA)</h1>
+
+<p>This example shows how to create a space parameter (SP) curve on a surface. 
+ This example also shows how to pack integers into doubles.</p>
+
+<pre>'----------------------------------------------
+' Preconditions:
+' 1. Open a part or assembly.
+' 2. Select a face.
+'
+' Postconditions:
+' 1. Creates a 3D sketch that contains a curve lying
+'    on selected face.
+' 2. Examine the graphics area.
+'
+' NOTES:
+' * Sketch contains a tessellated approximation of
+'   the curve lying on the selected face
+' * Control points are a random selection of U-V-W
+'   values.
+'----------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>' Define two types
+Type DoubleRec
+    dValue As Double
+End Type</pre>
+<pre>Type Int2Rec
+    iLower As Long ' C int has 4 bytes
+    iUpper As Long
+End Type</pre>
+<pre>Sub CreateTessCurve(swApp As SldWorks.SldWorks, swModel As SldWorks.ModelDoc2, swTrimCurve As SldWorks.Curve)</pre>
+<pre>    Const nChordTol             As Double = 0.001
+    Const nLengthTol            As Double = 0.001
+    Dim nStartParam             As Double
+    Dim nEndParam               As Double
+    Dim bIsClosed               As Boolean
+    Dim bIsPeriodic             As Boolean
+    Dim vStartPt                As Variant
+    Dim vEndPt                  As Variant
+    Dim vTessPts                As Variant
+    Dim swSketchSeg             As SldWorks.SketchSegment
+    Dim bRet                    As Boolean
+    Dim i                       As Long</pre>
+<pre>    ' Not really needed because curve is a trimmed curve,
+    ' so could pass in trim points as parameters
+    bRet = swTrimCurve.<b>GetEndParams</b>(nStartParam, nEndParam, bIsClosed, bIsPeriodic): Debug.Assert bRet</pre>
+<pre>    vStartPt = swTrimCurve.<b>Evaluate</b>(nStartParam)
+    vEndPt = swTrimCurve.<b>Evaluate</b>(nEndParam)</pre>
+<pre>    vTessPts = swTrimCurve.<b>GetTessPts</b>(nChordTol, nLengthTol, (vStartPt), (vEndPt))
+    </pre>
+<pre>    swModel.<b>Insert3DSketch2</b> False</pre>
+<pre>    swModel.<b>SetAddToDB</b> True</pre>
+<pre>    swModel.SetDisplayWhenAdded False    <b>
+</b></pre>
+<pre>    ' Disable Visual Basic range checking because tessellation points
+    ' may not be a multiple of 6
+    On Error Resume Next
+    For i = 0 To UBound(vTessPts) Step 3
+        Set swSketchSeg = swModel.<b>CreateLine2</b>(vTessPts(i + 0), vTessPts(i + 1), vTessPts(i + 2), vTessPts(i + 3), vTessPts(i + 4), vTessPts(i + 5))
+    Next i</pre>
+<pre>    On Error GoTo 0</pre>
+<pre>    swModel.<b>SetDisplayWhenAdded</b> True
+    swModel.<b>SetAddToDB</b> False
+    </pre>
+<pre>    swModel.<b>Insert3DSketch2</b> True</pre>
+<pre>    bRet = swModel.<b>EditRebuild3</b>: Debug.Assert bRet</pre>
+<pre>End Sub</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp                           As SldWorks.SldWorks
+    Dim swModeler                       As SldWorks.Modeler
+    Dim swModel                         As SldWorks.ModelDoc2
+    Dim swSelMgr                        As SldWorks.SelectionMgr
+    Dim swFace                          As SldWorks.Face2
+    Dim swSurf                          As SldWorks.Surface
+    Dim vProps                          As Variant
+    Dim nProp(1)                        As Double
+    Dim i2rDim_Order                    As Int2Rec
+    Dim i2rNumCtrlPt_Period             As Int2Rec
+    Dim nDummy1                         As DoubleRec
+    Dim nDummy2                         As DoubleRec
+    Dim swCurve                         As SldWorks.Curve
+    Dim nKnot(9)                        As Double
+    Dim vKnot                           As Variant
+    Dim nCtrlPt(8)                      As Double
+    Dim vCtrlPt                         As Variant</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModeler = swApp.<b>GetModeler</b>
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swFace = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swSurf = swFace.<b>GetSurface</b>
+    
+</pre>
+<pre>    ' Dimension of control points 'dim':
+    '   * For rational curves 'dim' = 3
+    '   * For non-rational curves 'dim' = 2
+    i2rDim_Order.iLower = 3</pre>
+<pre>    ' Order of the curve 'order':
+    '   * The order of the curve = degree + 1
+    '   * The minimum order is 2
+    i2rDim_Order.iUpper = 3</pre>
+<pre>    ' Number of control points 'nctrl': 'nctrl' &gt;= 'order'
+    i2rNumCtrlPt_Period.iLower = 3</pre>
+<pre>    ' Periodic flag 'period':
+    '   * For periodic curve = 1
+    '   * For non-periodic curve = 0
+    i2rNumCtrlPt_Period.iUpper = 0
+    LSet nDummy1 = i2rDim_Order
+    LSet nDummy2 = i2rNumCtrlPt_Period
+    nProp(0) = nDummy1.dValue
+    nProp(1) = nDummy2.dValue</pre>
+<pre>    vProps = nProp</pre>
+<pre>    ' Knot vector 'knots': The knot values must form a non-decreasing sequence
+    nKnot(0) = 0.09
+    nKnot(1) = 0.1
+    nKnot(2) = 0.2
+    nKnot(3) = 0.3
+    nKnot(4) = 0.4
+    nKnot(5) = 0.5
+    nKnot(6) = 0.6
+    nKnot(7) = 0.7
+    nKnot(8) = 0.8
+    nKnot(9) = 0.9
+    vKnot = nKnot</pre>
+<pre>    ' Control points 'ctrl':
+    '   * For non-rational curves, the control
+    '     points are points in the parameter space of 'surf';
+    '     they must be supplied as [u0,v0,u1,v1...]
+    '   * For rational curves each vector contains a point in parameter space
+    '     followed by a weight for the point; the points are supplied
+    '[u0,v0,w0,u1,v1,w1...]; the weights must be positive
+    nCtrlPt(0) = 168.441616909048 / 1000#:  nCtrlPt(1) = 150.079444300104 / 1000#:  nCtrlPt(2) = 361.067614130377 / 1000#
+    nCtrlPt(3) = 200.587021030302 / 1000#:  nCtrlPt(4) = 133.788963935729 / 1000#:  nCtrlPt(5) = 15.7123672133821 / 1000#
+    nCtrlPt(6) = 454.553312070037 / 1000#:  nCtrlPt(7) = 78.0558561766611 / 1000#:  nCtrlPt(8) = 1.00713763464455 / 1000#
+    vCtrlPt = nCtrlPt</pre>
+<pre>    ' Eventually goes down to CRSPCU, which is equivalent to:
+    '   * PK_CURVE_embed_in_surf
+    '   * PK_SPCURVE_create
+    Set swCurve = swModeler.<b>CreatePCurve</b>(swSurf, (vProps), (vKnot), (vCtrlPt))
+    Debug.Assert Not swCurve Is Nothing
+    Debug.Assert swCurve.<b>IsTrimmedCurve</b></pre>
+<pre>    CreateTessCurve swApp, swModel, swCurve</pre>
+<pre>End Sub
+</pre>
+
+</body>
+
+</html>

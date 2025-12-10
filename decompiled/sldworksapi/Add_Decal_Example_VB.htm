@@ -1,0 +1,142 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Add Decal Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,decals">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=1319>
+<meta name=layout-width content=750>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Add Decal Example (VBA)</h1>
+
+<p>This example shows how to add a decal to a selected face on a part.</p>
+
+<pre>'----------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified part document to open exists.
+' 2. Verify that the specified decal files exist.
+' 3. Verify that a ray-trace rendering engine is active.
+' 4. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the specified part document.
+' 2. Selects the face where to apply a decal.
+' 3. Applies a decal to the selected face.
+' 4. Gets the properties of the decal and prints them
+'    to the Immediate window.
+' 5. Examine the graphics area and the Immediate window.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'----------------------------------------------------------------------------</pre>
+<pre>Option Explicit
+Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFace As SldWorks.Face2
+Dim swDecal As SldWorks.Decal
+Dim swMaterial As SldWorks.RenderMaterial
+Dim swFaceDecalPropertiesArray As Variant
+Dim swFaceDecalProperties As SldWorks.FaceDecalProperties
+Dim status As Boolean
+Dim strname As String
+Dim nDecalID As Long
+Dim i As Long
+Dim errors As Long
+Dim warnings As Long
+Dim fileName As String
+Dim nbrDecals As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+
+    'Open part document and select face where to 
+    'apply a decal
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\tolanalyst\minimum_clearance\top_plate.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, -3.74778769440809E-03, 6.09129688728558E-02, 1.60000000000196E-02, False, 0, Nothing, 0)
+    Set swFace = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    'Create the decal
+    Set swDecal = swModelDocExt.<b>CreateDecal</b>
+    Set swMaterial = swDecal
+    status = swMaterial.<b>AddEntity</b>(swFace)
+    strname = &quot;C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\data\graphics\Decals\Logos\sw.p2d&quot;
+    swMaterial.<b>fileName</b> = strname
+    strname = &quot;C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\data\graphics\Decals\Logos\sw.bmp&quot;
+    swMaterial.<b>TextureFilename</b> = strname
+    swMaterial.<b>MappingType</b> = 0
+    swMaterial.<b>FixedAspectRatio</b> = False
+    swMaterial.<b>FitHeight</b> = True
+    swMaterial.<b>FitWidth</b> = True
+    status = swModelDocExt.<b>AddDecal</b>(swDecal, nDecalID)    </pre>
+<pre>    'Rebuild the model
+    Call swModelDocExt.<b>Rebuild</b>(swRebuildAll)    </pre>
+<pre>    'Get decal properties
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, -3.74778769440809E-03, 6.09129688728558E-02, 1.60000000000196E-02, False, 0, Nothing, 0)
+    Set swFace = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    nbrDecals = swFace.<b>GetDecalsCount</b>
+    Debug.Print &quot;Number of decals applied to this face: &quot; &amp; nbrDecals
+    If nbrDecals &gt; 0 Then
+        swFaceDecalPropertiesArray = swFace.<b>GetAllDecalProperties</b>
+        For i = 0 To UBound(swFaceDecalPropertiesArray)
+            Set swFaceDecalProperties = swFaceDecalPropertiesArray(i)
+            Debug.Print &quot;Decal &quot; &amp; i + 1 &amp; &quot;'s texture:&quot;
+            Debug.Print &quot;  Angle: &quot; &amp; swFaceDecalProperties.<b>TextureAngle</b>
+            Debug.Print &quot;  Angle UV: &quot; &amp; swFaceDecalProperties.<b>TextureAngleUV</b>
+            Debug.Print &quot;  File: &quot;
+            Debug.Print &quot;     Name: &quot; &amp; swFaceDecalProperties.<b>TextureFilename</b>
+            Debug.Print &quot;     ID: &quot; &amp; swFaceDecalProperties.<b>TextureFilenameID</b>
+            Debug.Print &quot;  ID: &quot; &amp; swFaceDecalProperties.<b>TextureID</b>
+            Debug.Print &quot;  Map ID: &quot; &amp; swFaceDecalProperties.<b>TextureMapID</b>
+            Debug.Print &quot;  Mirrored? &quot; &amp; swFaceDecalProperties.<b>TextureMirrored</b>
+            Debug.Print &quot;  Render mode (0 = Image; 1 = Luminance):  &quot; &amp; swFaceDecalProperties.<b>TextureRenderMode</b>
+            Debug.Print &quot;  Translation: &quot;
+            Debug.Print &quot;      U: &quot; &amp; swFaceDecalProperties.<b>TextureTranslationU</b>
+            Debug.Print &quot;      V: &quot; &amp; swFaceDecalProperties.<b>TextureTranslationV</b>
+            Debug.Print &quot;      X: &quot; &amp; swFaceDecalProperties.<b>TextureTranslationX</b>
+            Debug.Print &quot;      Y: &quot; &amp; swFaceDecalProperties.<b>TextureTranslationY</b>
+            Debug.Print &quot;  UV scale: &quot;
+            Debug.Print &quot;      U: &quot; &amp; swFaceDecalProperties.<b>TextureUScale</b>
+            Debug.Print &quot;      V: &quot; &amp; swFaceDecalProperties.<b>TextureVScale</b>
+        Next i
+    End If</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

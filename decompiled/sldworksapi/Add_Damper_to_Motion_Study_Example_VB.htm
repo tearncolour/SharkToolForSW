@@ -1,0 +1,98 @@
+<html>
+
+<head>
+<title>Add Damper to Motion Study Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,dampers">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add Damper to Motion Study Example (VBA)</h1>
+<p>This example shows how to add a damper to a motion study.</p>
+
+<p class="APICODE">
+'----------------------------------------------------------------------------<br>
+' Preconditions:<br>
+' 1. Open <i>public_documents</i><b>\samples\tutorial\api\wrench.sldasm</b>.<br>
+' 2. Click <b>View &gt; MotionManager</b> if the MotionStudy tabs are not visible.<br>
+' 3. Click <b>Tools &gt; Add-ins &gt; SOLIDWORKS Motion</b> to enable motion analysis.<br>
+' 4. Reference the SOLIDWORKS MotionStudy type library.<br>
+'<br>
+' Postconditions:<br>
+' 1. Adds a damper feature, <b>LinearDamper1</b>, between the grips of the 
+wrench.<br>
+' 2. Examine the Motion Analysis to verify.<br>
+'<br>
+' NOTE: Because the assembly is used elsewhere, do not save changes.<br>
+'----------------------------------------------------------------------------</p>
+<p class="APICODE">Option Explicit</p>
+<p class="APICODE">Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim swApp As SldWorks.SldWorks<br>
+&nbsp;&nbsp;&nbsp; Dim swModel As SldWorks.ModelDoc2<br>
+&nbsp;&nbsp;&nbsp; Dim swModelDocExt As SldWorks.ModelDocExtension<br>
+&nbsp;&nbsp;&nbsp; Dim swMotionMgr As MotionStudyManager<br>
+&nbsp;&nbsp;&nbsp; Dim swMotionStudy1 As MotionStudy<br>
+&nbsp;&nbsp;&nbsp; Dim swDamperFeat As SldWorks.SimulationDamperFeatureData<br>
+&nbsp;&nbsp;&nbsp; Dim boolstatus As Boolean<br>
+&nbsp;&nbsp;&nbsp; Dim swFeat As SldWorks.Feature<br>
+&nbsp;&nbsp;&nbsp; Dim swSelMgr As SelectionMgr</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.<b>SldWorks</b><br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; Set swModelDocExt = swModel.<b>Extension</b><br>
+&nbsp;&nbsp;&nbsp; Set swSelMgr = swModel.<b>SelectionManager</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get the MotionManager<br>
+&nbsp;&nbsp;&nbsp; Set swMotionMgr = swModelDocExt.<b>GetMotionStudyManager</b>()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If (swMotionMgr Is Nothing) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get and activate 
+&quot;MotionStudy1_Distance=0.5in&quot;<br>
+&nbsp;&nbsp;&nbsp; Set swMotionStudy1 = swMotionMgr.<b>GetMotionStudy</b>(&quot;MotionStudy1_Distance=0.5in&quot;)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If (swMotionStudy1 Is Nothing) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MsgBox &quot;MotionStudy1_Distance=0.5in 
+is not available.&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Activate swMotionStudy1<br>
+&nbsp;&nbsp;&nbsp; swMotionStudy1.<b>Activate</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Define Damper feature<br>
+&nbsp;&nbsp;&nbsp; Set swDamperFeat = swMotionStudy1.<b>CreateDefinition</b>(swFmAEMLinearDamper)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If swDamperFeat Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;ERROR: Creation of Damper 
+feature data object failed.&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Exit Sub<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Select the faces for the Damper's 
+endpoints<br>
+&nbsp;&nbsp;&nbsp; Dim swFace1 As Face2, swFace2 As Face2</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; swModel.<b>ShowNamedView2</b> &quot;*Left&quot;, 3<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>ViewZoomtofit2</b><br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 
+0.03344586330968, 0.0525345575174, 0, True, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; Set swFace1 = swSelMgr.<b>GetSelectedObject6</b>(1, -1)<br>
+&nbsp;&nbsp;&nbsp; boolstatus = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 
+0.02244533711473, 0.0131288302002, 2.238961779386E-04, True, 0, Nothing, 0)<br>
+&nbsp;&nbsp;&nbsp; Set swFace2 = swSelMgr.<b>GetSelectedObject6</b>(2, -1)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Set Damper's characteristics<br>
+&nbsp;&nbsp;&nbsp; swDamperFeat.<b>SetEndPoints</b> swFace1, swFace2</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Create Damper feature<br>
+&nbsp;&nbsp;&nbsp; Set swFeat = swMotionStudy1.<b>CreateFeature</b>(swDamperFeat)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If swFeat Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot; ERROR: Creation of the 
+Damper feature failed.&quot;<br>
+&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Debug.Print &quot;Type of Damper as 
+defined in swSimulationDamperType_e: &quot; &amp; swDamperFeat.<b>Type</b><br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">End Sub</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

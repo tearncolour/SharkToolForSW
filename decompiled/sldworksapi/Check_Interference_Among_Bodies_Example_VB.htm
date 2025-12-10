@@ -1,0 +1,151 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Check Interference Among Bodies Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples, interference">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2552>
+<meta name=layout-width content=724>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Check Interference Among Bodies Example (VBA)</h1>
+
+<p>This example shows how to check interference among bodies in a part document.</p>
+
+<pre>'----------------------------------------------------------------
+' Preconditions:
+' 1. Open <i>public_documents</i><b>\samples\tutorial\api\weldment_box3.sldprt</b>.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Finds a body in a solid body folder that interferes with
+'    one or more solid bodies in another solid body folder.
+' 2. Examine the Immediate window and expand <b>Cut list(31) &gt; 
+'    Sub-weldment(8)</b>.
+'----------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swPart As SldWorks.PartDoc
+Dim swPartDoc As SldWorks.ModelDoc2
+Dim swFeature As SldWorks.Feature
+Dim swBodyFolder As SldWorks.BodyFolder
+Dim BodyFolder As SldWorks.BodyFolder
+Dim toolBodyList As Variant
+Dim targetBodyList As Variant
+Dim contLoop As Boolean
+Dim areBodyClash As Boolean
+Dim swModeler As SldWorks.Modeler
+Dim vBodies As Variant
+Dim vFaces1 As Variant
+Dim vFaces2 As Variant
+Dim sldBody1 As SldWorks.Body2
+Dim sldBody2 As SldWorks.Body2
+Dim sizeOfOut1, sizeOfOut2, sizeOfOut3 As Long</pre>
+<pre>Sub GetVariantOfBody(swFeature As SldWorks.Feature, bodyList As Variant)
+    Dim tt As Variant
+    Dim FeatType As String
+    Dim FeatTypeName As String</pre>
+<pre>    FeatType = swFeature.<b>Name</b>
+    FeatTypeName = swFeature.<b>GetTypeName2</b>
+    Debug.Print FeatType &amp; &quot; [&quot; &amp; FeatTypeName &amp; &quot;]&quot;</pre>
+<pre>    Set swBodyFolder = swFeature.<b>GetSpecificFeature2</b>
+    Dim count As Long
+    count = swBodyFolder.<b>GetBodyCount</b>
+    If (count &lt; 1) Then
+        MsgBox (&quot;There are no bodies. Create a body in the folder.&quot;)
+    Else
+        bodyList = swBodyFolder.<b>GetBodies</b>
+    End If
+End Sub</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swPartDoc = swApp.<b>ActiveDoc</b>
+    Set swFeature = swPartDoc.<b>FirstFeature</b>
+    Set swModeler = swApp.<b>GetModeler</b>
+    </pre>
+<pre>    contLoop = True
+    </pre>
+<pre>    While Not swFeature Is Nothing And contLoop = True
+        Dim Name As String
+        Name = swFeature.<b>GetTypeName2</b>
+        If (Name = &quot;SolidBodyFolder&quot;) Then
+            contLoop = False
+    </pre>
+<pre>            GetVariantOfBody swFeature, targetBodyList
+    </pre>
+<pre>            Set swFeature = swFeature.GetFirstSubFeature
+    </pre>
+<pre>            GetVariantOfBody swFeature, toolBodyList
+    </pre>
+<pre>            Dim i As Long
+    </pre>
+<pre>            areBodyClash = swModeler.<b>CheckInterference3</b>(targetBodyList, toolBodyList, (swBodyInterference_ReturnInterferingObject + swBodyInterference_IncludeCoincidentFaces), vFaces1, vFaces2, vBodies)
+            If (areBodyClash) Then
+                sizeOfOut1 = UBound(vFaces1)
+                sizeOfOut2 = UBound(vFaces2)
+                sizeOfOut3 = UBound(vBodies)
+                Debug.Print (&quot;  Returning interfering body (faces touching each other):&quot;)
+                Debug.Print (&quot;    No. of faces that interfered from the first body with the second body&quot;)
+                Debug.Print (&quot;      &quot; &amp; sizeOfOut1 + 1)
+                Debug.Print (&quot;    No. of faces that interfered from the second body with the first body:&quot;)
+                Debug.Print (&quot;      &quot; &amp; sizeOfOut2 + 1)
+                Debug.Print (&quot;    No. of interfering bodies&quot;)
+                Debug.Print (&quot;      &quot; &amp; sizeOfOut3 + 1)
+            End If
+    </pre>
+<pre>            Debug.Print &quot; &quot;
+    </pre>
+<pre>            areBodyClash = swModeler.<b>CheckInterference3</b>(targetBodyList, toolBodyList, (swBodyInterference_OptionDefault), vFaces1, vFaces2, vBodies)
+            If (areBodyClash) Then
+                sizeOfOut1 = UBound(vFaces1)
+                sizeOfOut2 = UBound(vFaces2)
+                sizeOfOut3 = UBound(vBodies)
+                Debug.Print (&quot;  Returning interfering body (faces not touching each other): &quot;)
+                Debug.Print (&quot;    No. of faces1&quot;)
+                Debug.Print (&quot;    &quot; &amp; sizeOfOut1 + 1)
+                Debug.Print (&quot;    No. of faces2&quot;)
+                Debug.Print (&quot;    &quot; &amp; sizeOfOut2 + 1)
+                Debug.Print (&quot;    No. of bodies&quot;)
+                Debug.Print (&quot;    &quot; &amp; sizeOfOut3 + 1)
+            End If
+        Else
+            Set swFeature = swFeature.<b>GetNextFeature</b>
+        End If
+    Wend</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

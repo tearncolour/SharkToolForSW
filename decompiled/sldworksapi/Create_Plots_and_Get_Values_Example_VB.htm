@@ -1,0 +1,130 @@
+<html>
+
+<head>
+<title>Create Plots and Get Values Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,motion studies">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Plots and Get Values Example (VBA)</h1>
+<p>This example shows how to get the translational displacement and velocity 
+values for a selected face and how to plot these values.</p>
+<pre>'---------------------------------------------------------------------
+' Preconditions:
+' 1. Start SOLIDWORKS Premium, which includes SOLIDWORKS Motion.
+' 2. In SOLIDWORKS:
+'    a. Start the SOLIDWORKS Motion Study add-in (click <b>Tools &gt; 
+'       Add-Ins &gt; SOLIDWORKS Motion)</b>.
+'    b. Open<i> public_documents</i><b>\samples\tutorial\motionstudies\valve_cam.sldasm</b>.
+'    c. Click the <b>1200</b> Motion Study tab in the lower-left corner of
+'       the MotionManager.
+'    d. Select <b>Motion Analysis</b> in the Type of Study list at the
+'       upper-left corner of the MotionManager.
+' 3. In the IDE:
+'    a. Add a reference to the SOLIDWORKS MotionStudy type library.
+'    b. Open the Immediate window.
+'
+' Postconditions:
+' 1. Selects two faces.
+' 2. Calculates the motion analysis for the two selected faces.
+' 3. Gets the translational displacement and translational velocity
+'    values for the first selected face.
+' 4. Creates plots of the translational displacement and translational
+'    velocity.
+' 5. Prints the names of the plot features to the Immediate window.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'---------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Dim swApp                               As SldWorks.SldWorks
+    Dim swModel                             As SldWorks.ModelDoc2
+    Dim swSelMgr                            As SldWorks.SelectionMgr
+    Dim swModelDocExt                       As SldWorks.ModelDocExtension
+    Dim MotionMgr                           As SwMotionStudy.MotionStudyManager
+    Dim MotionStudy                         As SwMotionStudy.MotionStudy
+    Dim MotionStudyResults                  As SwMotionStudy.CosmosMotionStudyResults
+    Dim status                              As Boolean
+    Dim swSimPlotFeatureData                As SldWorks.MotionPlotFeatureData
+    Dim swSimPlotXAxisFeatureData           As SldWorks.MotionPlotAxisFeatureData
+    Dim swSimPlotYAxisFeatureData(0 To 1)   As SldWorks.MotionPlotAxisFeatureData
+    Dim swFace(0 To 0)                      As SldWorks.Face2
+    Dim swFaceArray                         As Variant
+    Dim swYAxisArray                        As Variant
+    Dim PlotOutput                          As SwMotionStudy.MotionPlotFeatureOutput
+    Dim swPlotFeature1                      As SldWorks.Feature
+    Dim swPlotFeature2                      As SldWorks.Feature
+    Dim swXData                             As Variant
+    Dim swYData                             As Variant
+    Dim nameYAxis(0 To 1)                   As String
+    Dim i                                   As Long
+    Dim j                                   As Long
+    </pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swModelDocExt = swModel.<b>Extension</b>
+    </pre>
+<pre>    ' Select the faces for which to calculate
+    ' motion analysis, then calculate it and
+    ' get the results
+    swModel.<b>ShowNamedView2</b> &quot;*Right&quot;, 4
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 0.03426699306681, 0.03342024416822, 0.02599934303839, True, 0, Nothing, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 0.03047373686337, 0.006937653650944, 0.02566622869226, True, 0, Nothing, 0)
+    Set MotionMgr = swModelDocExt.<b>GetMotionStudyManager</b>()
+    Set MotionStudy = MotionMgr.<b>GetMotionStudy</b>(&quot;1200&quot;)
+    status = MotionStudy.<b>Calculate</b>
+    Set MotionStudyResults = MotionStudy.<b>GetResults</b>(4)
+    </pre>
+<pre>    ' Create a plot feature data and create the  x and y axes feature data
+    Set swSimPlotFeatureData = MotionStudyResults.<b>CreatePlotFeatureData</b>()
+    Set swSimPlotXAxisFeatureData = MotionStudyResults.<b>CreatePlotXAxisFeatureData</b>()
+    Set swSimPlotYAxisFeatureData(0) = MotionStudyResults.<b>CreatePlotYAxisFeatureData</b>()
+    Set swSimPlotYAxisFeatureData(1) = MotionStudyResults.<b>CreatePlotYAxisFeatureData</b>()</pre>
+<pre>    ' Set the type of plots
+    nameYAxis(0) = &quot;swMotionPlotAxisType_TRANS_DISP&quot;
+    swSimPlotYAxisFeatureData(0).<b>Type</b> = SwConst.swMotionPlotAxisType_TRANS_DISP
+    swSimPlotYAxisFeatureData(0).<b>Component</b> = 1
+    nameYAxis(1) = &quot;swMotionPlotAxisType_TRANS_VELOCITY&quot;
+    swSimPlotYAxisFeatureData(1).<b>Type</b> = SwConst.swMotionPlotAxisType_TRANS_VELOCITY    
+    swSimPlotYAxisFeatureData(1).<b>Component</b> = 1
+    </pre>
+<pre>    ' Get the entity whose motion you want analyzed
+    Set swFace(0) = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    swFaceArray = swFace
+    swSimPlotYAxisFeatureData(0).<b>Entities</b> = swFaceArray
+    swSimPlotYAxisFeatureData(1).<b>Entities</b> = swFaceArray</pre>
+<pre>    ' Get the plot's x-axis and y-axes values
+    swYAxisArray = swSimPlotYAxisFeatureData
+    Set PlotOutput = MotionStudyResults.<b>GetValues</b>(swSimPlotFeatureData, swSimPlotXAxisFeatureData, (swYAxisArray))
+    swXData = PlotOutput.<b>GetXAxis</b>()
+    </pre>
+<pre>    ' Print the x-axis values and the y-axis translational
+    ' displacement values and the y-axes translational velocity
+    ' values to the Immediate window
+    Debug.Print &quot;&quot;
+    For i = 0 To UBound(swYAxisArray)
+        Debug.Print &quot;------ YAxis Type : &quot; &amp; nameYAxis(i)
+        swYData = PlotOutput.<b>GetYAxis</b>(swSimPlotYAxisFeatureData(i))
+        For j = 0 To UBound(swXData)
+            Debug.Print &quot; (x, y) : (&quot; &amp; Strings.Format(swXData(j)) &amp; &quot;, &quot; &amp; swYData(j) &amp; &quot;)&quot;
+        Next j
+    Next i
+    </pre>
+<pre>    ' Insert and display the translational displacement plot
+    Set swPlotFeature1 = MotionStudyResults.<b>InsertPlotFeature</b>(swSimPlotFeatureData, swSimPlotXAxisFeatureData, swSimPlotYAxisFeatureData(0))
+    Debug.Print &quot;Name of plot feature: &quot; &amp; swPlotFeature1.<b>Name</b></pre>
+<pre>    ' Insert and display the translational velocity plot
+    Set swPlotFeature2 = MotionStudyResults.<b>InsertPlotFeature</b>(swSimPlotFeatureData, swSimPlotXAxisFeatureData, swSimPlotYAxisFeatureData(1))
+    Debug.Print &quot;Name of plot feature: &quot; &amp; swPlotFeature2.<b>Name</b>
+</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

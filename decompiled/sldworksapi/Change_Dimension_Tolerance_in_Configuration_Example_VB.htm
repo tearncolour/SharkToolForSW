@@ -1,0 +1,126 @@
+<html>
+
+<head>
+<title>Change Dimension Tolerance in a Configuration Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,configurations">
+<meta name=MS-HKWD content="VBA examples,tolerances">
+<meta name=MS-HKWD content="VBA examples,dimensions">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Change Dimension Tolerance in a Configuration Example (VBA)</h1>
+<p>This example shows how to change the dimension tolerance in one 
+configuration in a multi-configuration part.</p>
+
+<pre>'--------------------------------------------
+' Preconditions:
+' 1. Ensure that the specified part document exists.
+' 2. Open the Immediate window.
+' 3. Run the macro.
+'
+' Postconditions:
+' 1. Opens specified document.
+' 2. Selects a sketch and a dimension
+'    in that sketch.
+' 3. Changes the tolerance values of the selected 
+'    dimension in the sketch and prints the values 
+'    to the Immediate window.
+' 4. Changes configuration.
+' 5. Selects the same sketch and dimension
+'    in the sketch in this configuration.
+' 6. Prints the tolerance values of the dimension 
+'    to the Immediate window.
+' 7. Examine the Immediate window to verify that
+'    the tolerance values of the sketch in the
+'    different configurations are different.
+'
+' <b>NOTE</b>: Because this part document is used elsewhere,
+' do not save any changes when closing it.
+---------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swConfigurationMgr As SldWorks.ConfigurationManager
+Dim swConfiguration As SldWorks.Configuration
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swDisplayDimension As SldWorks.DisplayDimension
+Dim swDimension As SldWorks.Dimension
+Dim swDimensionTolerance As SldWorks.DimensionTolerance
+Dim status As Boolean
+Dim fileName As String
+Dim errors As Long
+Dim warnings As Long
+</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks    </pre>
+<pre>    ' Open part document with multiple configurations
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\PDMWorks\speaker_frame.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocPART, swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModelDocExt = swModel.<b>Extension</b>    </pre>
+<pre>    ' Get name of active configuration
+    Set swConfigurationMgr = swModel.<b>ConfigurationManager</b>
+    Set swConfiguration = swConfigurationMgr.<b>ActiveConfiguration</b>
+    Debug.Print (&quot;Configuration name: &quot; &amp; swConfiguration.<b>Name</b>)    </pre>
+<pre>    ' Select sketch
+    ' Put the sketch in edit mode
+    ' Select a dimension in the sketch
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch8&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>EditSketch</b>
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;D4@Sketch8@speaker_frame.SLDPRT&quot;, &quot;DIMENSION&quot;, -4.30195952926557E-03, 3.21813003735837E-02, -1.55776956607312E-02, False, 0, Nothing, 0)    </pre>
+<pre>    ' Get the selection
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swDisplayDimension = swSelMgr.<b>GetSelectedObject6</b>(1, 0)    </pre>
+<pre>    ' If selection is not a display dimension, then exit
+    If swSelMgr.<b>GetSelectedObjectType3</b>(1, -1) &lt;&gt; swSelDIMENSIONS Then Exit Sub    </pre>
+<pre>    ' Selection is a dimension, so get the dimension tolerance
+    Set swDimension = swDisplayDimension.<b>GetDimension2</b>(0)
+    Set swDimensionTolerance = swDimension.<b>Tolerance</b>    </pre>
+<pre>    ' Set type of tolerance type
+    swDimensionTolerance.<b>Type</b> = swTolBASIC    </pre>
+<pre>    ' Set new dimension tolerance values
+    status = swDimensionTolerance.<b>SetValues2</b>(0.01, 0.015, swSetValueInConfiguration_e.swSetValue_InThisConfiguration, &quot;&quot;)
+    Debug.Print (&quot;  Minimum dimension tolerance: &quot; &amp; swDimensionTolerance.<b>GetMinValue</b>)
+    Debug.Print (&quot;  Maximum dimension tolerance: &quot; &amp; swDimensionTolerance.<b>GetMaxValue</b>)    </pre>
+<pre>    ' Exit sketch edit mode
+    swModel.<b>InsertSketch2</b> True    </pre>
+<pre>    ' Switch configuration to verify
+    ' that dimension tolerance changed
+    ' in other configuration only
+    status = swModel.<b>ShowConfiguration2</b>(&quot;Square Cutout Glueable&quot;)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Square Cutout Glueable&quot;, &quot;CONFIGURATIONS&quot;, 0, 0, 0, False, 0, Nothing, 0)    </pre>
+<pre>    ' Get name of configuration
+    Set swConfiguration = swConfigurationMgr.<b>ActiveConfiguration</b>
+    Debug.Print (&quot;Configuration name: &quot; &amp; swConfiguration.<b>Name</b>)    </pre>
+<pre>    ' Select sketch
+    ' Select same dimension in sketch as selected
+    ' in previously active configuration
+    ' Put the sketch in edit mode
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch8&quot;, &quot;SKETCH&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    swModel.<b>EditSketch</b>
+    swModel.<b>ClearSelection2</b> True
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;D4@Sketch8@speaker_frame.SLDPRT&quot;, &quot;DIMENSION&quot;, -4.71220094479408E-03, 0.032305394835097, -1.53009205936774E-02, False, 0, Nothing, 0)</pre>
+<pre>    ' Get the selection
+    Set swDisplayDimension = swSelMgr.<b>GetSelectedObject6</b>(1, 0)    </pre>
+<pre>    ' If selection is not a display dimension, then exit
+    If swSelMgr.<b>GetSelectedObjectType3</b>(1, -1) &lt;&gt; swSelDIMENSIONS Then Exit Sub    </pre>
+<pre>    ' Selection is a dimension, so get and print the dimension tolerance
+    Set swDimension = swDisplayDimension.GetDimension2(0)
+    Set swDimensionTolerance = swDimension.<b>Tolerance</b>
+    Debug.Print (&quot;  Minimum dimension tolerance: &quot; &amp; swDimensionTolerance.<b>GetMinValue</b>)
+    Debug.Print (&quot;  Maximum dimension tolerance: &quot; &amp; swDimensionTolerance.<b>GetMaxValue</b>)    </pre>
+<pre>   ' Exit sketch edit mode
+   swModel.<b>InsertSketch2</b> True</pre>
+<pre>End Sub</pre>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

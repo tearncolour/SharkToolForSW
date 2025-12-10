@@ -1,0 +1,119 @@
+<html>
+
+<head>
+<title>Publish Text and Custom Properties from Theme to MBD 3D PDF Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,3D PDF">
+<meta name=MS-HKWD content="VBA examples,MBD">
+<meta name=MS-HKWD content="VBA examples,SOLIDWORKS MBD">
+<meta name=MS-HKWD content="VBA examples,custom properties">
+<meta name=MS-HKWD content="VBA examples,text">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Publish Text and Custom Properties from Theme to MBD 3D PDF Example (VBA)</h1>
+<p>This example shows how to publish text and custom properties from a theme to 
+SOLIDWORKS MBD 3D PDF. </p>
+
+<pre>'--------------------------------------------------------------
+' Preconditions:
+'  1. Verify that:
+'     * specified part,
+'     * SOLIDWORKS MBD 3D PDF theme, and
+'     * <b>c:\temp </b>exist.
+'  2. Open the Immediate window.
+'
+' Postconditions:
+'  1. Opens the specified part.
+'  2. Gets the MBD3DPdfData object.
+'  3. Sets the path and file name for the SOLIDWORKS MBD 3D PDF.
+'  4. Sets to display SOLIDWORKS MBD 3D PDF after publishing.
+'  5. Sets the theme for the SOLIDWORKS MBD 3D PDF.
+'  6. Sets standard views for the SOLIDWORKS MBD 3D PDF.
+'  7. Creates and sets custom views for the SOLIDWORKS MBD 3D PDF.
+'  8. Gets the text and custom properties from the specified
+'     theme for the SOLIDWORKS MBD 3D PDF and sets the custom
+'     property names.
+'  9. Creates the SOLIDWORKS MBD 3D PDF.
+' 10. Examine the Immediate window and <b>c:\temp\MBDPart1.PDF</b>.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'---------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swMBDPdfData As SldWorks.MBD3DPdfData
+Dim swTextAndCustomProperty As SldWorks.TextAndCustomProperty
+Dim fileName As String
+Dim standardViews As Variant
+Dim viewIDs(2) As Long
+Dim viewNames(1) As String
+Dim textAndCustomProperties As Variant
+Dim nbrTextAndCustomProperties As Long
+Dim status As Long
+Dim errors As Long
+Dim warnings As Long
+Dim custProp As String
+Dim i As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    fileName = &quot;C:\temp\box.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModelDocExt = swModel.<b>Extension</b>    </pre>
+<pre>    'Get MBD3DPdfData object
+    Set swMBDPdfData = swModelDocExt.<b>GetMBD3DPdfData</b>       </pre>
+<pre>    'Set path and file name for SOLIDWORKS MBD 3D PDF
+    swMBDPdfData.<b>filePath</b> = &quot;c:\temp\MBDPart1.PDF&quot;    </pre>
+<pre>    'Display SOLIDWORKS MBD 3D PDF 
+    swMBDPdfData.<b>ViewPdfAfterSaving</b> = True    </pre>
+<pre>    'Set SOLIDWORKS MBD 3D PDF theme
+    swMBDPdfData.<b>ThemeName</b> = &quot;C:\Program Files\SolidWorks Corp\SOLIDWORKS\data\themes\simple part (a4, portrait)\theme.xml&quot;    </pre>
+<pre>    'Set standard views for SOLIDWORKS MBD 3D PDF
+    viewIDs(0) = swStandardViews_e.swFrontView
+    viewIDs(1) = swStandardViews_e.swTopView
+    viewIDs(2) = swStandardViews_e.swDimetricView
+    standardViews = viewIDs
+    swMBDPdfData.<b>SetStandardViews</b> (standardViews)    </pre>
+<pre>    'Create and set custom views for SOLIDWORKS MBD 3D PDF
+    swModel.<b>NameView</b> (&quot;CustomView1&quot;)
+    swModel.<b>NameView</b> (&quot;CustomView2&quot;)
+    viewNames(0) = &quot;CustomView1&quot;
+    viewNames(1) = &quot;CustomView2&quot;
+    swMBDPdfData.<b>SetMoreViews</b> (viewNames)    </pre>
+<pre>    'Get text and custom properties from theme for SOLIDWORKS MBD
+    '3D PDF
+    textAndCustomProperties = swMBDPdfData.<b>GetTextAndCustomProperties</b>
+    If Not IsEmpty(textAndCustomProperties) Then
+        nbrTextAndCustomProperties = UBound(textAndCustomProperties)
+            Debug.Print &quot;Text and custom properties from theme:&quot;
+            For i = 0 To nbrTextAndCustomProperties
+                Set swTextAndCustomProperty = textAndCustomProperties(i)
+                If swTextAndCustomProperty.<b>IsCustomProperty</b> = False Then
+                    Debug.Print (&quot; Text:&quot;)
+                    Debug.Print (&quot;  Description: &quot; &amp; swTextAndCustomProperty.<b>Description</b>)
+                    Debug.Print (&quot;  Field name: &quot; &amp; swTextAndCustomProperty.<b>Name</b>)
+                Else
+                    Debug.Print (&quot; Custom property:&quot;)
+                    custProp = &quot;CustomProperty &quot; + CStr(i)
+                    swTextAndCustomProperty.<b>CustomPropertyName</b> = custProp
+                    Debug.Print (&quot;  Custom property name: &quot; &amp; swTextAndCustomProperty.<b>CustomPropertyName</b>)
+                    Debug.Print (&quot;  Description: &quot; &amp; swTextAndCustomProperty.<b>Description</b>)
+                    Debug.Print (&quot;  Field name: &quot; &amp; swTextAndCustomProperty.<b>Name</b>)
+                    Debug.Print (&quot;  Value: &quot; &amp; swTextAndCustomProperty.<b>Value</b>)
+                End If
+            Next i
+    Else
+       Debug.Print &quot;No text or custom properties in theme.&quot;
+    End If    </pre>
+<pre>    'Create SOLIDWORKS MBD 3D PDF
+    status = swModelDocExt.<b>PublishTo3DPDF</b>(swMBDPdfData)
+    Debug.Print (&quot;Status of publishing part to SOLIDWORKS MBD 3D PDF (0 = success): &quot; &amp; status)</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

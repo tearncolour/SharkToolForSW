@@ -1,0 +1,208 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Move Assembly Components to New Folder Example (C#)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="C# examples,assemblies">
+<meta name=MS-HKWD content="C# examples,components">
+<meta name=MS-HKWD content="C# examples,folders">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2180>
+<meta name=layout-width content=910>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Move Assembly Components to New Folder Example (C#)</h1>
+
+<p>This example shows how to move selected assembly components to a newly 
+ created folder in the FeatureManager design tree.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<pre><font color="#008000">//---------------------------------------------------------------------------
+// Preconditions:
+// 1. Verify that the specified assembly to open exists.
+// 2. Open an Immediate window.
+//
+// Postconditions:
+// 1. Opens the specified assembly document.
+// 2. Selects the <b>valve&lt;1&gt;</b> and <b>valve_guide&lt;1&gt;</b> components.
+// 3. Creates a folder named <b>Folder1</b> in the FeatureManager design tree.
+// 4. Moves the <b>valve&lt;1&gt;</b> and <b>valve_guide&lt;1&gt;</b> components to <b>Folder1</b>,
+//    which you can verify by expanding <b>Folder1</b>.
+// 5. Examine the Immediate window.
+//
+// NOTE: Because the assembly document is used by elsewhere,
+// do not save any changes.
+//---------------------------------------------------------------------------</font></pre>
+	<p class="APICODE"><span style="color:Green">
+	<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	Microsoft.VisualBasic;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Collections;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Collections.Generic;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Data;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Diagnostics;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst;<br>
+	</span><span style="color:Blue">using</span><span style="color:Black"> 
+	System.Runtime.InteropServices;<br>
+	</span><span style="color:Blue">namespace</span><span style="color:Black"> 
+	FeatureFolderLocation_CSharp.csproj<br>
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">partial</span><span style="color:Black">
+	</span><span style="color:Blue">class</span><span style="color:Black">
+	</span><span style="color:#2b91af">SolidWorksMacro<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black"> 
+	modelDoc2;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">AssemblyDoc</span><span style="color:Black"> 
+	assemblyDoc;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">FeatureManager</span><span style="color:Black"> 
+	featureMgr;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">ModelDocExtension</span><span style="color:Black"> 
+	modelDocExt;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black"> 
+	selectionMgr;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Feature</span><span style="color:Black"> 
+	feature;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black"> 
+	selObj;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Feature</span><span style="color:Black"> 
+	feat;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Feature</span><span style="color:Black"> 
+	folderFeat;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	errors;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	warnings;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	count;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Component2</span><span style="color:Black"> 
+	componentToMove;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">object</span><span style="color:Black">[] 
+	componentsToMove;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">int</span><span style="color:Black"> 
+	i;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">bool</span><span style="color:Black"> 
+	retVal;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:Blue">void</span><span style="color:Black"> Main()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">//Open assembly document<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swApp.<b>OpenDoc6</b>(</span><span style="color:#a31515">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 
+	2018\\samples\\tutorial\\motionstudies\\valve_cam.sldasm&quot;</span><span style="color:Black">, 
+	(</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swDocumentTypes_e</span><span style="color:Black">.swDocASSEMBLY, 
+	(</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swOpenDocOptions_e</span><span style="color:Black">.swOpenDocOptions_Silent,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:Blue">ref</span><span style="color:Black"> errors,
+	</span><span style="color:Blue">ref</span><span style="color:Black"> 
+	warnings);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelDoc2 = (</span><span style="color:#2b91af">ModelDoc2</span><span style="color:Black">)swApp.<b>ActiveDoc</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assemblyDoc = (</span><span style="color:#2b91af">AssemblyDoc</span><span style="color:Black">)modelDoc2;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">//Select and get the two 
+	valve-related components to move to the new folder<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelDocExt = modelDoc2.<b>Extension</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selectionMgr = (</span><span style="color:#2b91af">SelectionMgr</span><span style="color:Black">)modelDoc2.<b>SelectionManager</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelDocExt.SelectByID2(</span><span style="color:#a31515">&quot;valve-1@valve_cam&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">true</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">null</span><span style="color:Black">, 
+	0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selObj = selectionMgr.<b>GetSelectedObject6</b>(1, -1);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelDocExt.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;valve_guide-1@valve_cam&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">true</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">null</span><span style="color:Black">, 
+	0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selectionMgr.<b>GetSelectedObject6</b>(2, -1);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count = selectionMgr.<b>GetSelectedObjectCount2</b>(0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;componentsToMove = </span><span style="color:Blue">new</span><span style="color:Black">
+	</span><span style="color:Blue">object</span><span style="color:Black">[count];<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">for</span><span style="color:Black"> 
+	(i = 0; i &lt;= count - 1; i++)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;componentToMove = (</span><span style="color:#2b91af">Component2</span><span style="color:Black">)selectionMgr.<b>GetSelectedObjectsComponent4</b>(i 
+	+ 1, 0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;componentsToMove[i] = componentToMove;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">//Create the folder where to 
+	move the selected components<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featureMgr = modelDoc2.<b>FeatureManager</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feature = featureMgr.<b>InsertFeatureTreeFolder2</b>((</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swFeatureTreeFolderType_e</span><span style="color:Black">.swFeatureTreeFolder_EmptyBefore);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feature = (</span><span style="color:#2b91af">Feature</span><span style="color:Black">)assemblyDoc.<b>FeatureByName</b>(</span><span style="color:#a31515">&quot;Folder1&quot;</span><span style="color:Black">);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">//Move the selected components 
+	to the new folder<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retVal = assemblyDoc.<b>ReorderComponents</b>(componentsToMove, 
+	feature, (</span><span style="color:Blue">int</span><span style="color:Black">)</span><span style="color:#2b91af">swReorderComponentsWhere_e</span><span style="color:Black">.swReorderComponents_LastInFolder);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelDocExt.<b>SelectByID2</b>(</span><span style="color:#a31515">&quot;valve-1@valve_cam&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;COMPONENT&quot;</span><span style="color:Black">, 
+	0, 0, 0, </span><span style="color:Blue">true</span><span style="color:Black">, 
+	0, </span><span style="color:Blue">null</span><span style="color:Black">, 
+	0);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feat = (</span><span style="color:#2b91af">Feature</span><span style="color:Black">)selectionMgr.<b>GetSelectedObject6</b>(1, 
+	-1);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featureMgr = modelDoc2.<b>FeatureManager</b>;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;folderFeat = featureMgr.<b>FeatureFolderLocation</b>(feat);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:#2b91af">Debug</span><span style="color:Black">.Print(</span><span style="color:#a31515">&quot;Component 
+	valve-1@valve_cam folder feature: &quot;</span><span style="color:Black"> + 
+	folderFeat.<b>Name</b>);<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">public</span><span style="color:Black">
+	</span><span style="color:#2b91af">SldWorks</span><span style="color:Black"> 
+	swApp;<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+	<br>
+	}</span>
+</div>
+
+</body>
+
+</html>

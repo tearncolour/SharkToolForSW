@@ -1,0 +1,223 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Select Edges of All Holes on Face Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,holes">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=4888>
+<meta name=layout-width content=786>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Select Edges of All Holes on Face Example (VBA)</h1>
+
+<p>This example shows how to select the edges on all circular holes on 
+ a face.</p>
+<p><b>NOTE: </b><!--kadov_tag{{</spaces>}}-->
+<font face="Verdana" style="font-size: 8pt">A 
+ circular hole can be defined in a many ways; for example, <!--kadov_tag{{</spaces>}}-->a 
+ circle inside an extruded sketch or a circle that is part&nbsp;<!--kadov_tag{{</spaces>}}-->of 
+ a cut-extrude feature. Thus, there is no ready way to <!--kadov_tag{{</spaces>}}-->detect 
+ a hole solely based on the feature information. <!--kadov_tag{{</spaces>}}-->However, 
+ by directly examining the geometry and topology of <!--kadov_tag{{</spaces>}}-->the 
+ model, it is possible to deduce holes. <!--kadov_tag{{</spaces>}}-->This 
+ code uses many of the geometry- and&nbsp;<!--kadov_tag{{</spaces>}}-->topology-related objects and methods to traverse a face <!--kadov_tag{{</spaces>}}-->and 
+ look for circular holes. </font></p>
+<pre>'------------------------------------------------------------------
+' Preconditions: Verify that the specified part to open exists.
+'
+' Postconditions:
+' 1. Opens the specified part document.
+' 2. Changes the view orientation to <b>Back</b>.
+' 3. Selects a face.
+' 4. Examines the geometry and topology of the selected face and
+'    identifies the holes in the face.
+' 5. Deselects the face.
+' 6. Selects all edges of all circular holes on the face.
+' 7. Examine the graphics area.
+'
+' NOTE: Because the part is used elsewhere, do not save changes.
+'------------------------------------------------------------------
+Option Explicit 
+</pre>
+<pre>Function GetFaceNormalAtMidCoEdge(swCoEdge As SldWorks.CoEdge) As Variant
+    Dim swFace As SldWorks.Face2
+    Dim swSurface As SldWorks.Surface
+    Dim swLoop As SldWorks.Loop2
+    Dim varParams As Variant
+    Dim varPoint As Variant
+    Dim dblMidParam As Double
+    Dim dblNormal(2) As Double
+    Dim bFaceSenseReversed As Boolean</pre>
+<pre>    varParams = swCoEdge.<b>GetCurveParams</b>
+    If varParams(6) &gt; varParams(7) Then
+        dblMidParam = (varParams(6) - varParams(7)) / 2 + varParams(7)
+    Else
+        dblMidParam = (varParams(7) - varParams(6)) / 2 + varParams(6)
+    End If
+    varPoint = swCoEdge.<b>Evaluate</b>(dblMidParam)    
+</pre>
+<pre>    ' Get the face of the given coedge
+    ' Check for the sense of the face
+    Set swLoop = swCoEdge.<b>GetLoop</b>
+    Set swFace = swLoop.<b>GetFace</b>
+    Set swSurface = swFace.<b>GetSurface</b>
+    bFaceSenseReversed = swFace.<b>FaceInSurfaceSense</b>
+    varParams = swSurface.<b>EvaluateAtPoint</b>(varPoint(0), varPoint(1), varPoint(2))</pre>
+<pre>    If bFaceSenseReversed Then
+        ' Negate the surface normal as it is opposite from the face normal
+        dblNormal(0) = -varParams(0)
+        dblNormal(1) = -varParams(1)
+        dblNormal(2) = -varParams(2)
+    Else
+        dblNormal(0) = varParams(0)
+        dblNormal(1) = varParams(1)
+        dblNormal(2) = varParams(2)
+    End If</pre>
+<pre>    GetFaceNormalAtMidCoEdge = dblNormal</pre>
+<pre>End Function</pre>
+<pre>Function GetTangentAtMidCoEdge(swCoEdge As SldWorks.CoEdge) As Variant
+    Dim varParams As Variant
+    Dim dblMidParam As Double
+    Dim dblTangent(2) As Double</pre>
+<pre>    varParams = swCoEdge.<b>GetCurveParams</b>
+    If varParams(6) &gt; varParams(7) Then
+        dblMidParam = (varParams(6) - varParams(7)) / 2# + varParams(7)
+    Else
+        dblMidParam = (varParams(7) - varParams(6)) / 2# + varParams(6)
+    End If</pre>
+<pre>    varParams = swCoEdge.<b>Evaluate</b>(dblMidParam)
+    dblTangent(0) = varParams(3)
+    dblTangent(1) = varParams(4)
+    dblTangent(2) = varParams(5)
+    GetTangentAtMidCoEdge = dblTangent</pre>
+<pre>End Function</pre>
+<pre>Function GetCrossProduct(varVec1 As Variant, varVec2 As Variant) As Variant
+    Dim dblCross(2) As Double</pre>
+<pre>    dblCross(0) = varVec1(1) * varVec2(2) - varVec1(2) * varVec2(1)
+    dblCross(1) = varVec1(2) * varVec2(0) - varVec1(0) * varVec2(2)
+    dblCross(2) = varVec1(0) * varVec2(1) - varVec1(1) * varVec2(0)
+    GetCrossProduct = dblCross</pre>
+<pre>End Function</pre>
+<pre>Function VectorsAreEqual(varVec1 As Variant, varVec2 As Variant) As Boolean
+    Dim dblMag As Double
+    Dim dblDot As Double
+    Dim dblUnit1(2) As Double
+    Dim dblUnit2(2) As Double</pre>
+<pre>    dblMag = (varVec1(0) * varVec1(0) + varVec1(1) * varVec1(1) + varVec1(2) * varVec1(2)) ^ 0.5
+    dblUnit1(0) = varVec1(0) / dblMag: dblUnit1(1) = varVec1(1) / dblMag: dblUnit1(2) = varVec1(2) / dblMag
+    dblMag = (varVec2(0) * varVec2(0) + varVec2(1) * varVec2(1) + varVec2(2) * varVec2(2)) ^ 0.5
+    dblUnit2(0) = varVec2(0) / dblMag: dblUnit2(1) = varVec2(1) / dblMag: dblUnit2(2) = varVec2(2) / dblMag
+    dblDot = dblUnit1(0) * dblUnit2(0) + dblUnit1(1) * dblUnit2(1) + dblUnit1(2) * dblUnit2(2)
+    dblDot = Abs(dblDot - 1#)</pre>
+<pre>    ' Compare within a tolerance
+    If dblDot &lt; 0.0000000001 Then '1.0e-10
+        VectorsAreEqual = True
+    Else
+        VectorsAreEqual = False
+    End If</pre>
+<pre>End Function</pre>
+<pre>Sub SelectHoleEdges(swFace As SldWorks.Face2, swSelData As SldWorks.SelectData)
+    Dim swThisLoop As SldWorks.Loop2
+    Dim swThisCoEdge As SldWorks.CoEdge
+    Dim swPartnerCoEdge  As SldWorks.CoEdge
+    Dim swEntity As SldWorks.Entity
+    Dim varThisNormal As Variant
+    Dim varPartnerNormal As Variant
+    Dim varCrossProduct As Variant
+    Dim varTangent As Variant
+    Dim vEdgeArr As Variant
+    Dim swEdge As SldWorks.Edge
+    Dim swCurve As SldWorks.Curve
+    Dim bRet As Boolean</pre>
+<pre>    Set swThisLoop = swFace.<b>GetFirstLoop</b>
+    Do While Not swThisLoop Is Nothing
+        ' Hole is inner loop
+        ' Circular or elliptical hole has only one edge
+        If swThisLoop.<b>IsOuter</b> = False And 1 = swThisLoop.<b>GetEdgeCount</b> Then
+            Set swThisCoEdge = swThisLoop.<b>GetFirstCoEdge</b>
+            Set swPartnerCoEdge = swThisCoEdge.<b>GetPartner</b>
+            varThisNormal = GetFaceNormalAtMidCoEdge(swThisCoEdge)
+            varPartnerNormal = GetFaceNormalAtMidCoEdge(swPartnerCoEdge)
+            If Not VectorsAreEqual(varThisNormal, varPartnerNormal) Then
+                ' There is a sufficient change between the two faces to determine
+                ' what kind of transition is being made
+                varCrossProduct = GetCrossProduct(varThisNormal, varPartnerNormal)
+                varTangent = GetTangentAtMidCoEdge(swThisCoEdge)
+                If VectorsAreEqual(varCrossProduct, varTangent) Then
+                    ' Hole
+                    vEdgeArr = swThisLoop.<b>GetEdges</b>
+                    Debug.Assert 0 = UBound(vEdgeArr)
+                    Set swEdge = vEdgeArr(0)
+                    Set swCurve = swEdge.<b>GetCurve</b>
+                    ' Ignore elliptical holes
+                    If swCurve.<b>IsCircle</b> Then
+                        Set swEntity = swEdge
+                        bRet = swEntity.<b>Select4</b>(True, swSelData)
+                        Debug.Assert bRet
+                    End If
+                End If
+            End If
+        End If</pre>
+<pre>        ' Move on to the next
+        Set swThisLoop = swThisLoop.<b>GetNext</b>        </pre>
+<pre>    Loop</pre>
+<pre>End Sub</pre>
+<pre>Sub main()
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swModelDocExt As SldWorks.ModelDocExtension
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swSelData As SldWorks.SelectData
+    Dim swFace As SldWorks.Face2
+    Dim fileName As String
+    Dim errors As Long
+    Dim warnings As Long
+    Dim bRet As Boolean</pre>
+<pre>    Set swApp = CreateObject(&quot;SldWorks.Application&quot;)
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\advdrawings\gear- caddy.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    swModel.<b>ShowNamedView2</b> &quot;*Back&quot;, 2
+    Set swModelDocExt = swModel.<b>Extension</b>
+    bRet = swModelDocExt.<b>SelectByID2</b>(&quot;&quot;, &quot;FACE&quot;, 2.90197084065686E-02, 1.11645373580202E-02, 0, False, 0, Nothing, 0)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swFace = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swSelData = swSelMgr.<b>CreateSelectData</b></pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    SelectHoleEdges swFace, swSelData</pre>
+<pre>End Sub
+</pre>
+
+</body>
+
+</html>

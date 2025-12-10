@@ -1,0 +1,949 @@
+<html>
+
+<head>
+<title>Add Shortcut Menus to Add-ins Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,shortcut menus">
+<meta name=MS-HKWD content="VB.NET examples,add-ins">
+<meta name=MS-HKWD content="VB.NET examples,background">
+<meta name=MS-HKWD content="VB.NET examples,SOLIDWORKS background">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add Shortcut Menus to Add-ins Example (VB.NET)</h1>
+
+
+<p>This example shows how to create a shortcut menu that launches from a 
+third-party icon in the context-sensitive menus of part faces. </p>
+
+<p class=APICODE>
+'----------------------------------------------------------------------------<br>
+' Preconditions:<br>
+'&nbsp;1. In Microsoft Visual 
+Studio 2010, or later, create a SOLIDWORKS add-in <br>
+'&nbsp;&nbsp;&nbsp; project using <b>Visual Basic &gt; SwVBAddin</b>.<br>
+'&nbsp;2. Name the project 
+<b>SwVBAddin1</b>.<br>
+'&nbsp;3. Copy and paste
+<a href="#SwAddin">this code</a> into <b>SwAddin.vb</b> of your VB.NET project.<br>
+'&nbsp;4. Select <b>Project &gt;
+SwVBAddin1 Properties &gt; Debug</b>.<br>
+'&nbsp;5. Select <b>Start external program</b> and type the path to <b>
+sldworks.exe</b>. Include<br>
+'&nbsp;&nbsp;&nbsp; <b>sldworks.exe</b> in the path.<br>
+'&nbsp;6. Press F5 to start 
+debugging SOLIDWORKS with this add-in.<br>
+'<br>
+'&nbsp;Postconditions:<br>
+'&nbsp;1. In SOLIDWORKS, click <b>Tools &gt; VB.NET Add-in &gt; CreateCube</b>.<br>
+'&nbsp;2. Click a face on the 
+cube.<br>
+'&nbsp;3. Click the 
+third-party icon in the face's context-sensitive menu.<br>
+'&nbsp;4. Click a menu 
+item on the shortcut menu and inspect the Immediate Window.<br>
+' 5. Click <b>Tools &gt; Options &gt; System Options &gt; Colors</b> &gt; select 
+a different <br>
+'&nbsp;&nbsp;&nbsp; <b>Background</b> &gt; <b>OK</b>.<br>
+' 6. Displays the new background. Click <b>OK</b> to close the message box.<br>
+' 7. Displays the FeatureManager design tree decimal color value. Click <b>OK</b>
+<br>
+'&nbsp;&nbsp;&nbsp; to close the message box.<br>
+'----------------------------------------------------------------------------</p>
+<p class="APICODE">' <a name="SwAddin">SwAddin.vb:</a></p>
+<p>&nbsp;</p>
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Collections<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Reflection<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Runtime.InteropServices<br>
+	<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swpublished<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SOLIDWORKSTools<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SOLIDWORKSTools.File<br>
+	<br>
+	<br>
+	&lt;Guid(</span><span style="color:#a31515">&quot;a3ddcdce-c8a8-47c2-8561-919a24285286&quot;</span><span style="color:Black">)&gt; 
+	_<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&lt;ComVisible(</span><span style="color:Blue">True</span><span style="color:Black">)&gt; 
+	_<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&lt;SwAddin( _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Description:=</span><span style="color:#a31515">&quot;SwVBAddin1 
+	third-party pop-up menus&quot;</span><span style="color:Black">, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Title:=</span><span style="color:#a31515">&quot;SwVBAddin1&quot;</span><span style="color:Black">, 
+	_<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LoadAtStartup:=</span><span style="color:Blue">True</span><span style="color:Black"> 
+	_<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)&gt; _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black">
+	</span><span style="color:Blue">Class</span><span style="color:Black"> 
+	SwAddin<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Implements</span><span style="color:Black"> 
+	SolidWorks.Interop.swpublished.SwAddin<br>
+	<br>
+	</span><span style="color:Blue">#Region</span><span style="color:Black">
+	</span><span style="color:#a31515">&quot;Local Variables&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black">
+	</span><span style="color:Blue">WithEvents</span><span style="color:Black"> 
+	iSwApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	iCmdMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ICommandManager<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	addinID </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	openDocs </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Hashtable<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	SwEventPtr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	ppage </span><span style="color:Blue">As</span><span style="color:Black"> 
+	UserPMPage<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	registerID </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	resultCode </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	model </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	frame </span><span style="color:Blue">As</span><span style="color:Black"> 
+	IFrame<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	cmdGroup </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ICommandGroup<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Public Properties<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReadOnly</span><span style="color:Black">
+	</span><span style="color:Blue">Property</span><span style="color:Black"> 
+	SwApp() </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Get<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Return</span><span style="color:Black"> 
+	iSwApp<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Get<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Property<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReadOnly</span><span style="color:Black">
+	</span><span style="color:Blue">Property</span><span style="color:Black"> 
+	CmdMgr() </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ICommandManager<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Get<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Return</span><span style="color:Black"> 
+	iCmdMgr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Get<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Property<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReadOnly</span><span style="color:Black">
+	</span><span style="color:Blue">Property</span><span style="color:Black"> 
+	OpenDocumentsTable() </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Hashtable<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Get<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Return</span><span style="color:Black"> 
+	openDocs<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Get<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Property<br>
+	#End</span><span style="color:Black"> </span><span style="color:Blue">Region<br>
+	<br>
+	#Region</span><span style="color:Black"> </span><span style="color:#a31515">
+	&quot;SOLIDWORKS Registration&quot;<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&lt;ComRegisterFunction()&gt; </span>
+	<span style="color:Blue">Public</span><span style="color:Black"> </span>
+	<span style="color:Blue">Shared</span><span style="color:Black"> </span>
+	<span style="color:Blue">Sub</span><span style="color:Black"> 
+	RegisterFunction(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	t </span><span style="color:Blue">As</span><span style="color:Black"> Type)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Get Custom Attribute: 
+	SwAddinAttribute<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	attributes() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	SWattr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SwAddinAttribute = </span><span style="color:Blue">Nothing<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;attributes = 
+	System.Attribute.GetCustomAttributes(</span><span style="color:Blue">GetType</span><span style="color:Black">(SwAddin),
+	</span><span style="color:Blue">GetType</span><span style="color:Black">(SwAddinAttribute))<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	attributes.Length &gt; 0 </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SWattr = </span>
+	<span style="color:Blue">DirectCast</span><span style="color:Black">(attributes(0), 
+	SwAddinAttribute)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	hklm </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Microsoft.Win32.RegistryKey = Microsoft.Win32.Registry.LocalMachine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	hkcu </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Microsoft.Win32.RegistryKey = Microsoft.Win32.Registry.CurrentUser<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	keyname </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black"> =
+	</span><span style="color:#a31515">&quot;SOFTWARE\SOLIDWORKS\Addins\{&quot;</span><span style="color:Black"> 
+	+ t.GUID.ToString() + </span><span style="color:#a31515">&quot;}&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	addinkey </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Microsoft.Win32.RegistryKey = hklm.CreateSubKey(keyname)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey.SetValue(</span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey.SetValue(</span><span style="color:#a31515">&quot;Description&quot;</span><span style="color:Black">, 
+	SWattr.Description)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey.SetValue(</span><span style="color:#a31515">&quot;Title&quot;</span><span style="color:Black">, 
+	SWattr.Title)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;keyname = </span><span style="color:#a31515">&quot;Software\SOLIDWORKS\AddInsStartup\{&quot;</span><span style="color:Black"> 
+	+ t.GUID.ToString() + </span><span style="color:#a31515">&quot;}&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey = 
+	hkcu.CreateSubKey(keyname)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinkey.SetValue(</span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	SWattr.LoadAtStartup, Microsoft.Win32.RegistryValueKind.DWord)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&lt;ComUnregisterFunction()&gt; </span>
+	<span style="color:Blue">Public</span><span style="color:Black"> </span>
+	<span style="color:Blue">Shared</span><span style="color:Black"> </span>
+	<span style="color:Blue">Sub</span><span style="color:Black"> 
+	UnregisterFunction(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	t </span><span style="color:Blue">As</span><span style="color:Black"> Type)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	hklm </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Microsoft.Win32.RegistryKey = Microsoft.Win32.Registry.LocalMachine<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	hkcu </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Microsoft.Win32.RegistryKey = Microsoft.Win32.Registry.CurrentUser<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	keyname </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black"> =
+	</span><span style="color:#a31515">&quot;SOFTWARE\SOLIDWORKS\Addins\{&quot;</span><span style="color:Black"> 
+	+ t.GUID.ToString() + </span><span style="color:#a31515">&quot;}&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hklm.DeleteSubKey(keyname)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;keyname = </span><span style="color:#a31515">&quot;Software\SOLIDWORKS\AddInsStartup\{&quot;</span><span style="color:Black"> 
+	+ t.GUID.ToString() + </span><span style="color:#a31515">&quot;}&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hkcu.DeleteSubKey(keyname)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	#End</span><span style="color:Black"> </span><span style="color:Blue">Region<br>
+	<br>
+	#Region</span><span style="color:Black"> </span><span style="color:#a31515">
+	&quot;ISwAddin Implementation&quot;<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	ConnectToSW(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	ThisSW </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object</span><span style="color:Black">,
+	</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	Cookie </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black">)
+	</span><span style="color:Blue">As</span><span style="color:Black"> </span>
+	<span style="color:Blue">Boolean</span><span style="color:Black"> </span>
+	<span style="color:Blue">Implements</span><span style="color:Black"> 
+	SolidWorks.Interop.swpublished.SwAddin.ConnectToSW<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iSwApp = ThisSW<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addinID = Cookie<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Setup callbacks<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iSwApp.<b>SetAddinCallbackInfo</b>(0,
+	</span><span style="color:Blue">Me</span><span style="color:Black">, addinID)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Setup the Command Manager<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iCmdMgr = 
+	iSwApp.<b>GetCommandManager</b>(Cookie)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AddCommandMgr()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Setup the Event Handlers<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SwEventPtr = iSwApp<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openDocs = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	Hashtable<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventHandlers()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Setup Sample Property Manager<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AddPMP()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ConnectToSW = </span><span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	DisconnectFromSW() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean</span><span style="color:Black">
+	</span><span style="color:Blue">Implements</span><span style="color:Black"> 
+	SolidWorks.Interop.swpublished.SwAddin.DisconnectFromSW<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RemoveCommandMgr()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RemovePMP()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DetachEventHandlers()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iSwApp = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'The 
+	addin _must_ call GC.Collect() here in order to retrieve all managed code 
+	pointers <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GC.Collect()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DisconnectFromSW = </span><span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	#End</span><span style="color:Black"> </span><span style="color:Blue">Region<br>
+	<br>
+	#Region</span><span style="color:Black"> </span><span style="color:#a31515">
+	&quot;UI Methods&quot;<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black">
+	</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	AddCommandMgr()<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	iBmp </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">New</span><span style="color:Black"> 
+	BitmapHandler<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	thisAssembly </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Assembly<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	cmdIndex0 </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black">, 
+	cmdIndex1 </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	Title </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black"> =
+	</span><span style="color:#a31515">&quot;VB.NET Add-in&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	ToolTip </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black"> =
+	</span><span style="color:#a31515">&quot;VB.NET Add-in&quot;<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	docTypes() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = {swDocumentTypes_e.swDocASSEMBLY, 
+	_<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swDocumentTypes_e.swDocDRAWING, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swDocumentTypes_e.swDocPART}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;thisAssembly = System.Reflection.Assembly.GetAssembly(</span><span style="color:Blue">Me</span><span style="color:Black">.GetType())<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup = iCmdMgr.<b>CreateCommandGroup</b>(1, Title, ToolTip, </span>
+	<span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, -1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.LargeIconList = iBmp.<b>CreateFileFromResourceBitmap</b>(</span><span style="color:#a31515">&quot;SwVBAddin1.ToolbarLarge.bmp&quot;</span><span style="color:Black">, 
+	thisAssembly)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.SmallIconList = iBmp.<b>CreateFileFromResourceBitmap</b>(</span><span style="color:#a31515">&quot;SwVBAddin1.ToolbarSmall.bmp&quot;</span><span style="color:Black">, 
+	thisAssembly)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.LargeMainIcon = iBmp.<b>CreateFileFromResourceBitmap</b>(</span><span style="color:#a31515">&quot;SwVBAddin1.MainIconLarge.bmp&quot;</span><span style="color:Black">, 
+	thisAssembly)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.SmallMainIcon = iBmp.<b>CreateFileFromResourceBitmap</b>(</span><span style="color:#a31515">&quot;SwVBAddin1.MainIconSmall.bmp&quot;</span><span style="color:Black">, 
+	thisAssembly)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIndex0 = cmdGroup.<b>AddCommandItem</b>(</span><span style="color:#a31515">&quot;CreateCube&quot;</span><span style="color:Black">, 
+	-1, </span><span style="color:#a31515">&quot;Create a cube&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;Create cube&quot;</span><span style="color:Black">, 
+	0, </span><span style="color:#a31515">&quot;CreateCube&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIndex1 = cmdGroup.<b>AddCommandItem</b>(</span><span style="color:#a31515">&quot;Show 
+	PMP&quot;</span><span style="color:Black">, -1, </span>
+	<span style="color:#a31515">&quot;Show PMP&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;Show PMP&quot;</span><span style="color:Black">, 
+	2, </span><span style="color:#a31515">&quot;ShowPMP&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;PMPEnable&quot;</span><span style="color:Black">, 
+	2)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.<b>HasToolbar</b> = </span><span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.<b>HasMenu</b> = </span>
+	<span style="color:Blue">True<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdGroup.<b>Activate</b>()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black">
+	</span><span style="color:Blue">Each</span><span style="color:Black"> 
+	docType </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black">
+	</span><span style="color:Blue">In</span><span style="color:Black"> docTypes<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	cmdTab </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ICommandTab = iCmdMgr.<b>GetCommandTab</b>(docType, Title)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	bResult </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	cmdTab </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdTab = 
+	iCmdMgr.<b>AddCommandTab</b>(docType, Title)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	cmdBox </span><span style="color:Blue">As</span><span style="color:Black"> 
+	CommandTabBox = cmdTab.<b>AddCommandTabBox</b><br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	cmdIDs(3) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	TextType(3) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIDs(0) = 
+	cmdGroup.<b>CommandID</b>(cmdIndex0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TextType(0) = 
+	swCommandTabButtonTextDisplay_e.swCommandTabButton_TextHorizontal<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIDs(1) = cmdGroup.<b>CommandID</b>(cmdIndex1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TextType(1) = 
+	swCommandTabButtonTextDisplay_e.swCommandTabButton_TextHorizontal<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIDs(2) = cmdGroup.<b>ToolbarId</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TextType(2) = 
+	swCommandTabButtonTextDisplay_e.swCommandTabButton_TextHorizontal<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bResult = cmdBox.<b>AddCommands</b>(cmdIDs, TextType)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	cmdBox1 </span><span style="color:Blue">As</span><span style="color:Black"> 
+	CommandTabBox = cmdTab.<b>AddCommandTabBox</b>()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReDim</span><span style="color:Black"> 
+	cmdIDs(1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">ReDim</span><span style="color:Black"> 
+	TextType(1)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdIDs(0) = cmdGroup.<b>ToolbarId</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TextType(0) = 
+	swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bResult = cmdBox1.<b>AddCommands</b>(cmdIDs, TextType)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmdTab.<b>AddSeparator</b>(cmdBox1, cmdGroup.ToolbarId)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	create a third-party icon in the context-sensitive menus of faces in parts<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;frame = SwApp.<b>Frame</b>()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultCode = frame.<b>AddMenuPopupIcon2</b>(swDocumentTypes_e.swDocPART, 
+	swSelectType_e.swSelFACES, </span><span style="color:#a31515">&quot;third-party 
+	context-sensitive&quot;</span><span style="color:Black">, addinID, </span>
+	<span style="color:#a31515">&quot;CSCallbackFunction&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;CSEnable&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 
+	cmdGroup.<b>SmallMainIcon</b>)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' create and register the shortcut 
+	menu<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;registerID = SwApp.<b>RegisterThirdPartyPopupMenu</b>()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' add a menu break at the top of 
+	the shortcut menu<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultCode = SwApp.<b>AddItemToThirdPartyPopupMenu2</b>(registerID,
+	</span><span style="color:Blue">CInt</span><span style="color:Black">(swDocumentTypes_e.swDocPART),
+	</span><span style="color:#a31515">&quot;Menu Break&quot;</span><span style="color:Black">, 
+	addinID, </span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:Blue">CInt</span><span style="color:Black">(swMenuItemType_e.swMenuItemType_Break))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' add a couple of items to the 
+	shortcut menu<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultCode = SwApp.<b>AddItemToThirdPartyPopupMenu2</b>(registerID,
+	</span><span style="color:Blue">CInt</span><span style="color:Black">(swDocumentTypes_e.swDocPART),
+	</span><span style="color:#a31515">&quot;Test1&quot;</span><span style="color:Black">, 
+	addinID, </span><span style="color:#a31515">&quot;TestCallback&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;EnableTest&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;Test1&quot;</span><span style="color:Black">, 
+	cmdGroup.<b>SmallMainIcon</b>, </span><span style="color:Blue">CInt</span><span style="color:Black">(swMenuItemType_e.swMenuItemType_Default))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultCode = SwApp.<b>AddItemToThirdPartyPopupMenu2</b>(registerID,
+	</span><span style="color:Blue">CInt</span><span style="color:Black">(swDocumentTypes_e.swDocPART),
+	</span><span style="color:#a31515">&quot;Test4&quot;</span><span style="color:Black">, 
+	addinID, </span><span style="color:#a31515">&quot;TestCallback&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;EnableTest&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;Test4&quot;</span><span style="color:Black">, 
+	cmdGroup.<b>SmallMainIcon</b>, </span><span style="color:Blue">CInt</span><span style="color:Black">(swMenuItemType_e.swMenuItemType_Default))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' add a separator bar to the 
+	shortcut menu <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultCode = SwApp.<b>AddItemToThirdPartyPopupMenu2</b>(registerID,
+	</span><span style="color:Blue">CInt</span><span style="color:Black">(swDocumentTypes_e.swDocPART),
+	</span><span style="color:#a31515">&quot;separator&quot;</span><span style="color:Black">, 
+	addinID, </span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:Blue">CInt</span><span style="color:Black">(swMenuItemType_e.swMenuItemType_Separator))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' add another item to the shortcut 
+	menu<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultCode = SwApp.<b>AddItemToThirdPartyPopupMenu2</b>(registerID,
+	</span><span style="color:Blue">CInt</span><span style="color:Black">(swDocumentTypes_e.swDocPART),
+	</span><span style="color:#a31515">&quot;Test5&quot;</span><span style="color:Black">, 
+	addinID, </span><span style="color:#a31515">&quot;TestCallback&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;EnableTest&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;Test5&quot;</span><span style="color:Black">, 
+	cmdGroup.<b>SmallMainIcon</b>, </span><span style="color:Blue">CInt</span><span style="color:Black">(swMenuItemType_e.swMenuItemType_Default))<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' add an icon to a menu bar of the 
+	shortcut menu<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultCode = SwApp.<b>AddItemToThirdPartyPopupMenu2</b>(registerID,
+	</span><span style="color:Blue">CInt</span><span style="color:Black">(swDocumentTypes_e.swDocPART),
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, 
+	addinID, </span><span style="color:#a31515">&quot;TestCallback&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;EnableTest&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">,
+	</span><span style="color:#a31515">&quot;NoOp&quot;</span><span style="color:Black">, 
+	cmdGroup.<b>SmallMainIcon</b>, </span><span style="color:Blue">CInt</span><span style="color:Black">(swMenuItemType_e.swMenuItemType_Default))<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' remove an icon from the menu bar 
+	of the shortcut menu<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'resultCode 
+	= SwApp.<b>RemoveItemFromThirdPartyPopupMenu</b>(registerID, 
+	CInt(swDocumentTypes_e.swDocPART), &quot;&quot;, 1)<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;thisAssembly = </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iBmp.Dispose()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black">
+	</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	RemoveCommandMgr()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iCmdMgr.<b>RemoveCommandGroup</b>(1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	AddPMP() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ppage = </span>
+	<span style="color:Blue">New</span><span style="color:Black"> UserPMPage<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ppage.Init(iSwApp, </span><span style="color:Blue">Me</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	RemovePMP() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ppage = </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	#End</span><span style="color:Black"> </span><span style="color:Blue">Region<br>
+	<br>
+	#Region</span><span style="color:Black"> </span><span style="color:#a31515">
+	&quot;Event Methods&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	AttachEventHandlers()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachSWEvents()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Listen for events on all currently 
+	open docs<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventsToAllDocuments()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	DetachEventHandlers()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DetachSWEvents()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Close events on all currently open 
+	docs<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	docHandler </span><span style="color:Blue">As</span><span style="color:Black"> 
+	DocumentEventHandler<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	key </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	numKeys </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numKeys = openDocs.Count<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	numKeys &gt; 0 </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	keys() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object</span><span style="color:Black"> =
+	</span><span style="color:Blue">New</span><span style="color:Black"> </span>
+	<span style="color:Blue">Object</span><span style="color:Black">(numKeys - 
+	1) {}<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Remove all document event 
+	handlers<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openDocs.Keys.CopyTo(keys, 0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black">
+	</span><span style="color:Blue">Each</span><span style="color:Black"> key
+	</span><span style="color:Blue">In</span><span style="color:Black"> keys<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler = openDocs.Item(key)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler.DetachEventHandlers() </span>
+	<span style="color:Green">'This also removes the pair from the hash<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler = </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key = </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	AttachSWEvents()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">AddHandler</span><span style="color:Black"> 
+	iSwApp.<b>ActiveDocChangeNotify</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_ActiveDocChangeNotify<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">AddHandler</span><span style="color:Black"> 
+	iSwApp.<b>DocumentLoadNotify2</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_DocumentLoadNotify2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">AddHandler</span><span style="color:Black"> 
+	iSwApp.<b>FileNewNotify2</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_FileNewNotify2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">AddHandler</span><span style="color:Black"> 
+	iSwApp.<b>ActiveModelDocChangeNotify</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_ActiveModelDocChangeNotify<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">AddHandler</span><span style="color:Black"> 
+	iSwApp.<b>FileOpenPostNotify</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_FileOpenPostNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>&nbsp;<font color="#0000FF">AddHandler</font> 
+	iSwApp.<b>InterfaceBrightnessThemeChangeNotify</b>, <font color="#0000FF">
+	AddressOf Me</font>.SldWorks_InterfaceBrightnessChangeThemeNotify<br>
+	<span style="color:Black"><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	DetachSWEvents()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">RemoveHandler</span><span style="color:Black"> 
+	iSwApp.<b>ActiveDocChangeNotify</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_ActiveDocChangeNotify<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">RemoveHandler</span><span style="color:Black"> 
+	iSwApp.<b>DocumentLoadNotify2</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_DocumentLoadNotify2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">RemoveHandler</span><span style="color:Black"> 
+	iSwApp.<b>FileNewNotify2</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_FileNewNotify2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">RemoveHandler</span><span style="color:Black"> 
+	iSwApp.<b>ActiveModelDocChangeNotify</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_ActiveModelDocChangeNotify<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">RemoveHandler</span><span style="color:Black"> 
+	iSwApp.<b>FileOpenPostNotify</b>, </span><span style="color:Blue">AddressOf</span><span style="color:Black">
+	</span><span style="color:Blue">Me</span><span style="color:Black">.SldWorks_FileOpenPostNotify<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><font color="#0000FF">
+	RemoveHandler</font><span style="color:Black"> iSwApp.<b>InterfaceBrightnessThemeChangeNotify</b>, </span>
+	<font color="#0000FF">AddressOf Me</font><span style="color:Black">.SldWorks_InterfaceBrightnessChangeThemeNotify<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	AttachEventsToAllDocuments()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	modDoc </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modDoc = iSwApp.<b>GetFirstDocument</b>()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">While</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> modDoc
+	</span><span style="color:Blue">Is</span><span style="color:Black"> </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	openDocs.Contains(modDoc) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachModelDocEventHandler(modDoc)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modDoc = modDoc.<b>GetNext</b>()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">While<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	AttachModelDocEventHandler(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	modDoc </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2) </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	modDoc </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Return</span><span style="color:Black">
+	</span><span style="color:Blue">False<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	docHandler </span><span style="color:Blue">As</span><span style="color:Black"> 
+	DocumentEventHandler = </span><span style="color:Blue">Nothing<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black">
+	</span><span style="color:Blue">Not</span><span style="color:Black"> 
+	openDocs.Contains(modDoc) </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Select</span><span style="color:Black">
+	</span><span style="color:Blue">Case</span><span style="color:Black"> 
+	modDoc.<b>GetType</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Case</span><span style="color:Black"> 
+	swDocumentTypes_e.swDocPART<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	PartEventHandler()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Case</span><span style="color:Black"> 
+	swDocumentTypes_e.swDocASSEMBLY<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	AssemblyEventHandler()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Case</span><span style="color:Black"> 
+	swDocumentTypes_e.swDocDRAWING<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	DrawingEventHandler()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Select<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler.Init(iSwApp, </span>
+	<span style="color:Blue">Me</span><span style="color:Black">, modDoc)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler.AttachEventHandlers()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openDocs.Add(modDoc, docHandler)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	DetachModelEventHandler(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	modDoc </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	docHandler </span><span style="color:Blue">As</span><span style="color:Black"> 
+	DocumentEventHandler<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler = openDocs.Item(modDoc)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openDocs.Remove(modDoc)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modDoc = </span><span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docHandler = </span>
+	<span style="color:Blue">Nothing<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	#End</span><span style="color:Black"> </span><span style="color:Blue">Region<br>
+	<br>
+	#Region</span><span style="color:Black"> </span><span style="color:#a31515">
+	&quot;Event Handlers&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	SldWorks_ActiveDocChangeNotify() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'TODO: 
+	Add your implementation here<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	SldWorks_DocumentLoadNotify2(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	docTitle </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black">,
+	</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	docPath </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black">)
+	</span><span style="color:Blue">As</span><span style="color:Black"> </span>
+	<span style="color:Blue">Integer<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	SldWorks_FileNewNotify2(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	newDoc </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object</span><span style="color:Black">,
+	</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	doctype </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black">,
+	</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	templateName </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black">)
+	</span><span style="color:Blue">As</span><span style="color:Black"> </span>
+	<span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventsToAllDocuments()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	SldWorks_ActiveModelDocChangeNotify() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'TODO: 
+	Add your implementation here<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	SldWorks_FileOpenPostNotify(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	FileName </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String</span><span style="color:Black">)
+	</span><span style="color:Blue">As</span><span style="color:Black"> </span>
+	<span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttachEventsToAllDocuments()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function</span><p class="APICODE"><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	SldWorks_InterfaceBrightnessChangeThemeNotify(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	Theme </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span>,<span style="color:Blue"> 
+	ByRef </span>Colors<span style="color:Blue"> as Object</span><span style="color:Black">)
+	</span><span style="color:Blue">As</span><span style="color:Black"> </span>
+	<span style="color:Blue">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MsgBox(<span style="color:#a31515;">&quot;Background&nbsp;changed&nbsp;to&nbsp;(0&nbsp;=&nbsp;light,&nbsp;1&nbsp;=&nbsp;medium,&nbsp;2&nbsp;=&nbsp;dark, 
+	3 = medium light):&nbsp;&quot;</span>&nbsp;&amp;&nbsp;Theme)<span style="color:blue;"><br>
+	</span>&nbsp;&nbsp;&nbsp; <span style="color:blue;">&nbsp;&nbsp;&nbsp; Dim</span>&nbsp;colorsArray()&nbsp;<span style="color:blue;">As</span>&nbsp;<span style="color:blue;">Integer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; colorsArray&nbsp;=&nbsp;Colors<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MsgBox(<span style="color:#a31515;">&quot;FeatureManager&nbsp;design&nbsp;tree&nbsp;color:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;colorsArray(0))<span style="color:Black"><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	#End</span><span style="color:Black"> </span><span style="color:Blue">Region<br>
+	<br>
+	#Region</span><span style="color:Black"> </span><span style="color:#a31515">
+	&quot;UI Callbacks&quot;<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	CreateCube()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'make sure we have a part open<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	partTemplate </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">String<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	featMan </span><span style="color:Blue">As</span><span style="color:Black"> 
+	FeatureManager<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;partTemplate = 
+	iSwApp.<b>GetUserPreferenceStringValue</b>(swUserPreferenceStringValue_e.swDefaultTemplatePart)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model = iSwApp.<b>NewDocument</b>(partTemplate, 
+	swDwgPaperSizes_e.swDwgPaperA2size, 0.0, 0.0)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model.<b>InsertSketch2</b>(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model.<b>SketchRectangle</b>(0, 0, 0, 0.1, 0.1, 0.1, </span>
+	<span style="color:Blue">False</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Extrude the sketch<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featMan = model.<b>FeatureManager</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featMan.<b>FeatureExtrusion</b>(</span><span style="color:Blue">True</span><span style="color:Black">, 
+	_<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">False</span><span style="color:Black">,
+	</span><span style="color:Blue">False</span><span style="color:Black">, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swEndConditions_e.swEndCondBlind, 
+	swEndConditions_e.swEndCondBlind, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.1, 0.0, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">False</span><span style="color:Black">,
+	</span><span style="color:Blue">False</span><span style="color:Black">, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">False</span><span style="color:Black">,
+	</span><span style="color:Blue">False</span><span style="color:Black">, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.0, 0.0, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">False</span><span style="color:Black">,
+	</span><span style="color:Blue">False</span><span style="color:Black">, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">False</span><span style="color:Black">,
+	</span><span style="color:Blue">False</span><span style="color:Black">, _<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">True</span><span style="color:Black">, 
+	_<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">False</span><span style="color:Black">,
+	</span><span style="color:Blue">False</span><span style="color:Black">)<br>
+	<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	CSCallbackFunction()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultCode = SwApp.<b>ShowThirdPartyPopupMenu</b>(registerID, 500, 
+	500)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	CSEnable() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	iSwApp.<b>ActiveDoc</b> </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CSEnable = 0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Else<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CSEnable = 1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	ShowPMP()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>ppage.<b>Show</b>()<span style="color:Green"><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	PMPEnable() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	iSwApp.<b>ActiveDoc</b> </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PMPEnable = 0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Else<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PMPEnable = 1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> 
+	TestCallback()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Diagnostics.Debug.Print(</span><span style="color:#a31515">&quot;Test 
+	callback&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	EnableTest() </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	iSwApp.<b>ActiveDoc</b> </span><span style="color:Blue">Is</span><span style="color:Black">
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">
+	</span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EnableTest = 0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Else<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EnableTest = 1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	#End</span><span style="color:Black"> </span><span style="color:Blue">Region<br>
+	<br>
+	End</span><span style="color:Black"> </span><span style="color:Blue">Class</span>
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,141 @@
+<html>
+
+<head>
+<title>Add ActiveX Tabs to FeatureManager Design Tree Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,tabs">
+<meta name=MS-HKWD content="VB.NET examples,FeatureManager design tree">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add ActiveX Tabs to FeatureManager Design Tree Example (VB.NET)</h1>
+<p>This example shows how to add tabs to a split FeatureManager design tree using 
+an on-disk bitmap file for the tabs' icons.</p>
+
+<p class="APICODE"><font color="Green" size="-1" face="Courier New">
+'----------------------------------------------------------<br>
+' Preconditions:<br>
+</font><font color="#008000">' 1. In the IDE, reference your ActiveX control 
+file <br>
+'&nbsp;&nbsp;&nbsp; (click <b>Project &gt; Add Reference &gt; Browse</b> and browse<br>
+'&nbsp;&nbsp;&nbsp; to the folder where the ActiveX control resides and click<br>
+'&nbsp;&nbsp;&nbsp; the ActiveX control file <b>&gt; OK</b>).<br>
+' 2. Verify that the specified part document and bitmap exist.<br>
+' 3. Replace <i>activex_control_component_declaration</i> and <br>
+'&nbsp;&nbsp;&nbsp; <i>activex_control_CLSID_or_ProgID</i> with your ActiveX 
+control's <br>
+'&nbsp;&nbsp;&nbsp; information.</font><font size="-1" face="Courier New"><font color="Green"><br>
+'<br>
+' Postconditions:<br>
+' 1. Opens the part document and splits the FeatureManager <br>
+'&nbsp;&nbsp;&nbsp; design tree.<br>
+</font></font><font color="#008000">' 2. Adds a new tab to each FeatureManager 
+design tree.<br>
+' 3. Activates the new tab</font><font size="-1" face="Courier New"><font color="Green"> 
+on the top of the FeatureManager<br>
+'&nbsp;&nbsp;&nbsp; design tree.<br>
+<br>
+' NOTE: Because the part document is used elsewhere,<br>
+' do not save changes.<br>
+'----------------------------------------------------------<br>
+</font><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.sldworks<br>
+</font><font color="Blue">Imports</font><font color="Black"> 
+SolidWorks.Interop.swconst<br>
+<br>
+</font><font color="Blue">Partial</font><font color="Black"> </font>
+<font color="Blue">Class</font><font color="Black"> SolidWorksMacro<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> </font>
+<font color="Blue">Sub</font><font color="Black"> Main()<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Const</font><font color="Black"> iconSmall
+</font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">String</font><font color="Black"> = </font>
+<font color="#a31515">&quot;C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\data\user 
+macro icons\button.bmp&quot;<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+swModel </font><font color="Blue">As</font><font color="Black"> ModelDoc2<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> swModViewMgr
+</font><font color="Blue">As</font><font color="Black"> ModelViewManager<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> swFeatMgrTabTop
+</font><font color="Blue">As</font><font color="Black"> FeatMgrView<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> swFeatMgrTabBtm
+</font><font color="Blue">As</font><font color="Black"> FeatMgrView<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> ctrlTop </font>
+<font color="Blue">As</font><font color="Black"> </font></font><i>
+activex_control_component_declaration</i><font size="-1" face="Courier New"><font color="Black"><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> ctrlBtm </font>
+<font color="Blue">As</font><font color="Black"> </font></font><i>
+activex_control_component_declaration</i><font size="-1" face="Courier New"><font color="Black"><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> fileName </font>
+<font color="Blue">As</font><font color="Black"> </font><font color="Blue">
+String<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+errors </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+warnings </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Integer<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Dim</font><font color="Black"> 
+activePane </font><font color="Blue">As</font><font color="Black"> </font>
+<font color="Blue">Integer<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fileName = </font><font color="#a31515">
+&quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\fillets\knob.sldprt&quot;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = swApp.<b>OpenDoc6</b>(fileName, 
+swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, </font>
+<font color="#a31515">&quot;&quot;</font><font color="Black">, errors, warnings)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModViewMgr = swModel.<b>ModelViewManager<br>
+&nbsp;</b></font></font></p>
+<p class="APICODE"><font face="Courier New" size="-1"><font color="#008000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+' Split the FeatureManager design tree;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' the original is displayed below the 
+copy</font><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>FeatureManagerSplitterPosition</b> 
+= 0.5<font color="Black"><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' New 
+tab on original of FeatureManager design tree<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatMgrTabBtm = swModViewMgr.<b>CreateFeatureMgrControl2</b>(iconSmall,
+</font><font color="#a31515">&quot;</font></font><font color="#800000"><i>activex_control_CLSID_or_ProgID</i></font><font face="Courier New" size="-1"><font color="#a31515">&quot;</font><font color="Black">, </font>
+<font color="#a31515">&quot;&quot;</font><font color="Black">, </font>
+<font color="#a31515">&quot;Bottom tab ToolTip&quot;</font><font color="Black">, 
+swFeatMgrPane_e.swFeatMgrPaneBottom)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ctrlBtm = swFeatMgrTabBtm.<b>GetControl</b><br>
+&nbsp;</font></font></p>
+<p class="APICODE"><font face="Courier New" size="-1"><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">' 
+New tab on copy of FeatureManager design tree<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatMgrTabTop = swModViewMgr.<b>CreateFeatureMgrControl2</b>(iconSmall,
+</font><font color="#a31515">&quot;</font></font><font color="#800000"><i>activex_control_CLSID_or_ProgID</i></font><font face="Courier New" size="-1"><font color="#a31515">&quot;</font><font color="Black">, </font>
+<font color="#a31515">&quot;&quot;</font><font color="Black">, </font>
+<font color="#a31515">&quot;Top tab ToolTip&quot;</font><font color="Black">, 
+swFeatMgrPane_e.swFeatMgrPaneBottom)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ctrlTop = swFeatMgrTabTop.<b>GetControl</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;activePane = swFeatMgrTabTop.<b>ActivateView</b><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">End</font><font color="Black"> </font>
+<font color="Blue">Sub<br>
+<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' </font>
+<font color="Gray">&lt;summary&gt;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' The SldWorks swApp 
+variable is pre-assigned for you.<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Green">''' </font>
+<font color="Gray">&lt;/summary&gt;<br>
+</font><font color="Black">&nbsp;&nbsp;&nbsp;&nbsp;</font><font color="Blue">Public</font><font color="Black"> 
+swApp </font><font color="Blue">As</font><font color="Black"> SldWorks<br>
+<br>
+<br>
+</font><font color="Blue">End</font><font color="Black"> </font></font>
+<font color="Blue"><font size="-1" face="Courier New">Class</font></font></p>
+
+</body>
+
+</html>

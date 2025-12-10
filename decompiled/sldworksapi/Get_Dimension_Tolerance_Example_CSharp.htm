@@ -1,0 +1,117 @@
+<html>
+
+<head>
+<title>Get Dimension Tolerance Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,dimensions">
+<meta name=MS-HKWD content="C# examples,tolerances">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Get Dimension Tolerance Example (C#)</h1>
+<p>This example shows how to get and set dimension tolerance values and options.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color:green;">//--------------------------------------------------------------------</span>
+<span style="color:green;">//&nbsp;Preconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Open&nbsp;<i>public_documents</i><b>\samples\tutorial\api\box.slddrw</b>.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Zoom&nbsp;in&nbsp;on&nbsp;the&nbsp;diameter&nbsp;dimension&nbsp;and&nbsp;click&nbsp;it.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;Postconditions:</span>
+<span style="color:green;">//&nbsp;1.&nbsp;Sets&nbsp;the dimension&nbsp;tolerance&nbsp;type&nbsp;to&nbsp;fit&nbsp;with&nbsp;tolerance.</span>
+<span style="color:green;">//&nbsp;2.&nbsp;Sets&nbsp;the&nbsp;dimension&nbsp;fit&nbsp;tolerance&nbsp;type&nbsp;to&nbsp;transitional.</span>
+<span style="color:green;">//&nbsp;3.&nbsp;Gets&nbsp;the&nbsp;minimum&nbsp;and&nbsp;maximum&nbsp;dimension&nbsp;tolerances&nbsp;for&nbsp;the</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;selected&nbsp;dimension&nbsp;and&nbsp;whether&nbsp;the&nbsp;values&nbsp;are&nbsp;valid.</span>
+<span style="color:green;">//&nbsp;4.&nbsp;Gets&nbsp;the&nbsp;height&nbsp;and&nbsp;scale&nbsp;of&nbsp;the&nbsp;font&nbsp;of&nbsp;the&nbsp;dimension</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;tolerances.</span>
+<span style="color:green;">//&nbsp;5.&nbsp;Sets&nbsp;the&nbsp;dimension&nbsp;fit&nbsp;tolerance&nbsp;font&nbsp;to&nbsp;be&nbsp;the&nbsp;same&nbsp;</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;size&nbsp;as&nbsp;the&nbsp;dimension&nbsp;tolerance&nbsp;font.</span>
+<span style="color:green;">//&nbsp;6.&nbsp;Gets&nbsp;the&nbsp;height&nbsp;and&nbsp;scale&nbsp;of&nbsp;the&nbsp;font&nbsp;of&nbsp;the&nbsp;dimension&nbsp;fit&nbsp;</span>
+<span style="color:green;">//&nbsp;&nbsp;&nbsp;&nbsp;tolerance.</span>
+<span style="color:green;">//&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;Immediate&nbsp;window&nbsp;and&nbsp;drawing&nbsp;sheet.</span>
+<span style="color:green;">//</span>
+<span style="color:green;">//&nbsp;NOTE:&nbsp;Because&nbsp;this&nbsp;drawing&nbsp;is&nbsp;used&nbsp;elsewhere,&nbsp;do&nbsp;not&nbsp;save&nbsp;changes.</span>
+<span style="color:green;">//--------------------------------------------------------------------</span>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;
+<span style="color:blue;">using</span>&nbsp;System;
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;
+ 
+<span style="color:blue;">namespace</span>&nbsp;Macro1CSharp.csproj
+{
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span>
+&nbsp;&nbsp;&nbsp;&nbsp;{
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModelDoc2&nbsp;swModel&nbsp;=&nbsp;<span style="color:blue;">default</span>(ModelDoc2);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelectionMgr&nbsp;swSelMgr&nbsp;=&nbsp;<span style="color:blue;">default</span>(SelectionMgr);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DisplayDimension&nbsp;swDisplayDimension&nbsp;=&nbsp;<span style="color:blue;">default</span>(DisplayDimension);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Dimension&nbsp;swDimension&nbsp;=&nbsp;<span style="color:blue;">default</span>(Dimension);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DimensionTolerance&nbsp;swDimensionTolerance&nbsp;=&nbsp;<span style="color:blue;">default</span>(DimensionTolerance);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;maxValue&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;minValue&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;maxValueValid&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">int</span>&nbsp;minValueValid&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;fontHeight&nbsp;=&nbsp;0;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">double</span>&nbsp;fontScale&nbsp;=&nbsp;0;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;(ModelDoc2)swApp.<b>ActiveDoc</b>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr&nbsp;=&nbsp;(SelectionMgr)swModel.<b>SelectionManager</b>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Get&nbsp;the&nbsp;selection</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDisplayDimension&nbsp;=&nbsp;(DisplayDimension)swSelMgr.<b>GetSelectedObject6</b>(1,&nbsp;0);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//If&nbsp;selection&nbsp;is&nbsp;not&nbsp;a&nbsp;dimension,&nbsp;then&nbsp;exit</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">if</span>&nbsp;(swSelMgr.<b>GetSelectedObjectType3</b>(1,&nbsp;-1)&nbsp;!=&nbsp;(<span style="color:blue;">int</span>)swSelectType_e.swSelDIMENSIONS)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">return</span>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Selection&nbsp;is&nbsp;a&nbsp;dimension,&nbsp;so&nbsp;get&nbsp;the&nbsp;dimension&nbsp;tolerance&nbsp;object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimension&nbsp;=&nbsp;(Dimension)swDisplayDimension.<b>GetDimension2</b>(0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionTolerance&nbsp;=&nbsp;(DimensionTolerance)swDimension.<b>Tolerance</b>;
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Set&nbsp;tolerance&nbsp;type&nbsp;to&nbsp;fit&nbsp;with&nbsp;tolerance&nbsp;and&nbsp;transitional</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionTolerance.<b>Type</b>&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swTolType_e.swTolFITWITHTOL;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Type&nbsp;of&nbsp;tolerance&nbsp;(8&nbsp;=&nbsp;swTolType_e.swTolFITWITHTOL):&nbsp;&quot;</span>&nbsp;+&nbsp;swDimensionTolerance.<b>Type</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionTolerance.<b>FitType</b>&nbsp;=&nbsp;(<span style="color:blue;">int</span>)swFitType_e.swFitTRANSITIONAL;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Type&nbsp;of&nbsp;fit&nbsp;tolerance&nbsp;(2&nbsp;=&nbsp;swFitType_e.swFitTransitional):&nbsp;&quot;</span>&nbsp;+&nbsp;swDimensionTolerance.<b>FitType</b>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&quot;</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Get&nbsp;dimension&nbsp;tolerance&nbsp;minimum&nbsp;and&nbsp;maximum&nbsp;values</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//and&nbsp;whether&nbsp;values&nbsp;are&nbsp;valid</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;maxValueValid&nbsp;=&nbsp;swDimensionTolerance.<b>GetMaxValue2</b>(<font color="#0000FF">out</font> maxValue);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;minValueValid&nbsp;=&nbsp;swDimensionTolerance.<b>GetMinValue2</b>(<font color="#0000FF">out</font> minValue);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Minimum&nbsp;dimension&nbsp;tolerance&nbsp;of&nbsp;&quot;</span>&nbsp;+&nbsp;minValue&nbsp;+&nbsp;<span style="color:#a31515;">&quot;&nbsp;valid&nbsp;(0&nbsp;=&nbsp;valid)?&nbsp;&quot;</span>&nbsp;+&nbsp;minValueValid);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Maximum&nbsp;dimension&nbsp;tolerance&nbsp;of&nbsp;&quot;</span>&nbsp;+&nbsp;maxValue&nbsp;+&nbsp;<span style="color:#a31515;">&quot;&nbsp;valid&nbsp;(0&nbsp;=&nbsp;valid)?&nbsp;&quot;</span>&nbsp;+&nbsp;maxValueValid);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Get&nbsp;some&nbsp;dimension&nbsp;tolerance&nbsp;values</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fontHeight&nbsp;=&nbsp;swDimensionTolerance.<b>GetFontHeight</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Height&nbsp;of&nbsp;font:&nbsp;&quot;</span>&nbsp;+&nbsp;fontHeight&nbsp;*&nbsp;1000.0&nbsp;+&nbsp;<span style="color:#a31515;">&quot;&nbsp;mm&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fontScale&nbsp;=&nbsp;swDimensionTolerance.<b>GetFontScale</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp;&nbsp;Scale&nbsp;of&nbsp;font:&nbsp;&quot;</span>&nbsp;+&nbsp;fontScale);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&quot;</span>);
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:green;">//Set&nbsp;and&nbsp;get&nbsp;some&nbsp;dimension&nbsp;fit&nbsp;tolerance&nbsp;values</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swDimensionTolerance.<b>SetFitFont</b>(<span style="color:blue;">true</span>,&nbsp;<span style="color:blue;">false</span>,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;Dimension&nbsp;fit&nbsp;tolerance&nbsp;font&nbsp;same&nbsp;size&nbsp;as&nbsp;tolerance&nbsp;font?&nbsp;&quot;</span>&nbsp;+&nbsp;swDimensionTolerance.<b>GetFitFontUseDimension</b>());
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fontHeight&nbsp;=&nbsp;swDimensionTolerance.<b>GetFitFontHeight</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp; Height&nbsp;of&nbsp;fit&nbsp;tolerance&nbsp;font:&nbsp;&quot;</span>&nbsp;+&nbsp;fontHeight&nbsp;*&nbsp;1000.0&nbsp;+&nbsp;<span style="color:#a31515;">&quot;&nbsp;mm&quot;</span>);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fontScale&nbsp;=&nbsp;swDimensionTolerance.<b>GetFitFontScale</b>();
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2b91af;">Debug</span>.Print(<span style="color:#a31515;">&quot;&nbsp; Scale&nbsp;of&nbsp;fit&nbsp;tolerance&nbsp;font:&nbsp;&quot;</span>&nbsp;+&nbsp;fontScale);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}</pre>
+
+</body>
+
+</html>

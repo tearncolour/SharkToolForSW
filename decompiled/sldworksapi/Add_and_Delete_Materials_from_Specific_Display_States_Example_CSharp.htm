@@ -1,0 +1,315 @@
+<html>
+
+<head>
+<title>Add and Delete Appearances from Specific Display States Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,display states">
+<meta name=MS-HKWD content="C# examples,appearances">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Add and Delete Appearances from Specific Display States Example (C#)</h1>
+<p>This example shows how to add an appearance to and delete an appearance from specific 
+display states.</p>
+
+<font SIZE="2" COLOR="#008000">
+<p class="APICODE">
+//---------------------------------------------------------------------------</p>
+<p class="APICODE">// Preconditions:</p>
+<p class="APICODE">// 1. Specified model exists.</p>
+<p class="APICODE">// 2. Specified appearance exists.</p>
+<p class="APICODE">// 3. Open an Immediate window.</p>
+<p class="APICODE">//</p>
+<p class="APICODE">// Postconditions:</p>
+<p class="APICODE">// 1. Creates Display State 2 and Display State 3 for the 
+active</p>
+<p class="APICODE">//&nbsp;&nbsp;&nbsp; configuration.</p>
+<p class="APICODE">// 2. Applies specified appearance to all display states of the 
+active</p>
+<p class="APICODE">//&nbsp;&nbsp;&nbsp; configuration.</p>
+<p class="APICODE">// 3. Press F5.</p>
+<p class="APICODE">// 4. Deletes specified appearance from all display states of 
+the active</p>
+<p class="APICODE">//&nbsp;&nbsp;&nbsp; configuration.</p>
+<p class="APICODE">// 5. Press F5.</p>
+<p class="APICODE">// 6. Closes document.</p>
+<p class="APICODE">
+//---------------------------------------------------------------------------</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> Microsoft.VisualBasic;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> System;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> System.Collections;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> System.Collections.Generic;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> System.Data;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> System.Diagnostics;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> SolidWorks.Interop.sldworks;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> SolidWorks.Interop.swconst;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">using</font><font SIZE="2"> System.Runtime.InteropServices;</p>
+</font><font SIZE="2" COLOR="#0000ff">
+<p class="APICODE">namespace</font><font SIZE="2"> RenderMaterials_CSharp.csproj</p>
+<p class="APICODE">{</p>
+<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">&nbsp;&nbsp;&nbsp; 
+partial</font><font SIZE="2"> </font><font SIZE="2" COLOR="#0000ff">class</font><font SIZE="2">
+</font><font SIZE="2" COLOR="#2b91af">SolidWorksMacro</p>
+</font><font SIZE="2">
+<p class="APICODE">&nbsp;&nbsp;&nbsp; {</p>
+<blockquote>
+	<blockquote>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">ModelDoc2</font><font SIZE="2"> 
+		swModel;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Configuration</font><font SIZE="2"> 
+		swConfig;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">
+		ModelDocExtension</font><font SIZE="2"> swModelDocExt;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Entity</font><font SIZE="2"> 
+		swEntity;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">SelectionMgr</font><font SIZE="2"> 
+		swSelMgr;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">RenderMaterial</font><font SIZE="2"> 
+		swRenderMaterial;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">object</font><font SIZE="2">[] 
+		displayStateNames;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">bool</font><font SIZE="2"> 
+		status;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">string</font><font SIZE="2"> 
+		modelName;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">string</font><font SIZE="2"> 
+		materialName;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2"> 
+		errors;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2"> 
+		warnings;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2"> 
+		nbrDisplayStates;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2"> 
+		i;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2"> 
+		k;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2"> 
+		nbrMaterials;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2"> 
+		materialID1;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2"> 
+		materialID2;</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">[] 
+		materialID1_ToDelete = </font><font SIZE="2" COLOR="#0000ff">new</font><font SIZE="2">
+		</font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">[1];</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">[] 
+		materialID2_ToDelete = </font><font SIZE="2" COLOR="#0000ff">new</font><font SIZE="2">
+		</font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">[1];</p>
+		<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">public</font><font SIZE="2">
+		</font><font SIZE="2" COLOR="#0000ff">void</font><font SIZE="2"> Main()</p>
+		<p class="APICODE">{</p>
+		<blockquote>
+			<p class="APICODE">modelName = </font>
+			<font SIZE="2" COLOR="#a31515">&quot;C:\\Users\\Public\\Documents\\SOLIDWORKS\\SOLIDWORKS 2018\\samples\\tutorial\\dimxpert\\bracket_auto_manual.sldprt&quot;</font><font SIZE="2">;</p>
+			<p class="APICODE">swModel = swApp.<b>OpenDoc6</b>(modelName, (</font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">)</font><font SIZE="2" COLOR="#2b91af">swDocumentTypes_e</font><font SIZE="2">.swDocPART, 
+			(</font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">)</font><font SIZE="2" COLOR="#2b91af">swOpenDocOptions_e</font><font SIZE="2">.swOpenDocOptions_Silent,
+			</font><font SIZE="2" COLOR="#a31515">&quot;&quot;</font><font SIZE="2">,
+			</font><font SIZE="2" COLOR="#0000ff">ref</font><font SIZE="2"> 
+			errors, </font><font SIZE="2" COLOR="#0000ff">ref</font><font SIZE="2"> 
+			warnings);</p>
+			<p class="APICODE">swModelDocExt = swModel.<b>Extension</b>;</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Get 
+			active configuration and create a new display</p>
+			</font><font SIZE="2">
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// state 
+			for this configuration</p>
+			</font><font SIZE="2">
+			<p class="APICODE">swConfig = (</font><font SIZE="2" COLOR="#2b91af">Configuration</font><font SIZE="2">)swModel.<b>GetActiveConfiguration</b>();</p>
+			<p class="APICODE">status = swConfig.<b>CreateDisplayState</b>(</font><font SIZE="2" COLOR="#a31515">&quot;Display 
+			State 2&quot;</font><font SIZE="2">);</p>
+			<p class="APICODE">swModel.<b>ForceRebuild3</b>(</font><font SIZE="2" COLOR="#0000ff">true</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Get 
+			active configuration and create another new</p>
+			</font><font SIZE="2">
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// display 
+			state for this configuration</p>
+			</font><font SIZE="2">
+			<p class="APICODE">swConfig = (</font><font SIZE="2" COLOR="#2b91af">Configuration</font><font SIZE="2">)swModel.<b>GetActiveConfiguration</b>();</p>
+			<p class="APICODE">status = swConfig.<b>CreateDisplayState</b>(</font><font SIZE="2" COLOR="#a31515">&quot;Display 
+			State 3&quot;</font><font SIZE="2">);</p>
+			<p class="APICODE">swModel.<b>ForceRebuild3</b>(</font><font SIZE="2" COLOR="#0000ff">true</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Create 
+			appearance</p>
+			</font><font SIZE="2">
+			<p class="APICODE">materialName = </font>
+			<font SIZE="2" COLOR="#a31515">&quot;C:\\Program Files\\SolidWorks Corp\\SolidWorks\\data\\graphics\\materials\\metal\\steel\\stainless 
+			steel treadplate.p2m&quot;</font><font SIZE="2">;</p>
+			<p class="APICODE">swRenderMaterial = swModelDocExt.<b>CreateRenderMaterial</b>(materialName);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Select a 
+			face and add the appearance to that face</p>
+			</font><font SIZE="2">
+			<p class="APICODE">status = swModelDocExt.<b>SelectByID2</b>(</font><font SIZE="2" COLOR="#a31515">&quot;&quot;</font><font SIZE="2">,
+			</font><font SIZE="2" COLOR="#a31515">&quot;FACE&quot;</font><font SIZE="2">, 
+			0.07151920610502, 0.0952597996959, 0.009524999999996, </font>
+			<font SIZE="2" COLOR="#0000ff">false</font><font SIZE="2">, 0,
+			</font><font SIZE="2" COLOR="#0000ff">null</font><font SIZE="2">, 
+			0);</p>
+			<p class="APICODE">swSelMgr = (</font><font SIZE="2" COLOR="#2b91af">SelectionMgr</font><font SIZE="2">)swModel.<b>SelectionManager</b>;</p>
+			<p class="APICODE">swEntity = (</font><font SIZE="2" COLOR="#2b91af">Entity</font><font SIZE="2">)swSelMgr.<b>GetSelectedObject6</b>(1, 
+			-1);</p>
+			<p class="APICODE">status = swRenderMaterial.<b>AddEntity</b>(swEntity);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Get the 
+			names of display states</p>
+			</font><font SIZE="2">
+			<p class="APICODE">displayStateNames = (</font><font SIZE="2" COLOR="#0000ff">object</font><font SIZE="2">[])swConfig.<b>GetDisplayStates</b>();</p>
+			<p class="APICODE">nbrDisplayStates = swConfig.<b>GetDisplayStatesCount</b>();</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;This 
+			configuration's display states =&quot;</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">for</font><font SIZE="2"> 
+			(i = 0; i &lt;= (nbrDisplayStates - 1); i++)</p>
+			<p class="APICODE">{</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot; 
+			Display state name = &quot;</font><font SIZE="2"> + displayStateNames[i]);</p>
+			<p class="APICODE">}</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Add 
+			appearance to all of the display states</p>
+			</font><font SIZE="2">
+			<p class="APICODE">status = swModelDocExt.<b>AddDisplayStateSpecificRenderMaterial</b>(swRenderMaterial, 
+			(</font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">)</font><font SIZE="2" COLOR="#2b91af">swDisplayStateOpts_e</font><font SIZE="2">.swAllDisplayState, 
+			displayStateNames, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			materialID1, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			materialID2);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Get the 
+			appearance IDs and names</p>
+			</font><font SIZE="2">
+			<p class="APICODE">swRenderMaterial.<b>GetMaterialIds</b>(</font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			materialID1, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			materialID2);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot; 
+			Appearance IDs:&quot;</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot; 
+			ID1 = &quot;</font><font SIZE="2"> + materialID1);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot; 
+			ID2 = &quot;</font><font SIZE="2"> + materialID2);</p>
+			<p class="APICODE">nbrMaterials = swModelDocExt.<b>GetRenderMaterialsCount2</b>((</font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">)</font><font SIZE="2" COLOR="#2b91af">swDisplayStateOpts_e</font><font SIZE="2">.swAllDisplayState,
+			</font><font SIZE="2" COLOR="#0000ff">null</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot; 
+			Number of materials: &quot;</font><font SIZE="2"> + nbrMaterials);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">for</font><font SIZE="2"> 
+			(k = 0; k &lt;= (nbrMaterials - 1); k++)</p>
+			<p class="APICODE">{</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot; 
+			Name of appearance &quot;</font><font SIZE="2"> + (k + 1) + </font>
+			<font SIZE="2" COLOR="#a31515">&quot;: &quot;</font><font SIZE="2"> + swModel.<b>MaterialIdName</b>);</p>
+			<p class="APICODE">}</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">double</font><font SIZE="2"> 
+			xcoord = 0;</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">double</font><font SIZE="2"> 
+			ycoord = 0;</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">double</font><font SIZE="2"> 
+			zcoord = 0;</p>
+			<p class="APICODE">swRenderMaterial.<b>GetCenterPoint2</b>(</font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			xcoord, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			ycoord, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			zcoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;&quot;</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Texture-based 
+			appearance data:&quot;</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;X 
+			coordinate of center point: &quot;</font><font SIZE="2"> + xcoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Y 
+			coordinate of center point: &quot;</font><font SIZE="2"> + ycoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Z 
+			coordinate of center point: &quot;</font><font SIZE="2"> + zcoord);</p>
+			<p class="APICODE">swRenderMaterial.<b>GetUDirection2</b>(</font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			xcoord, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			ycoord, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			zcoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;X 
+			coordinate of U direction: &quot;</font><font SIZE="2"> + xcoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Y 
+			coordinate of U direction: &quot;</font><font SIZE="2"> + ycoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Z 
+			coordinate of U direction: &quot;</font><font SIZE="2"> + zcoord);</p>
+			<p class="APICODE">swRenderMaterial.<b>GetVDirection2</b>(</font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			xcoord, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			ycoord, </font><font SIZE="2" COLOR="#0000ff">out</font><font SIZE="2"> 
+			zcoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;X 
+			coordinate of V direction: &quot;</font><font SIZE="2"> + xcoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Y 
+			coordinate of V direction: &quot;</font><font SIZE="2"> + ycoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Z 
+			coordinate of V direction: &quot;</font><font SIZE="2"> + zcoord);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;&quot;</font><font SIZE="2">);</p>
+			<p class="APICODE">swModel.<b>ClearSelection2</b>(</font><font SIZE="2" COLOR="#0000ff">true</font><font SIZE="2">);</p>
+			<p class="APICODE">swModel.<b>ForceRebuild3</b>(</font><font SIZE="2" COLOR="#0000ff">true</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#2b91af">Debug</font><font SIZE="2">.Print(</font><font SIZE="2" COLOR="#a31515">&quot;Model 
+			has an appearance: &quot;</font><font SIZE="2"> + swModelDocExt.<b>HasMaterialPropertyValues</b>());</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">object</font><font SIZE="2"> 
+			dispStates = </font><font SIZE="2" COLOR="#0000ff">null</font><font SIZE="2">;</p>
+			<p class="APICODE">status = swRenderMaterial.<b>SetLinkedDisplayStates</b>((</font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">)</font><font SIZE="2" COLOR="#2b91af">swDisplayStateOpts_e</font><font SIZE="2">.swAllDisplayState, 
+			displayStateNames);</p>
+			<p class="APICODE">dispStates = swRenderMaterial.<b>GetLinkedDisplayStates</b>();</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">object</font><font SIZE="2"> 
+			renderMaterials = </font><font SIZE="2" COLOR="#0000ff">null</font><font SIZE="2">;</p>
+			<p class="APICODE">renderMaterials = swModelDocExt.<b>GetRenderMaterials2</b>((</font><font SIZE="2" COLOR="#0000ff">int</font><font SIZE="2">)</font><font SIZE="2" COLOR="#2b91af">swDisplayStateOpts_e</font><font SIZE="2">.swAllDisplayState,
+			</font><font SIZE="2" COLOR="#0000ff">null</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Examine 
+			the display states of the active configuration</p>
+			</font><font SIZE="2">
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// to 
+			ensure that the specified appearance was applied to all</p>
+			</font><font SIZE="2">
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// display 
+			states 
+			</font></p><font SIZE="2">
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Continue 
+			running the macro after your examination</p>
+			</font><font SIZE="2">
+			<p class="APICODE">System.Diagnostics.</font><font SIZE="2" COLOR="#2b91af">Debugger</font><font SIZE="2">.Break();</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Delete 
+			the appearance from the part</p>
+			</font><font SIZE="2">
+			<p class="APICODE">materialID1_ToDelete[0] = materialID1;</p>
+			<p class="APICODE">materialID2_ToDelete[0] = materialID2;</p>
+			<p class="APICODE">swModelDocExt.<b>DeleteDisplayStateSpecificRenderMaterial</b>((materialID1_ToDelete), 
+			(materialID2_ToDelete));</p>
+			<p class="APICODE">swModel.<b>ForceRebuild3</b>(</font><font SIZE="2" COLOR="#0000ff">true</font><font SIZE="2">);</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Examine 
+			the display states of the active configuration</p>
+			</font><font SIZE="2">
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// to 
+			ensure that the specified appearance was deleted from all</p>
+			</font><font SIZE="2">
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// display 
+			states 
+			</font></p><font SIZE="2">
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Continue 
+			running the macro after your examination</p>
+			</font><font SIZE="2">
+			<p class="APICODE">System.Diagnostics.</font><font SIZE="2" COLOR="#2b91af">Debugger</font><font SIZE="2">.Break();</p>
+			<p class="APICODE"></font><font SIZE="2" COLOR="#008000">// Close 
+			the part without saving changes</p>
+			</font><font SIZE="2">
+			<p class="APICODE">modelName = swModel.<b>GetTitle</b>();</p>
+			<p class="APICODE">swApp.<b>QuitDoc</b>(modelName);</p>
+		</blockquote>
+	</blockquote>
+</blockquote>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}</p>
+<p class="APICODE">&nbsp;</p>
+<p class="APICODE"></font><font SIZE="2" COLOR="#0000ff">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+public</font><font SIZE="2"> </font><font SIZE="2" COLOR="#2b91af">SldWorks</font><font SIZE="2"> 
+swApp;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</p>
+<p class="APICODE">}</p>
+</font>
+
+</body>
+
+</html>

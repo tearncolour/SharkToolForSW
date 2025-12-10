@@ -1,0 +1,112 @@
+<html>
+
+<head>
+<title>Rename Component and Update References Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,components">
+<meta name=MS-HKWD content="VBA examples,assemblies">
+<meta name=MS-HKWD content="VBA examples,references">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Rename Component and Update References Example (VBA)</h1>
+<p>This example shows how to rename a component and update its references.</p>
+
+<pre>'----------------------------------------------------------------------
+' Preconditions:
+' 1. Copy and paste <a href="#Main">Main</a> into your project.
+' 2. Insert a class module and copy and paste <a href="#Class1">Class1</a> into that module.
+' 3. Copy <i>public_documents</i><b>\samples\tutorial\EDraw\claw</b> to <b>c:\test\claw</b>.
+' 4. Open <b>c:\test\claw\claw-mechanism.sldasm </b>and save the file as <b>
+'    claw-mechanism-copy.sldasm</b>.
+' 5. Close <b>claw-mechanism-copy.sldasm</b> and reopen <b>claw-mechanism.sldasm</b>.
+' 6. Open the Immediate window.
+'
+' Postconditions:
+' 1. Renames the <b>center</b> component to <b>centerXXX</b>.
+' 2. Fires the <b>RenameItemNotify</b> event.
+' 3. Saves the assembly.
+' 4. Fires the <b>RenamedDocumentNotify</b> event.
+' 5. Updates references.
+' 6. Examine the FeatureManager design tree and Immediate window.
+' 7. Close <b>claw-mechanism.sldasm</b> and open
+'    <b>c:\test\claw\claw-mechanism-copy.sldasm</b> to verify that the
+'    <b>center</b> component was renamed to <b>centerXXX</b>.
+'---------------------------------------------------------------------
+<a name="Main"></a>'Main
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swAssy As SldWorks.AssemblyDoc
+Dim swAssyEvents As Class1
+Dim errors As Long
+Dim warnings As Long
+Dim status As Boolean</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swAssy = swApp.<b>ActiveDoc</b>        </pre>
+<pre>    'Set up event
+    Set swAssyEvents = New Class1
+    Set swAssyEvents.swAssy = swApp.<b>ActiveDoc</b>    </pre>
+<pre>    Set swModel = swAssy
+    Set swModelDocExt = swModel.<b>Extension</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;center-1@claw-mechanism&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    errors = swModelDocExt.<b>RenameDocument</b>(&quot;centerXXX&quot;)
+    swModelDocExt.<b>Rebuild</b> swRebuildOptions_e.swRebuildAll
+    status = swModel.<b>Save3</b>(swSaveAsOptions_e.swSaveAsOptions_Silent + swSaveAsOptions_e.swSaveAsOptions_SaveReferenced, errors, warnings)</pre>
+<pre>End Sub</pre>
+<pre>&nbsp;</pre>
+<pre><a name="Class1"></a>'Class1
+Option Explicit
+
+Public WithEvents swAssy As SldWorks.AssemblyDoc
+
+
+'Fire notification when item is renamed
+Public Function swAssy_<b>RenameItemNotify</b>(ByVal entType As Long, ByVal oldName As String, ByVal newName As String) As Long
+	Debug.Print &quot;RenameItemNotify fired&quot;
+End Function
+
+
+'Fire notification for Rename Documents dialog
+Public Function swAssy_<b>RenamedDocumentNotify</b>(ByRef swObj As Object) As Long
+	Dim swRenamedDocumentReferences As SldWorks.RenamedDocumentReferences
+	Dim searchPaths As Variant
+	Dim pathNames As Variant
+	Dim i As Long
+	Dim nbr As Long
+
+	Set swRenamedDocumentReferences = swObj
+
+	swRenamedDocumentReferences.<b>UpdateWhereUsedReferences</b> = True
+	swRenamedDocumentReferences.<b>IncludeFileLocations</b> = True
+
+	searchPaths = swRenamedDocumentReferences.<b>GetSearchPath</b>
+	nbr = UBound(searchPaths)
+	Debug.Print &quot;Search paths:&quot;
+	For i = 0 To nbr
+	Debug.Print (&quot; &quot; &amp; searchPaths(i))
+	Next i
+
+	swRenamedDocumentReferences.<b>Search</b>
+
+	pathNames = swRenamedDocumentReferences.<b>ReferencesArray</b>
+	nbr = UBound(pathNames)
+	Debug.Print &quot;References:&quot;
+	For i = 0 To nbr
+	Debug.Print (&quot; &quot; &amp; pathNames(i))
+	Next i
+
+	swRenamedDocumentReferences.<b>CompletionAction</b> = swRenamedDocumentFinalAction_e.swRenamedDocumentFinalAction_Ok
+
+	Debug.Print &quot;RenamedDocumentNotify fired&quot;
+
+End Function</pre>
+
+</body>
+
+</html>

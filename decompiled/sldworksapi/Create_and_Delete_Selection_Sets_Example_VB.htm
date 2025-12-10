@@ -1,0 +1,122 @@
+<html>
+
+<head>
+<title>Create and Delete Selection Sets Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,selection sets">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create and Delete Selection Sets Example (VBA)</h1>
+<p>This example shows how to:</p>
+<ul>
+	<li><font face="Verdana" style="font-size: 8pt">create selection sets.</font></li>
+	<li><font face="Verdana" style="font-size: 8pt">get the Selection Sets 
+	folder.</font></li>
+	<li><font face="Verdana" style="font-size: 8pt">get the selection sets in 
+	the Selection Sets folder.</font></li>
+	<li><font face="Verdana" style="font-size: 8pt">get and then delete the 
+	items in the selection sets, which deletes the selection sets.</font></li>
+</ul>
+<pre>'--------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the assembly to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the assembly.
+' 2. Creates two selection sets.
+' 3. Traverses the FeatureManager design tree. If the feature is the
+'    Selection Sets folder, then:
+'    a. Gets its name.
+'    b. Gets each selection set in the Selection Sets folder.
+'    c. Gets and then deletes each selection set item in the 
+'       selection set, which deletes the selection set.
+' 4. Examine the Immediate window.
+'
+' NOTE: Because the assembly is used elsewhere, do not save changes.
+'--------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Sub TraverseFeatureFeatures(swFeat As SldWorks.Feature)</pre>
+<pre>    Dim swSelectionSetFolder As SldWorks.SelectionSetFolder
+    Dim selectionSetArray As Variant
+    Dim selectionSetItemArray As Variant
+    Dim selectionSetItemArrayTypes As Variant
+    Dim swSelectionSet As SldWorks.SelectionSet
+    Dim swSelectionSetItem As SldWorks.SelectionSetItem
+    Dim i As Long
+    Dim j As Long    </pre>
+<pre>    While Not swFeat Is Nothing
+        If swFeat.<b>Name</b> = &quot;Selection Sets&quot; Then
+            Debug.Print &quot;    &quot; &amp; swFeat.<b>Name</b> &amp; &quot; [&quot; &amp; swFeat.<b>GetTypeName</b> &amp; &quot;]&quot;
+            'Get Selection Sets folder
+            Set swSelectionSetFolder = swFeat.<b>GetSpecificFeature2</b>
+            'Get selection sets in Selection Sets folder
+            selectionSetArray = swSelectionSetFolder.<b>GetSelectionSets</b>
+            For i = 0 To UBound(selectionSetArray)
+                Set swSelectionSet = selectionSetArray(i)
+                Debug.Print &quot;      Selection set[&quot; &amp; i &amp; &quot;] name: &quot; &amp; swSelectionSet.<b>GetName</b>
+                'Get the items in this selection set
+                selectionSetItemArray = swSelectionSet.<b>GetSelectionSetItems
+ </b>		selectionSetItemArrayTypes = swSelectionSet.<b>GetSelectionSetItemTypes</b>
+                For j = 0 To UBound(selectionSetItemArray)
+                    Set swSelectionSetItem = selectionSetItemArray(j)
+                    Debug.Print &quot;        Item[&quot; &amp; j &amp; &quot;] in this selection set is this entity type as defined in swSelectType_e: &quot; &amp; selectionSetItemArrayTypes(j)
+                    'Delete each item in this selection set
+                    swSelectionSetItem.<b>RemoveFromSelectionSet</b>
+                    Debug.Print (&quot;          Selection set item[&quot; &amp; j &amp; &quot;] deleted&quot;)
+                Next
+            Next
+        End If
+        Set swFeat = swFeat.<b>GetNextFeature</b>
+    Wend
+    </pre>
+<pre>End Sub</pre>
+<pre>Sub TraverseModelFeatures(swModel As SldWorks.ModelDoc2)
+
+    Dim swFeat As SldWorks.Feature
+
+    Set swFeat = swModel.<b>FirstFeature</b>
+    TraverseFeatureFeatures swFeat</pre>
+<pre>End Sub
+
+Sub main()</pre>
+<pre>    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swModelDocExtension As SldWorks.ModelDocExtension
+    Dim swSelectionSet1 As SldWorks.SelectionSet
+    Dim swSelectionSet2 As SldWorks.SelectionSet
+    Dim status As Boolean
+    Dim errors As Long
+    Dim warnings As Long
+    Dim fileName As String    </pre>
+<pre>    Set swApp = CreateObject(&quot;SldWorks.Application&quot;)    </pre>
+<pre>    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\wrench.sldasm&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocASSEMBLY, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Debug.Print &quot;File = &quot; &amp; swModel.<b>GetPathName</b>
+    Set swModelDocExtension = swModel.<b>Extension</b>    </pre>
+<pre>    'Create a selection set
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;arm1-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;arm2-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;clamp2-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    Set swSelectionSet1 = swModelDocExtension.<b>SaveSelection</b>(errors)
+    Debug.Print &quot;  First selection set created (1 = succeeded; 0 = failed)? &quot; &amp; errors
+    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    'Create another selection set
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;centerlink-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;screw-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, True, 0, Nothing, 0)
+    status = swModelDocExtension.<b>SelectByID2</b>(&quot;screw-1@wrench&quot;, &quot;COMPONENT&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swSelectionSet2 = swModelDocExtension.<b>SaveSelection</b>(errors)
+    Debug.Print &quot;  Second selection set created (1 = succeeded; 0 = failed)? &quot; &amp; errors
+    swModel.<b>ClearSelection2</b> True    </pre>
+<pre>    'Traverse the model to get Selection Sets folder
+    TraverseModelFeatures swModel    </pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

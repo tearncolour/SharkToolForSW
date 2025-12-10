@@ -1,0 +1,238 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Body Outline Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta NAME=MS-HAID CONTENT=EXGetBodyOutline>
+
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=1801>
+<meta name=layout-width content=628>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+<meta name=MS-HKWD content="VBA examples,bodies">
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Get Body Outline Example (VBA)</h1>
+
+<p>This example shows how to get the outline of a solid body. 
+ This example also creates and inserts a sketch of that outline.</p>
+
+<p class="APICODE">
+'-----------------------------------------------------<br>
+' Preconditions: Open a part document that contains <br>
+' at least one solid body.<br>
+'<br>
+' Postconditions: Processes the body outline curves <br>
+' to remove gaps before sketching the outline.<br>
+'-----------------------------------------------------</p>
+<p class="APICODE">Option Explicit</p>
+<p class="APICODE">Dim swApp As SldWorks.SldWorks<br>
+Dim swPart As SldWorks.PartDoc<br>
+Dim swModel As SldWorks.ModelDoc2<br>
+Dim swMathVector As SldWorks.MathVector<br>
+Dim swMathUtility As SldWorks.MathUtility<br>
+Dim swModeler As SldWorks.Modeler<br>
+Dim dirVar As Variant<br>
+Dim bVar As Variant<br>
+Dim crvOut As Variant<br>
+Dim topol As Variant<br>
+Dim outline As Variant<br>
+Dim sEva As Variant<br>
+Dim eEva As Variant<br>
+Dim sEvaPrev As Variant<br>
+Dim eEvaPrev As Variant</p>
+<p class="APICODE">Dim sEvaNext As Variant<br>
+Dim eEvaNext As Variant</p>
+<p class="APICODE">Dim dirArr(0 To 2) As Double<br>
+Dim s As Double<br>
+Dim e As Double<br>
+Dim nCt As Long<br>
+Dim i As Long<br>
+Dim v As Long</p>
+<p class="APICODE">Dim isClosed As Boolean<br>
+Dim isPer As Boolean</p>
+<p class="APICODE">Enum direction<br>
+&nbsp;&nbsp;&nbsp; X = 1<br>
+&nbsp;&nbsp;&nbsp; Y = 2<br>
+&nbsp;&nbsp;&nbsp; Z = 3<br>
+&nbsp;&nbsp;&nbsp; Xminus = 4<br>
+&nbsp;&nbsp;&nbsp; Yminus = 5<br>
+&nbsp;&nbsp;&nbsp; Zminus = 6<br>
+End Enum</p>
+<p class="APICODE">Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.<b>SldWorks</b><br>
+&nbsp;&nbsp;&nbsp; Set swPart = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; Set swModel = swPart<br>
+&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Get the bodies in this part<br>
+&nbsp;&nbsp;&nbsp; bVar = swPart.<b>GetBodies2</b>(swSolidBody, False)<br>
+&nbsp;&nbsp;&nbsp; Set swModeler = swApp.<b>GetModeler</b><br>
+&nbsp;&nbsp;&nbsp; Set swMathUtility = swApp.<b>GetMathUtility</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Create the direction vector<br>
+&nbsp;&nbsp;&nbsp; dirArr(0) = 0<br>
+&nbsp;&nbsp;&nbsp; dirArr(1) = 0<br>
+&nbsp;&nbsp;&nbsp; dirArr(2) = 0<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim userDirection As direction<br>
+&nbsp;&nbsp;&nbsp; userDirection = Y<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If userDirection = X Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dirArr(0) = 1<br>
+&nbsp;&nbsp;&nbsp; ElseIf userDirection = Xminus Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dirArr(0) = -1<br>
+&nbsp;&nbsp;&nbsp; ElseIf userDirection = Y Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dirArr(1) = 1<br>
+&nbsp;&nbsp;&nbsp; ElseIf userDirection = Yminus Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dirArr(1) = -1<br>
+&nbsp;&nbsp;&nbsp; ElseIf userDirection = Z Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dirArr(2) = 1<br>
+&nbsp;&nbsp;&nbsp; ElseIf userDirection = Zminus Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dirArr(2) = -1<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; dirVar = dirArr<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Create a MathVector<br>
+&nbsp;&nbsp;&nbsp; Set swMathVector = swMathUtility.<b>CreateVector</b>((dirArr))<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Get the number of curves in the body 
+outline<br>
+&nbsp;&nbsp;&nbsp; nCt = swModeler.<b>GetBodyOutline2</b>((bVar), swMathVector, 
+0.00001, True, crvOut, topol, outline)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Open a 3D sketch in the part document<br>
+&nbsp;&nbsp;&nbsp; swPart.<b>Insert3DSketch</b><br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Using the end conditions of the curves, 
+create a 2D sketch of each curve<br>
+&nbsp;&nbsp;&nbsp; Dim vCurve() As Curve<br>
+&nbsp;&nbsp;&nbsp; Dim newCt As Integer<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; For i = 0 To nCt - 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; crvOut(i).<b>GetEndParams</b> s, e, 
+isClosed, isPer<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If crvOut(i).<b>GetLength3</b>(s, e) 
+&gt; 0.00001 Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ReDim 
+Preserve vCurve(newCt)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set 
+vCurve(newCt) = crvOut(i)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+newCt = newCt + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; Next<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim sPoints() As Double<br>
+&nbsp;&nbsp;&nbsp; Dim ePoints() As Double<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ReDim sPoints((newCt * 3) - 1)<br>
+&nbsp;&nbsp;&nbsp; ReDim ePoints((newCt * 3) - 1)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; For i = 0 To newCt - 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vCurve(i).<b>GetEndParams</b> s, e, 
+isClosed, isPer<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sEva = vCurve(i).<b>Evaluate</b>(s)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; eEva = vCurve(i).<b>Evaluate</b>(e)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If i &gt; 0 Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = i - 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = newCt - 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vCurve(v).<b>GetEndParams</b> 
+s, e, isClosed, isPer<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sEvaPrev = vCurve(v).<b>Evaluate</b>(s)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; eEvaPrev = vCurve(v).<b>Evaluate</b>(e)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If i &lt; newCt - 1 
+Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = i + 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Else<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vCurve(v).<b>GetEndParams</b> 
+s, e, isClosed, isPer<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sEvaNext = vCurve(v).<b>Evaluate</b>(s)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; eEvaNext = vCurve(v).<b>Evaluate</b>(e)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sPoints(i * 3) = 
+sEva(0) + 0.5 * (eEvaPrev(0) - sEva(0))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sPoints(i * 3 + 1) = sEva(1) + 0.5 * 
+(eEvaPrev(1) - sEva(1))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sPoints(i * 3 + 2) = sEva(2) + 0.5 * 
+(eEvaPrev(2) - sEva(2))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ePoints(i * 3) = 
+eEva(0) + 0.5 * (sEvaNext(0) - eEva(0))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ePoints(i * 3 + 1) = eEva(1) + 0.5 * 
+(sEvaNext(1) - eEva(1))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ePoints(i * 3 + 2) = eEva(2) + 0.5 * 
+(sEvaNext(2) - eEva(2))<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If userDirection = 
+X Or userDirection = Xminus Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sPoints(i * 
+3) = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ePoints(i * 
+3) = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf userDirection = Y Or 
+userDirection = Yminus Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sPoints(i * 3 
++ 1) = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ePoints(i * 3 
++ 1) = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf userDirection = Z Or 
+userDirection = Zminus Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sPoints(i * 3 
++ 2) = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ePoints(i * 3 
++ 2) = 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; Next i<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; For i = 0 To (newCt * 3) - 1 Step 3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; swModel.<b>CreateLine2</b> sPoints(i), 
+sPoints(i + 1), sPoints(i + 2), ePoints(i), ePoints(i + 1), ePoints(i + 2)<br>
+&nbsp;&nbsp;&nbsp; Next<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Insert the sketches<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>InsertSketch2</b> True<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>ClearSelection2</b> True</p>
+<p class="APICODE">End Sub</p>
+
+</body>
+
+</html>

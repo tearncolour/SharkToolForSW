@@ -1,0 +1,220 @@
+<html>
+
+<head>
+<title>Start, Update, and Stop Progress Indicator Example (C#)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="C# examples,progress indicator">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Start, Update, and Stop Progress Indicator Example (C#)</h1>
+<p>This example shows how to create, start, update, and stop a progress 
+ indicator on the system task bar.</p>
+
+<p class=APICODE><font color="#008000">//---------------------------------------------------------------------------- 
+<br>
+// Preconditions: <br>
+// 1.&nbsp;Create a C# macro in SOLIDWORKS called ManipulatePB_CSharp.<br>
+// 2. Right-click the macro project name in the Project Explorer and click <b>
+<br>
+//&nbsp;&nbsp;&nbsp; Add &gt; Windows Form</b>.<br>
+// 3. Click <b>Add</b>.<br>
+// 4. Modify <b>Form1.cs [Design]</b> to look like this:<br>
+<br>
+&nbsp;&nbsp;&nbsp;
+<img border="0" src="UserProgressIndicator.gif" width="163" height="331"> </font> </p>
+
+<p class=APICODE><font color="#008000">// 5. Copy </font><a href="#Forms">
+<font color="#008000">Forms - Form1</font></a><font color="#008000"><span style="font-weight: bold;"> </span>
+into <b>Form1.cs</b>. <br>
+// 6. Modify <i>control_name </i>in<i> </i>each<i> control_name</i>_Click 
+subroutine to <br>
+//&nbsp;&nbsp;&nbsp; match your form.<br>
+// 7. Copy </font><a href="#Module"><font color="#008000">SolidWorksMacro</font></a><font color="#008000"> into 
+<b>SolidWorksMacro.cs</b>.<br>
+// 8. Open the Immediate window.<br>
+//<br>
+// Postconditions:&nbsp; <br>
+// 1. Shows a dialog box.<br>
+// 2. Click <b>Start</b>. <br>
+//&nbsp;&nbsp;&nbsp; * Displays a progress indicator on the SOLIDWORKS icon on 
+the<br>
+//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; system taskbar. <br>
+//&nbsp;&nbsp;&nbsp; * Increments the progress indicator to 100% completion.<br>
+// 3. Click <b>Update</b> repeatedly to increment the progress indicator in 
+steps of<br>
+//&nbsp;&nbsp;&nbsp; 10. <br>
+// 4. Inspect the Immediate window to see the return code after each update.<br>
+// 5. Type a new title and click <b>Update Title</b> to change the progress 
+indicator<br>
+//&nbsp;&nbsp;&nbsp; title.<br>
+// 6. Click <b>Stop</b> to remove the progress indicator from SOLIDWORKS.<br>
+// 7. Click <b>Exit</b> to close the dialog box.<br>
+// 
+---------------------------------------------------------------------------</font></p>
+
+<h3><a name=Forms></a>Forms - Form1</h3>
+
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color:blue;">using</span>&nbsp;System;<br>
+<span style="color:blue;">using</span>&nbsp;System.Collections.Generic;<br>
+<span style="color:blue;">using</span>&nbsp;System.ComponentModel;<br>
+<span style="color:blue;">using</span>&nbsp;System.Data;<br>
+<span style="color:blue;">using</span>&nbsp;System.Drawing;<br>
+<span style="color:blue;">using</span>&nbsp;System.Text;<br>
+<span style="color:blue;">using</span>&nbsp;System.Windows.Forms;<br>
+<span style="color:blue;">using</span>&nbsp;System.Diagnostics;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;<br>
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;<br>
+<span style="color:blue;">using</span>&nbsp;Microsoft.VisualBasic;<br>
+&nbsp;<br>
+<span style="color:blue;">namespace</span>&nbsp;ManipulateUserPB_CSharp.csproj<br>
+{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">Form1</span>&nbsp;:&nbsp;Form<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;Form1()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;InitializeComponent();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; UserProgressBar&nbsp;pb;<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int</span>&nbsp;Position;<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int</span>&nbsp;lRet;<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bool</span>&nbsp;retVal;<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bool</span>&nbsp;boolstatus;<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public</span>&nbsp;SldWorks&nbsp;swApp;<br>
+&nbsp;<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;cmdExit_Click(System.<span style="color:#2b91af;">Object</span>&nbsp;sender,&nbsp;System.<span style="color:#2b91af;">EventArgs</span>&nbsp;e)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	{<br>
+		<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this</span>.Close();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	}</p>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;cmdPBTitle_Click(System.<span style="color:#2b91af;">Object</span>&nbsp;sender,&nbsp;System.<span style="color:#2b91af;">EventArgs</span>&nbsp;e)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	{<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		retVal&nbsp;=&nbsp;pb.<b>UpdateTitle</b>(textBox1.Text);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	}</p>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;cmdStartPB_Click(System.<span style="color:#2b91af;">Object</span>&nbsp;sender,&nbsp;System.<span style="color:#2b91af;">EventArgs</span>&nbsp;e)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	{<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		boolstatus&nbsp;=&nbsp;pb.<b>Start</b>(0,&nbsp;160,&nbsp;<span style="color:#a31515;">&quot;Status&quot;</span>);<br>
+		<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; while</span>&nbsp;(!(Position&nbsp;==&nbsp;160))&nbsp;{<br>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			Position&nbsp;=&nbsp;Position&nbsp;+&nbsp;10;<br>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			lRet&nbsp;=&nbsp;pb.<b>UpdateProgress</b>(Position);<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		}<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		Position&nbsp;=&nbsp;0;<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	}</p>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;cmdStopPB_Click(System.<span style="color:#2b91af;">Object</span>&nbsp;sender,&nbsp;System.<span style="color:#2b91af;">EventArgs</span>&nbsp;e)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	{<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		pb.<b>End</b>();<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	}</p>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Form1_Initialize(System.<span style="color:#2b91af;">Object</span>&nbsp;sender,&nbsp;System.<span style="color:#2b91af;">EventArgs</span>&nbsp;e)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	{<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		swApp&nbsp;=&nbsp;(SldWorks)System.Runtime.InteropServices.<span style="color:#2b91af;">Marshal</span>.GetActiveObject(<span style="color:#a31515;">&quot;SldWorks.Application&quot;</span>);<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		retVal&nbsp;=&nbsp;swApp.<b>GetUserProgressBar</b>(<span style="color:blue;">out</span>&nbsp;pb);<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	}</p>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;cmdUpdatePB_Click(System.<span style="color:#2b91af;">Object</span>&nbsp;sender,&nbsp;System.<span style="color:#2b91af;">EventArgs</span>&nbsp;e)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	{<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		Position&nbsp;=&nbsp;Position&nbsp;+&nbsp;10;<br>
+		<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if</span>&nbsp;((Position&nbsp;==&nbsp;160))<br>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			Position&nbsp;=&nbsp;0;<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		lRet&nbsp;=&nbsp;pb.<b>UpdateProgress</b>(Position);<br>
+		<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if</span>&nbsp;(lRet&nbsp;!=&nbsp;2)&nbsp;{<br>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			Debug.Print(<span style="color:#a31515;">&quot;&nbsp;Result&nbsp;&quot;</span>&nbsp;+&nbsp;lRet);<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		}&nbsp;<span style="color:blue;">else</span>&nbsp;{<br>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			MessageBox.Show(<span style="color:#a31515;">&quot;&nbsp;User&nbsp;pressed&nbsp;Esc&nbsp;to&nbsp;cancel&nbsp;&quot;</span>,&nbsp;<span style="color:#a31515;">&quot;&nbsp;API&quot;</span>);<br>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			pb.End();<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	}</p>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<br>
+	<span style="color:blue;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; private</span>&nbsp;<span style="color:blue;">void</span>&nbsp;TextBox1_TextChanged(System.<span style="color:#2b91af;">Object</span>&nbsp;sender,&nbsp;System.<span style="color:#2b91af;">EventArgs</span>&nbsp;e)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	{<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	}<br>
+	<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+}</p>
+
+<p style="text-align: center;"
+	align=center><a href="#Top">Back to top</a></p>
+
+<h3><a name=Module></a>SolidWorksMacro</h3>
+<p style="font-family: Courier New; font-size: 13; color: black; background: white" class="APICODE">
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.sldworks;<br>
+<span style="color:blue;">using</span>&nbsp;SolidWorks.Interop.swconst;<br>
+<span style="color:blue;">using</span>&nbsp;System.Runtime.InteropServices;<br>
+<span style="color:blue;">using</span>&nbsp;System;<br>
+&nbsp;<br>
+<span style="color:blue;">namespace</span>&nbsp;ManipulateUserPB_CSharp.csproj<br>
+{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">partial</span>&nbsp;<span style="color:blue;">class</span>&nbsp;<span style="color:#2b91af;">SolidWorksMacro</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Windows.Forms.Form&nbsp;aForm;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;<span style="color:blue;">void</span>&nbsp;Main()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;aForm&nbsp;=&nbsp;<span style="color:blue;">new</span>&nbsp;Form1();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;aForm.ShowDialog();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:gray;">///</span><span style="color:green;">&nbsp;</span><span style="color:gray;">&lt;/summary&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:blue;">public</span>&nbsp;SldWorks&nbsp;swApp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+}</p>
+
+<p style="text-align: center;"
+	align=center><a href="#Top">Back to top</a></p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

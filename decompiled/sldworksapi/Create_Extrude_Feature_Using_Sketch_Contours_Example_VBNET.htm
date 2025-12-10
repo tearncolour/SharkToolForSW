@@ -1,0 +1,128 @@
+<html>
+
+<head>
+<title>Create Extrude Feature Using Sketch Contours Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,feature">
+<meta name=MS-HKWD content="VB.NET examples,contour selections">
+<meta name=MS-HKWD content="VB.NET examples,extrude feature">
+<meta name=MS-HKWD content="VB.NET examples,sketch contours">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Create Extrude Feature Using Sketch Contours Example (VB.NET)</h1>
+<p>This example shows how to create an extrude feature using sketch contours.</p>
+
+<pre style="font-family: Courier New; font-size: 13; color: black; background: white"><span style="color: green">'--------------------------------------------------------------</span>
+<span style="color: green">'&nbsp;Preconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Verify&nbsp;that&nbsp;the&nbsp;specified&nbsp;part&nbsp;template&nbsp;exists.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Open&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'</span>
+<span style="color: green">'&nbsp;Postconditions:</span>
+<span style="color: green">'&nbsp;1.&nbsp;Opens&nbsp;a&nbsp;new&nbsp;part&nbsp;document.</span>
+<span style="color: green">'&nbsp;2.&nbsp;Creates&nbsp;a&nbsp;sketch&nbsp;containing&nbsp;sketch&nbsp;contours.</span>
+<span style="color: green">'&nbsp;3.&nbsp;Creates&nbsp;a&nbsp;boss&nbsp;extrude&nbsp;feature using the sketch of sketch
+'    contours.</span>
+<span style="color: green">'&nbsp;4.&nbsp;Selects&nbsp;the&nbsp;boss&nbsp;extrude&nbsp;feature&nbsp;and&nbsp;accesses</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;its&nbsp;data.</span>
+<span style="color: green">'&nbsp;5.&nbsp;Gets&nbsp;the&nbsp;sketch&nbsp;contours.</span>
+<span style="color: green">'&nbsp;6.&nbsp;Get&nbsp;whether&nbsp;each&nbsp;sketch&nbsp;contour&nbsp;is&nbsp;open&nbsp;or&nbsp;closed.</span>
+<span style="color: green">'&nbsp;7.&nbsp;Examine&nbsp;the&nbsp;FeatureManager&nbsp;design&nbsp;tree,&nbsp;graphics&nbsp;area,&nbsp;and</span>
+<span style="color: green">'&nbsp;&nbsp;&nbsp;&nbsp;the&nbsp;Immediate&nbsp;window.</span>
+<span style="color: green">'--------------------------------------------------------------</span>
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.sldworks
+<span style="color: blue">Imports</span>&nbsp;SolidWorks.Interop.swconst
+<span style="color: blue">Imports</span>&nbsp;System.Runtime.InteropServices
+<span style="color: blue">Imports</span>&nbsp;System
+<span style="color: blue">Imports</span>&nbsp;System.Diagnostics
+ 
+<span style="color: blue">Partial</span>&nbsp;<span style="color: blue">Class</span>&nbsp;<span style="color: #2b91af">SolidWorksMacro</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;<span style="color: blue">Sub</span>&nbsp;main()
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModel&nbsp;<span style="color: blue">As</span>&nbsp;ModelDoc2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSketchMgr&nbsp;<span style="color: blue">As</span>&nbsp;SketchManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSketchSegment&nbsp;<span style="color: blue">As</span>&nbsp;SketchSegment
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swModelDocExtension&nbsp;<span style="color: blue">As</span>&nbsp;ModelDocExtension
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swSelectionMgr&nbsp;<span style="color: blue">As</span>&nbsp;SelectionMgr
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swFeatureMgr&nbsp;<span style="color: blue">As</span>&nbsp;FeatureManager
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swFeature&nbsp;<span style="color: blue">As</span>&nbsp;Feature
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;swExtrudeFeatureData&nbsp;<span style="color: blue">As</span>&nbsp;ExtrudeFeatureData2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;status&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Boolean</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;skcontours()&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Object</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;skcontour&nbsp;<span style="color: blue">As</span>&nbsp;SketchContour&nbsp;=&nbsp;<span style="color: blue">Nothing</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;nbrContours&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Dim</span>&nbsp;i&nbsp;<span style="color: blue">As</span>&nbsp;<span style="color: blue">Integer</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel&nbsp;=&nbsp;swApp.<b>NewDocument</b>(<span style="color: #a31515">&quot;C:\ProgramData\SolidWorks\SolidWorks&nbsp;2016\templates\Part.prtdot&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModelDocExtension&nbsp;=&nbsp;swModel.<b>Extension</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr&nbsp;=&nbsp;swModel.<b>SketchManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr&nbsp;=&nbsp;swModel.<b>SelectionManager</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatureMgr&nbsp;=&nbsp;swModel.<b>FeatureManager</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Create&nbsp;sketch&nbsp;containing&nbsp;sketch&nbsp;contours</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>InsertSketch</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;swSketchMgr.<b>CreateCircle</b>(0.0#,&nbsp;0.0#,&nbsp;0.0#,&nbsp;0.010564,&nbsp;-0.041843,&nbsp;0.0#)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;swSketchMgr.<b>CreateCircle</b>(0.043155,&nbsp;0.0#,&nbsp;0.0#,&nbsp;0.048428,&nbsp;-0.01221,&nbsp;0.0#)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchSegment&nbsp;=&nbsp;swSketchMgr.<b>CreateCircle</b>(-0.043155,&nbsp;0.0#,&nbsp;0.0#,&nbsp;-0.043214,&nbsp;-0.014954,&nbsp;0.0#)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSketchMgr.<b>InsertSketch</b>(<span style="color: blue">True</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Create&nbsp;boss&nbsp;extrude&nbsp;feature
+</span>        status = swModelDocExtension.<b>SelectByID2</b>(<font color="#800000">&quot;Sketch1&quot;</font>, <font color="#800000">&quot;SKETCH&quot;</font>, 0, 0, 0, <font color="#0000FF">False</font>, 0, <font color="#0000FF">Nothing</font>, 0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExtension.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCHCONTOUR&quot;</span>,&nbsp;-0.047096875714166,&nbsp;0.00724922083273226,&nbsp;0.018531938896921,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExtension.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCHCONTOUR&quot;</span>,&nbsp;0.0473122625955432,&nbsp;-0.015948285832011,&nbsp;-0.0155264330079864,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExtension.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCHCONTOUR&quot;</span>,&nbsp;-0.00880361157802517,&nbsp;-0.0246473508312897,&nbsp;0.0199951653548178,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel.<b>ClearSelection2</b>(<span style="color: blue">True</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr.<b>EnableContourSelection</b>&nbsp;=&nbsp;<span style="color: blue">True
+</span>        status = swModelDocExtension.<b>SelectByID2</b>(<font color="#800000">&quot;Sketch1&quot;</font>, <font color="#800000">&quot;SKETCH&quot;</font>, 0, 0, 0, <font color="#0000FF">False</font>, 4, <font color="#0000FF">Nothing</font>, 0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExtension.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCHCONTOUR&quot;</span>,&nbsp;-0.047096875714166,&nbsp;0.00724922083273226,&nbsp;0.018531938896921,&nbsp;<span style="color: blue">True</span>,&nbsp;4,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExtension.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCHCONTOUR&quot;</span>,&nbsp;0.0473122625955432,&nbsp;-0.015948285832011,&nbsp;-0.0155264330079864,&nbsp;<span style="color: blue">True</span>,&nbsp;4,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExtension.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Sketch1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;SKETCHCONTOUR&quot;</span>,&nbsp;-0.00880361157802517,&nbsp;-0.0246473508312897,&nbsp;0.0199951653548178,&nbsp;<span style="color: blue">True</span>,&nbsp;4,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;0)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swFeatureMgr.<b>FeatureExtrusion3</b>(<span style="color: blue">True</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;0,&nbsp;0.01016,&nbsp;0.00254,&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;0.0174532925199433,&nbsp;0.0174532925199433,&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: blue">False</span>,&nbsp;<span style="color: blue">True</span>,&nbsp;<span style="color: blue">True</span>,&nbsp;<span style="color: blue">True</span>,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">False</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelectionMgr.<b>EnableContourSelection</b>&nbsp;=&nbsp;<span style="color: blue">False</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Select&nbsp;the&nbsp;boss&nbsp;extrude&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status&nbsp;=&nbsp;swModelDocExtension.<b>SelectByID2</b>(<span style="color: #a31515">&quot;Boss-Extrude1&quot;</span>,&nbsp;<span style="color: #a31515">&quot;BODYFEATURE&quot;</span>,&nbsp;0,&nbsp;0,&nbsp;0,&nbsp;<span style="color: blue">False</span>,&nbsp;0,&nbsp;<span style="color: blue">Nothing</span>,&nbsp;swSelectOption_e.swSelectOptionDefault)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeature&nbsp;=&nbsp;swSelectionMgr.<b>GetSelectedObject6</b>(1,&nbsp;-1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swExtrudeFeatureData&nbsp;=&nbsp;swFeature.<b>GetDefinition</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Access&nbsp;the&nbsp;boss&nbsp;extrude&nbsp;feature&nbsp;data</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swExtrudeFeatureData.<b>AccessSelections</b>(swModel,&nbsp;<span style="color: blue">Nothing</span>)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Get&nbsp;the&nbsp;number&nbsp;of&nbsp;sketch&nbsp;contours&nbsp;in&nbsp;the&nbsp;extrude&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nbrContours&nbsp;=&nbsp;swExtrudeFeatureData.<b>GetContoursCount</b>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;Number&nbsp;of&nbsp;sketch&nbsp;contours&nbsp;in&nbsp;the&nbsp;extrude&nbsp;feature:&nbsp;&quot;</span>&nbsp;&amp;&nbsp;nbrContours)
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Get&nbsp;the&nbsp;sketch&nbsp;contours&nbsp;in&nbsp;the&nbsp;extrude&nbsp;feature</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;skcontours&nbsp;=&nbsp;swExtrudeFeatureData.<b>Contours</b>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Get&nbsp;each&nbsp;sketch&nbsp;contour&nbsp;and&nbsp;whether&nbsp;it&nbsp;is&nbsp;open&nbsp;or&nbsp;closed</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">For</span>&nbsp;i&nbsp;=&nbsp;0&nbsp;<span style="color: blue">To</span>&nbsp;(nbrContours&nbsp;-&nbsp;1)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;skcontour&nbsp;=&nbsp;skcontours(i)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #2b91af">Debug</span>.Print(<span style="color: #a31515">&quot;&nbsp;&nbsp;Sketch&nbsp;contour&nbsp;&quot;</span>&nbsp;&amp;&nbsp;i&nbsp;&amp;&nbsp;<span style="color: #a31515">&quot;&nbsp;is&nbsp;closed?&nbsp;&quot;</span>&nbsp;&amp;&nbsp;skcontour.<b>IsClosed</b>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Next</span> i
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'Release&nbsp;selection&nbsp;access</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swExtrudeFeatureData.<b>ReleaseSelectionAccess</b>()
+
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">End</span>&nbsp;<span style="color: blue">Sub</span>
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;The&nbsp;SldWorks&nbsp;swApp&nbsp;variable&nbsp;is&nbsp;pre-assigned&nbsp;for&nbsp;you.</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: green">'''&nbsp;</span><span style="color: gray">&lt;/summary&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: blue">Public</span>&nbsp;swApp&nbsp;<span style="color: blue">As</span>&nbsp;SldWorks
+ 
+ 
+<span style="color: blue">End</span>&nbsp;<span style="color: blue">Class</span></pre>
+
+</body>
+
+</html>

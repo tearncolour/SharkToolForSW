@@ -1,0 +1,107 @@
+<html>
+
+<head>
+<title>Mirror Sheet-metal Part Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,sheet metal">
+<meta name=MS-HKWD content="VBA examples,mirror part">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Mirror Sheet-metal Part Example (VBA)</h1>
+<p>This example shows how to mirror a sheet-metal part.</p>
+<pre>'---------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the sheet-metal part to open exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Opens the specified sheet-metal part.
+' 2. Creates a reference plane about which to mirror the
+'    sheet-metal part.
+' 3. Creates a new part document containing the mirrored
+'    sheet-metal part, which includes the sheet-metal
+'    information in the mirrored part.
+' 4. Examine the graphics area and the Immediate window.
+'
+' NOTE: Because this part document is used elsewhere, do
+' not save changes.
+'---------------------------------------------------------------------------</pre>
+<pre>Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFeatureMgr As SldWorks.FeatureManager
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swPart As SldWorks.PartDoc
+Dim swMirrorFeature As SldWorks.Feature
+Dim swFeature As SldWorks.Feature
+Dim swResultPart As SldWorks.ModelDoc2
+Dim swMirrorFeatData As SldWorks.MirrorPartFeatureData
+Dim swRefPlane As SldWorks.refPlane
+Dim swPlane As SldWorks.Entity
+Dim mirrorOptions As Long
+Dim mirrorType As Long
+Dim selType As swSelectType_e
+Dim filename As String
+Dim errors As Long
+Dim status As Boolean
+Dim warnings As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    filename = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2018\samples\tutorial\api\2012-sm.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(filename, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)    </pre>
+<pre>    If swModel Is Nothing Then Exit Sub
+    If swModel.<b>GetType</b> &lt;&gt; swDocPART Then Exit Sub    </pre>
+<pre>    Set swModelDocExt = swModel.<b>Extension</b>
+    Set swFeatureMgr = swModel.<b>FeatureManager</b>
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Top Plane&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swRefPlane = swFeatureMgr.<b>InsertRefPlane</b>(8, 0.09, 0, 0, 0, 0)
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Plane1&quot;, &quot;PLANE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    selType = swSelMgr.<b>GetSelectedObjectType3</b>(1, -1)
+    If Not (selType = swSelDATUMPLANES) Then Exit Sub
+
+    Set swPart = swModel
+    mirrorOptions = swMirrorPartOptions_ImportSMInfo + swMirrorPartOptions_ImportIndProps + swMirrorPartOptions_ImportSolids + swMirrorPartOptions_ImportCutListProperties
+    Set swMirrorFeature = swPart.<b>MirrorPart2</b>(False, mirrorOptions, swResultPart)
+    If swMirrorFeature Is Nothing Then
+        Debug.Print &quot;No feature!&quot;
+    Else
+        Debug.Print &quot;Feature: &quot; &amp; swMirrorFeature.<b>Name</b>    
+   End If
+    
+</pre>
+<pre>    If swResultPart Is Nothing Then
+        Debug.Print &quot;No new part! &quot;
+    Else
+        Debug.Print &quot;Part document title: &quot; &amp; swResultPart.<b>GetTitle</b>
+    End If    </pre>
+<pre>    Set swModel = swApp.<b>ActiveDoc</b>
+    swMirrorFeature.<b>Select2</b> False, -1
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swFeature = swSelMgr.<b>GetSelectedObject6</b>(1, -1)
+    Set swMirrorFeatData = swFeature.<b>GetDefinition</b></pre>
+<pre>    swMirrorFeatData.<b>AccessSelections</b> swModel, Nothing</pre>
+<pre>    Debug.Print &quot;  Path name = &quot; &amp; swMirrorFeatData.<b>PathName</b>
+    Debug.Print &quot;  Import:  &quot;
+    Debug.Print &quot;     Solid bodies?  &quot; &amp; swMirrorFeatData.<b>SolidBodies</b>
+    Debug.Print &quot;     Cut-list properties? &quot; &amp; swMirrorFeatData.<b>CutListProperties</b>
+    Debug.Print &quot;     Sheet-metal information?  &quot; &amp; swMirrorFeatData.<b>SheetMetalInformation</b>
+    Debug.Print &quot;     Unlocked properties?  &quot; &amp; swMirrorFeatData.<b>UnlockedProperties</b></pre>
+<pre>    mirrorType = swMirrorFeatData.<b>GetMirrorPlaneType</b>
+    Debug.Print &quot;  Mirror plane type as defined in swMirrorPlaneType_e = &quot; &amp; mirrorType
+    Set swRefPlane = swMirrorFeatData.<b>GetMirrorPlane</b>
+    swMirrorFeatData.<b>ReleaseSelectionAccess</b>
+    Set swPlane = swRefPlane
+    swPlane.Select False</pre>
+<pre>End Sub
+</pre>
+
+</body>
+
+</html>

@@ -1,0 +1,102 @@
+<html>
+
+<head>
+<title>Insert Punch Table Example (VB.NET)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VB.NET examples,punch tables">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Punch Table Example (VB.NET)</h1>
+<p>This example shows how to insert a punch table in the flat pattern view of a sheet metal part
+that contains one or more forming tool features.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<pre><font color="#008000">'----------------------------------------------------------------------------
+' Preconditions:
+' 1. Open a drawing that contains a flat pattern view of a sheet
+'    metal part with one or more forming tool features.
+' 2. Modify the x- and y-coordinates in the IModelDocExtension::SelectByID2
+'    methods for the specified VERTEX and FACE.
+' 3. Verify that the punch table template exists.
+' 4. Open the Immediate window.
+'
+' Postconditions:
+' 1. Inserts a punch table in the drawing.
+' 2. Inspect the Immediate window for punch table feature details.
+' ---------------------------------------------------------------------------</font><span style="color:Green"><br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> System<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> System.Diagnostics<br><br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black"> </span><span style="color:Blue">Class</span><span style="color:Black"> SolidWorksMacro<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> Part </span><span style="color:Blue">As</span><span style="color:Black"> ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> boolstatus </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">Boolean<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> myView </span><span style="color:Blue">As</span><span style="color:Black"> View<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> myTableAnn </span><span style="color:Blue">As</span><span style="color:Black"> PunchTableAnnotation<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> MyTable </span><span style="color:Blue">As</span><span style="color:Black"> PunchTable<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> featRet </span><span style="color:Blue">As</span><span style="color:Black"> Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> rVar </span><span style="color:Blue">As</span><span style="color:Black"> </span><span style="color:Blue">Object<br><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Sub</span><span style="color:Black"> main()<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part = swApp.ActiveDoc<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.ActivateView(</span><span style="color:#a31515">&quot;Drawing View1&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.Extension.SelectByID2(</span><span style="color:#a31515">&quot;Drawing 
+	View1&quot;</span><span style="color:Black">, </span><span style="color:#a31515">&quot;DRAWINGVIEW&quot;</span><span style="color:Black">, 0, 0, 0, </span><span style="color:Blue">False</span><span style="color:Black">, 0, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 0)<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Select a vertex in the drawing 
+	view to be the origin of all datums in the table<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'All 
+	X LOCATION and Y LOCATION table column values will be relative to this datum 
+	origin<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = 
+	Part.Extension.SelectByID2(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, </span><span style="color:#a31515">&quot;VERTEX&quot;</span><span style="color:Black">, 
+	0.1344949308616, 0.0948467785893, 0, </span><span style="color:Blue">False</span><span style="color:Black">, 
+	1, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">'Select a face that contains the 
+	punches that will be annotated in the table<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = 
+	Part.Extension.SelectByID2(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">, </span><span style="color:#a31515">&quot;FACE&quot;</span><span style="color:Black">, 
+	0.1562337360869, 0.1059474450873, 0, </span><span style="color:Blue">True</span><span style="color:Black">, 
+	2, </span><span style="color:Blue">Nothing</span><span style="color:Black">, 
+	0)<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;myView = Part.SelectionManager.GetSelectedObjectsDrawingView(1)<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;myTableAnn = myView.<b>InsertPunchTable</b>(</span><span style="color:Blue">False</span><span style="color:Black">, 
+	0.2178779310824, 0.2022819591903, 1, </span><span style="color:#a31515">&quot;A&quot;</span><span style="color:Black">, </span><span style="color:#a31515">&quot;C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\lang\english\punchtable-standard.sldpuntbt&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> myTableAnn </span><span style="color:Blue">Is</span><span style="color:Black"> </span><span style="color:Blue">Nothing</span><span style="color:Black"> </span><span style="color:Blue">Then</span><span style="color:Black"> MsgBox(</span><span style="color:#a31515">&quot;Failed to insert Punch Table&quot;</span><span style="color:Black">)<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MyTable = myTableAnn.<b>PunchTable</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Default punch table 
+	properties:&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Tag style (swPunchTableTagStyle_e): 
+	&quot;</span><span style="color:Black"> &amp; MyTable.<b>TagStyle</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Starting tag: &quot;</span><span style="color:Black"> &amp; MyTable.<b>StartingValue</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Merge cells with the 
+	punch ID for a given tag? &quot;</span><span style="color:Black"> &amp; MyTable.<b>CombineSameSize</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Combine rows with 
+	the same punch ID? &quot;</span><span style="color:Black"> &amp; MyTable.<b>CombineTags</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Display dual 
+	dimensions? &quot;</span><span style="color:Black"> &amp; MyTable.<b>DualDimensions</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Display units for 
+	dual dimensions? &quot;</span><span style="color:Black"> &amp; MyTable.<b>ShowUnits</b>)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Punch table 
+	annotation count: &quot;</span><span style="color:Black"> &amp; MyTable.<b>GetTableAnnotationCount</b>)<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rVar = MyTable.<b>GetTableAnnotations</b><br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;featRet = MyTable.<b>GetFeature</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Feature name: &quot;</span><span style="color:Black"> &amp; featRet.Name)<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Part.ClearSelection2(</span><span style="color:Blue">True</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolstatus = Part.ActivateSheet(</span><span style="color:#a31515">&quot;Sheet1&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black"> </span><span style="color:Blue">Sub<br><br><br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> swApp </span><span style="color:Blue">As</span><span style="color:Black"> SldWorks<br><br><br>
+	</span><span style="color:Blue">End</span><span style="color:Black"> </span><span style="color:Blue">Class</span> </pre>
+</div>
+<p class=APICODE>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+</body>
+
+</html>

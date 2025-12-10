@@ -1,0 +1,132 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Use Presentation Transforms to Move Component Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,components">
+<meta name=MS-HKWD content="VBA examples,transforms">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=2828>
+<meta name=layout-width content=786>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API Help</span></h1>
+
+<h1>Use Presentation Transforms to Move Component Example (VBA)</h1>
+
+<p>This example shows how to use presentation transforms.</p>
+
+<pre>'-----------------------------------------------
+' Preconditions:
+' 1. Open a fully resolved assembly.
+' 2. Select a component.
+'
+' Postconditions: Moves the component.
+'
+' NOTES:
+' * When the graphics area is redrawn, the display
+'   reverts to how it was at the before running the
+'   macro, that is, the selected component
+'   appears to move back to its original
+'   position. This is by design because
+'   presentation transforms are disabled
+'   at the end of the macro. If presentation transforms
+'   are not disabled, then the component would
+'   remain in its moved position.
+' * When presentation transforms are enabled,
+'   access to most of the menus is blocked.
+'   This is by design because selections cannot
+'   be made because the graphics area is not the
+'   same as the model data.
+'-----------------------------------------------
+Option Explicit</pre>
+<pre>Sub main()</pre>
+<pre>    Const MaxSteps As Long = 100
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swAssy As SldWorks.AssemblyDoc
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Dim swComp As SldWorks.Component2
+    Dim vXform As Variant
+    Dim arr(15) As Double
+    Dim swMathUtil As SldWorks.MathUtility
+    Dim swMathXform As SldWorks.MathTransform
+    Dim swModelView as SldWorks.ModelView
+    Dim i As Long
+    Dim rect as Variant</pre>
+<pre>    Set swApp = Application.SldWorks
+    Set swMathUtil = swApp.<b>GetMathUtility</b>()
+    Set swModel = swApp.<b>ActiveDoc</b>
+    Set swAssy = swModel
+    Set swSelMgr = swModel.<b>SelectionManager</b>
+    Set swComp = swSelMgr.<b>GetSelectedObjectsComponent4</b>(1, -1)</pre>
+<pre>    ' Block access to menus
+    swAssy.<b>EnablePresentation</b> = True</pre>
+<pre>    ' Set up unit matrix - no rotation, translation, or scaling</pre>
+<pre>    ' Unit rotation matrix
+    arr(0) = 1#:    arr(1) = 0#:    arr(2) = 0#
+    arr(3) = 0#:    arr(4) = 1#:    arr(5) = 0#
+    arr(6) = 0#:    arr(7) = 0#:    arr(8) = 1#</pre>
+<pre>    ' No translation
+    arr(9) = 0#:    arr(10) = 0#:   arr(11) = 0#</pre>
+<pre>    ' Unit scaling
+    arr(12) = 1#</pre>
+<pre>    ' Not used, so pad with zeros
+    arr(13) = 0#:   arr(14) = 0#:   arr(15) = 0#
+    
+</pre>
+<pre>    For i = 1 To MaxSteps
+        ' Change rotation
+        arr(2) = 1.2 * (i / MaxSteps)
+        arr(3) = 1.2 * (i / MaxSteps):  arr(4) = 0.8 * (i / MaxSteps):  arr(5) = 0.9 * (i / MaxSteps)
+        arr(6) = 0.8 * (i / MaxSteps)</pre>
+<pre>        ' Change translation
+        arr(9) = 0.1 * (i / MaxSteps):  arr(10) = 0.2 * (i / MaxSteps)</pre>
+<pre>        ' Should really check that matrix is valid,
+        ' especially rotation matrix
+        vXform = arr</pre>
+<pre>        Set swMathXform = swMathUtil.<b>CreateTransform</b>((vXform))</pre>
+<pre>        swComp.<b>RemovePresentationTransform</b>
+        swComp.<b>PresentationTransform</b> = swMathXform</pre>
+<pre>        ' Redraw so it is shown immediately
+        Set swModelView = swModel.<b>ActiveView</b>
+        Set rect = Nothing
+        swModelView.<b>GraphicsRedraw</b> (rect)
+    Next i</pre>
+<pre>    ' Re-enable access to menus
+    ' Comment out to leave component in its moved position
+    swAssy.<b>EnablePresentation</b> = False</pre>
+<pre>End Sub
+</pre>
+
+</body>
+
+</html>

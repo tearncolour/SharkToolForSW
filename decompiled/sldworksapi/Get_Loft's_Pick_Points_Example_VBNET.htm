@@ -1,0 +1,347 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Get Loft's Pick Points Example (VB.NET)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VB.NET examples,lofts">
+<meta name=MS-HKWD content="Pick points">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=1839>
+<meta name=layout-width content=955>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="ApiHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Get and Set Loft's Pick Points Example (VB.NET)</h1>
+
+<p>This example shows how to get and set the pick points of a loft feature.</p>
+
+<div style="font-family:Monospace; font-size: 10pt; background-color: white;">
+	<p class="APICODE"><span style="color:Green">
+	'----------------------------------------------------------- &nbsp;<br>
+	' Preconditions: <br>
+	' 1. Open a part that contains a loft.<br>
+	' 2. Open the Immediate window.<br>
+	' 3. Select the loft feature.<br>
+	' <br>
+	' Postconditions: <br>
+	' 1. New loft pick points are set.<br>
+	' 2. Examine the part and the Immediate window to verify.<br>
+	'----------------------------------------------------------- <br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.sldworks<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	SolidWorks.Interop.swconst<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Diagnostics<br>
+	</span><span style="color:Blue">Imports</span><span style="color:Black"> 
+	System.Runtime.InteropServices<br>
+	<br>
+	</span><span style="color:Blue">Partial</span><span style="color:Black">
+	</span><span style="color:Blue">Class</span><span style="color:Black"> 
+	SolidWorksMacro<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	swModel </span><span style="color:Blue">As</span><span style="color:Black"> 
+	ModelDoc2<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	swSelMgr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SelectionMgr<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	swFeat </span><span style="color:Blue">As</span><span style="color:Black"> 
+	Feature<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	swFeatData </span><span style="color:Blue">As</span><span style="color:Black"> 
+	LoftFeatureData<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	swMathPoint </span><span style="color:Blue">As</span><span style="color:Black"> 
+	MathPoint<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	newMathPoint </span><span style="color:Blue">As</span><span style="color:Black"> 
+	MathPoint()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	pointArray </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Double</span><span style="color:Black">()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	pickPointData </span><span style="color:Blue">As</span><span style="color:Black"> 
+	[Object]()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	pointVar </span><span style="color:Blue">As</span><span style="color:Black"> 
+	[Object]<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	pointData </span><span style="color:Blue">As</span><span style="color:Black"> 
+	[Object]()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	newChains </span><span style="color:Blue">As</span><span style="color:Black"> 
+	[Object]()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	selCount </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	numberOfChains </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Private</span><span style="color:Black"> 
+	newCount </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black">
+	</span><span style="color:Blue">Sub</span><span style="color:Black"> Main()<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swModel = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(swApp.<b>ActiveDoc</b>, 
+	ModelDoc2)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swSelMgr = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(swModel.<b>SelectionManager</b>, 
+	SelectionMgr)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;selCount = swSelMgr.<b>GetSelectedObjectCount</b>()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">If</span><span style="color:Black"> 
+	selCount &lt;&gt; 1 </span><span style="color:Blue">Then<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Windows.Forms.MessageBox.Show(</span><span style="color:#a31515">&quot;Select 
+	the loft feature and rerun the macro.&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Return<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">If<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeat = </span>
+	<span style="color:Blue">DirectCast</span><span style="color:Black">(swSelMgr.<b>GetSelectedObject6</b>(1, 
+	-1), Feature)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatData = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(swFeat.<b>GetDefinition</b>(), 
+	LoftFeatureData)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Get the loft's pick points <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCount = 0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pickPointData = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(swFeatData.<b>PickPoints</b>, 
+	[Object]())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numberOfChains = pickPointData.GetUpperBound(0) + 1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newChains = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	[Object](numberOfChains - 1) {}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;No. of chains = &quot;</span><span style="color:Black"> 
+	&amp; numberOfChains)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	chainCount </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = 
+	pickPointData.GetLowerBound(0) </span><span style="color:Blue">To</span><span style="color:Black"> 
+	pickPointData.GetUpperBound(0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointData = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(pickPointData(chainCount), 
+	[Object]())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	numOfPointInEachChain </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = 
+	pointData.GetUpperBound(0) + 1<br>
+	<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	newPoints </span><span style="color:Blue">As</span><span style="color:Black"> 
+	MathPoint() = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	MathPoint(numOfPointInEachChain - 1) {}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Chain = &quot;</span><span style="color:Black"> 
+	&amp; chainCount &amp; </span><span style="color:#a31515">&quot;, Number of points = &quot;</span><span style="color:Black"> 
+	&amp; numOfPointInEachChain)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	pointCount </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = 
+	pointData.GetLowerBound(0) </span><span style="color:Blue">To</span><span style="color:Black"> 
+	pointData.GetUpperBound(0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathPoint = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(pointData(pointCount), 
+	MathPoint)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointVar = swMathPoint.<b>ArrayData</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointArray = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(pointVar, 
+	[Double]())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newPoints(pointCount) = swMathPoint<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;X = &quot;</span><span style="color:Black"> 
+	&amp; </span><span style="color:Blue">CDbl</span><span style="color:Black">(pointArray(0)) 
+	* 1000 &amp; </span><span style="color:#a31515">&quot; Y = &quot;</span><span style="color:Black"> 
+	&amp; </span><span style="color:Blue">CDbl</span><span style="color:Black">(pointArray(1)) 
+	* 1000 &amp; </span><span style="color:#a31515">&quot; Z = &quot;</span><span style="color:Black"> 
+	&amp; </span><span style="color:Blue">CDbl</span><span style="color:Black">(pointArray(2)) 
+	* 1000)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCount = newCount + 1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newChains(chainCount) = 
+	newPoints<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numPoints = numOfPointInEachChain<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Change the loft pick points, rotating them to create a twist<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	tmpPoints </span><span style="color:Blue">As</span><span style="color:Black"> 
+	MathPoint() = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(newChains(newChains.GetUpperBound(0)), 
+	MathPoint())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	objPrev </span><span style="color:Blue">As</span><span style="color:Black"> 
+	MathPoint = tmpPoints(numPoints - 1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	chainArr </span><span style="color:Blue">As</span><span style="color:Black"> 
+	[Object]() = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	[Object](newChains.GetUpperBound(0)) {}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	chainCount </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = 
+	newChains.GetLowerBound(0) </span><span style="color:Blue">To</span><span style="color:Black"> 
+	newChains.GetUpperBound(0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	newPoints </span><span style="color:Blue">As</span><span style="color:Black"> 
+	MathPoint() = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(newChains(chainCount), 
+	MathPoint())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	tmp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	MathPoint = newPoints(numPoints - 1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newPoints(numPoints - 1) = objPrev<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;objPrev = tmp<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	newPointWrapArray </span><span style="color:Blue">As</span><span style="color:Black"> 
+	DispatchWrapper() = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(ObjectArrayToDispatchWrapperArray(newPoints), 
+	DispatchWrapper())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;chainArr(chainCount) = newPointWrapArray<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' 
+	Set the loft's new pick points <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	status </span><span style="color:Blue">As</span><span style="color:Black"> 
+	[Boolean] = </span><span style="color:Blue">False<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status = swFeatData.<b>AccessSelections</b>(swModel,
+	</span><span style="color:Blue">Nothing</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swFeatData.PickPoints = chainArr<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;status = swFeat.<b>ModifyDefinition</b>(swFeatData, swModel, </span>
+	<span style="color:Blue">Nothing</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Loft's pick points 
+	were modified: &quot;</span><span style="color:Black"> &amp; status)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Green">' Get the loft's pick points <br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCount = 0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pickPointData = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(swFeatData.<b>PickPoints</b>, 
+	[Object]())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;numberOfChains = pickPointData.GetUpperBound(0) + 1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;No. of chains = &quot;</span><span style="color:Black"> 
+	&amp; numberOfChains)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	chainCount </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = 
+	pickPointData.GetLowerBound(0) </span><span style="color:Blue">To</span><span style="color:Black"> 
+	pickPointData.GetUpperBound(0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointData = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(pickPointData(chainCount), 
+	[Object]())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	numOfPointInEachChain </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Long</span><span style="color:Black"> = 
+	pointData.GetUpperBound(0) + 1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Array.Resize(newMathPoint, </span><span style="color:Blue">CInt</span><span style="color:Black">((numberOfChains 
+	* numOfPointInEachChain) - 1) + 1)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;Chain = &quot;</span><span style="color:Black"> 
+	&amp; chainCount &amp; </span><span style="color:#a31515">&quot;, Number of points = &quot;</span><span style="color:Black"> 
+	&amp; numOfPointInEachChain)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	pointCount </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = 
+	pointData.GetLowerBound(0) </span><span style="color:Blue">To</span><span style="color:Black"> 
+	pointData.GetUpperBound(0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;swMathPoint = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(pointData(pointCount), 
+	MathPoint)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointVar = swMathPoint.<b>ArrayData</b><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newMathPoint(newCount) = swMathPoint<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newMathPoint(newCount).<b>ArrayData</b> = pointVar<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pointArray = </span><span style="color:Blue">DirectCast</span><span style="color:Black">(pointVar, 
+	[Double]())<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;X = &quot;</span><span style="color:Black"> 
+	&amp; </span><span style="color:Blue">CDbl</span><span style="color:Black">(pointArray(0)) 
+	* 1000 &amp; </span><span style="color:#a31515">&quot; Y = &quot;</span><span style="color:Black"> 
+	&amp; </span><span style="color:Blue">CDbl</span><span style="color:Black">(pointArray(1)) 
+	* 1000 &amp; </span><span style="color:#a31515">&quot; Z = &quot;</span><span style="color:Black"> 
+	&amp; </span><span style="color:Blue">CDbl</span><span style="color:Black">(pointArray(2)) 
+	* 1000)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCount = newCount + 1<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Debug.Print(</span><span style="color:#a31515">&quot;&quot;</span><span style="color:Black">)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Sub<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black">
+	</span><span style="color:Blue">Function</span><span style="color:Black"> 
+	ObjectArrayToDispatchWrapperArray(</span><span style="color:Blue">ByVal</span><span style="color:Black"> 
+	SwObjects </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Object</span><span style="color:Black">())
+	</span><span style="color:Blue">As</span><span style="color:Black"> 
+	DispatchWrapper()<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	arraySize </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = 0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arraySize = SwObjects.GetUpperBound(0)<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	dispwrap </span><span style="color:Blue">As</span><span style="color:Black"> 
+	DispatchWrapper() = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	DispatchWrapper(arraySize) {}<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Dim</span><span style="color:Black"> 
+	arrayIndex </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer</span><span style="color:Black"> = 0<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">For</span><span style="color:Black"> 
+	arrayIndex = 0 </span><span style="color:Blue">To</span><span style="color:Black"> 
+	arraySize<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dispwrap(arrayIndex) = </span><span style="color:Blue">New</span><span style="color:Black"> 
+	DispatchWrapper(SwObjects(arrayIndex))<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Next<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Return</span><span style="color:Black"> 
+	dispwrap<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">End</span><span style="color:Black">
+	</span><span style="color:Blue">Function<br>
+	<br>
+	<br>
+	<br>
+	</span><span style="color:Black">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	swApp </span><span style="color:Blue">As</span><span style="color:Black"> 
+	SldWorks<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:Blue">Public</span><span style="color:Black"> 
+	numPoints </span><span style="color:Blue">As</span><span style="color:Black">
+	</span><span style="color:Blue">Integer<br>
+	<br>
+	<br>
+	End</span><span style="color:Black"> </span><span style="color:Blue">Class<br>
+	<br>
+	<br>
+	<br>
+&nbsp;</span></div>
+
+</body>
+
+</html>

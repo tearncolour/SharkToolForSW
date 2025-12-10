@@ -1,0 +1,110 @@
+<html>
+
+<head>
+<title>Merge Miter Trimmed Bodies Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,weldments">
+<meta name=MS-HKWD content="VBA examples,structural-member group">
+
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Merge Miter Trimmed Bodies Example (VBA)</h1>
+<p>This example shows how to specify to merge miter trimmed bodies in a structural-member 
+group.</p>
+
+<pre>'---------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the specified weldment profile exists.
+' 2. Open the Immediate window.
+'
+' Postconditions:
+' 1. Creates a new document containing a weldment and a structural member.
+' 2. Sets to merge miter trimmed bodies in the structural-member group.
+' 3. Examine the Immediate window.
+'---------------------------------------------------------------------------
+Option Explicit</pre>
+<pre>Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swFeatMgr As SldWorks.FeatureManager
+Dim swSelMgr As SldWorks.SelectionMgr
+Dim swWeldFeat As SldWorks.Feature
+Dim swWeldFeatData As SldWorks.StructuralMemberFeatureData
+Dim swFeature As SldWorks.Feature
+Dim status As Boolean
+Dim template As String
+Dim skLines As Variant
+Dim group1 As SldWorks.StructuralMemberGroup
+Dim seg1 As Variant
+Dim segments1(1) As Object
+Dim groups1 As Variant
+Dim groupArray1(0) As Object
+Dim group As SldWorks.StructuralMemberGroup
+Dim groups As Variant
+Dim segments As Variant
+Dim i As Long
+Dim j As Long</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks</pre>
+<pre>    template = swApp.<b>GetUserPreferenceStringValue</b>(swUserPreferenceStringValue_e.swDefaultTemplatePart)
+    Set swModel = swApp.<b>NewDocument</b>(template, 0, 0, 0)
+    Set swFeatMgr = swModel.<b>FeatureManager</b>
+    Set swSelMgr = swModel.<b>SelectionManager</b></pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    ' Create weldment and structural member 
+    skLines = swModel.<b>SketchManager</b>.<b>CreateCornerRectangle</b>(-0.1872393706766, 0.1133237194389, 0, -0.07003610048208, 0.009188409684237, 0)
+    swModel.<b>ClearSelection2</b> True
+    swModel.<b>SketchManager</b>.<b>InsertSketch</b> True
+    swModel.<b>ViewZoomtofit2</b>
+    Set swFeature = swFeatMgr.<b>InsertWeldmentFeature</b>()
+    Set group1 = swFeatMgr.<b>CreateStructuralMemberGroup</b>
+    status = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;Line1@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, -0.1495427140733, 0.1133237194389, 0, False, 0, Nothing, 0)
+    status = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;Line2@Sketch1&quot;, &quot;EXTSKETCHSEGMENT&quot;, -0.1872393706766, 0.08238014634844, 0, True, 0, Nothing, 0)
+    Set segments1(0) = swSelMgr.<b>GetSelectedObject6</b>(1, 0)
+    Set segments1(1) = swSelMgr.<b>GetSelectedObject6</b>(2, 0)
+    seg1 = segments1
+    group1.<b>segments</b> = (seg1)
+    group1.<b>Angle</b> = 0
+    group1.<b>ApplyCornerTreatment</b> = True
+    group1.<b>CornerTreatmentType</b> = <font SIZE="2">swSolidworksWeldmentEndCondOptions_e.</font>swEndConditionMiter
+    group1.<b>MirrorProfile</b> = True
+    group1.<b>MirrorProfileAxis</b> = swMirrorProfileOrAlignmentAxis_e.swMirrorProfileOrAlignmentAxis_Vertical
+    group1.<b>GapWithinGroup</b> = 0
+    Set groupArray1(0) = group1
+    groups1 = groupArray1
+    Set swFeature = swFeatMgr.<b>InsertStructuralWeldment5</b>(&quot;C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\lang\english\weldment profiles\ansi inch\c channel\3 x 5.sldlfp&quot;, swConnectedSegmentsOption_e.swConnectedSegments_SimpleCut, False, (groups1), &quot;&quot;)
+    swModel.<b>ClearSelection2</b> True</pre>
+<pre>    ' Get and set structural-member group information
+    status = swModel.<b>Extension</b>.<b>SelectByID2</b>(&quot;c channel 3 x 5(1)&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 0, Nothing, 0)
+    Set swWeldFeat = swSelMgr.<b>GetSelectedObject6</b>(1, 0)
+    Set swWeldFeatData = swWeldFeat.<b>GetDefinition</b>
+    swWeldFeatData.<b>AccessSelections</b> swModel, Nothing
+    Debug.Print &quot;&quot;
+    Debug.Print &quot;Number of groups: &quot; &amp; swWeldFeatData.<b>GetGroupsCount</b>
+    Debug.Print &quot; Feature name: &quot; &amp; swWeldFeat.<b>Name</b>
+    groups = swWeldFeatData.<b>groups</b>
+        For i = LBound(groups) To UBound(groups)
+           Set group = groups(i)
+            Debug.Print &quot; Number of segments in group &quot; &amp; i + 1 &amp; &quot;: &quot; &amp; group.<b>GetSegmentsCount</b>
+            Debug.Print &quot; Apply corner treatment? &quot; &amp; group.<b>ApplyCornerTreatment</b>
+            Debug.Print &quot; Corner treatment type (1 = swSolidworksWeldmentEndCondOptions_e.swEndconditionMiter): &quot; &amp; group.<b>CornerTreatmentType</b>
+            Debug.Print &quot; Original merge miter trimmed bodies setting: &quot; &amp; group.<b>MiterMergeCondition</b>
+            If group.<b>CornerTreatmentType</b> = swSolidworksWeldmentEndCondOptions_e.swEndConditionMiter Then
+                    group.<b>MiterMergeCondition</b> = True
+            End If
+            Debug.Print &quot; Modified merge miter trimmed bodies setting: &quot; &amp; group.<b>MiterMergeCondition</b>
+            segments = group.<b>segments</b>
+            For j = LBound(segments) To UBound(segments)
+                segments(j).<b>Select4</b> False, Nothing
+            Next j
+        Next i
+    swFeature.<b>ModifyDefinition</b> swWeldFeatData, swModel, Nothing    </pre>
+<pre>    swModel.<b>ClearSelection2</b> True</pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

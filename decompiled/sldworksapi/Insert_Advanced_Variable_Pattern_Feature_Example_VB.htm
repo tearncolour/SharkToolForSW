@@ -1,0 +1,119 @@
+<html>
+
+<head>
+<title>Insert Variable Pattern Feature Example (VBA)</title>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" type="text/css" href="ApiHelp.css">
+</head>
+<meta name=MS-HKWD content="VBA examples,variable patterns">
+<meta name=MS-HKWD content="VBA examples,patterns">
+<body>
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+<h1>Insert Variable Pattern Feature Example (VBA)</h1>
+<p>This example shows how to insert a variable pattern feature.</p>
+
+<pre>'----------------------------------------------------------------------------
+' Preconditions:
+' 1. Verify that the part to open exists.
+' 2. Verify that <b>c:\temp</b> exists.
+' 3. Open the Immediate window.
+'
+' Postconditions:
+' 1. Inserts a variable pattern feature.
+' 2. Exports the table to a Microsoft Excel file.
+' 3. Examine the graphics area, Immediate window, and <b>c:\temp</b>.
+'
+' NOTE: Because the part is used elsewhere, do not changes.
+' ---------------------------------------------------------------------------</pre>
+<pre>Option Explicit
+
+Dim swApp As SldWorks.SldWorks
+Dim swModel As SldWorks.ModelDoc2
+Dim swModelDocExt As SldWorks.ModelDocExtension
+Dim swFeatureManager As SldWorks.FeatureManager
+Dim swFeature As SldWorks.Feature
+Dim swDimensionDrivenTablePatternFeat As SldWorks.DimPatternFeatureData
+Dim fileName As String
+Dim status As Boolean
+Dim errors As Long, warnings As Long
+Dim nbr As Long
+Dim dimNbr as Long
+Dim i As Long
+Dim j As Long
+Dim controllingDimNames() As String
+Dim controllingDimName as String
+Dim instanceName As String
+Dim instanceNames() As String
+Dim patternName As String</pre>
+<pre>Sub main()</pre>
+<pre>    Set swApp = Application.SldWorks
+    fileName = &quot;C:\Users\Public\Documents\SOLIDWORKS\SOLIDWORKS 2019\samples\tutorial\api\cstick.sldprt&quot;
+    Set swModel = swApp.<b>OpenDoc6</b>(fileName, swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, &quot;&quot;, errors, warnings)
+    Set swModelDocExt = swModel.<b>Extension</b>    </pre>
+<pre>    'Select feature to pattern
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sweep1&quot;, &quot;BODYFEATURE&quot;, 0, 0, 0, False, 4, Nothing, 0)    </pre>
+<pre>    'Select reference geometry to drive seed feature
+    status = swModelDocExt.<b>SelectByID2</b>(&quot;Sketch1&quot;, &quot;SKETCH&quot;, 0, 0, 0, True, 1048576, Nothing, 0)    </pre>
+<pre>    'Populate table
+    Set swFeatureManager = swModel.<b>FeatureManager
+</b>    status = swFeatureManager.<b>InsertVaryInstanceOverride</b>(&quot;D1@Sketch2@cstick.SLDPRT&quot;, 256, 1, 0, 1, 0, 0.085)
+    status = swFeatureManager.<b>InsertVaryInstanceOverride</b>(&quot;D3@Sketch2@cstick.SLDPRT&quot;, 256, 1, 0, 1, 0, 0.04)
+    status = swFeatureManager.<b>InsertVaryInstanceOverride</b>(&quot;D4@Sketch2@cstick.SLDPRT&quot;, 256, 1, 0, 1, 0, 0.03)
+    status = swFeatureManager.<b>InsertVaryInstanceOverride</b>(&quot;D1@Sketch2@cstick.SLDPRT&quot;, 256, 1, 0, 2, 0, 0.105)
+    status = swFeatureManager.<b>InsertVaryInstanceOverride</b>(&quot;D3@Sketch2@cstick.SLDPRT&quot;, 256, 1, 0, 2, 0, 0.06)
+    status = swFeatureManager.<b>InsertVaryInstanceOverride</b>(&quot;D4@Sketch2@cstick.SLDPRT&quot;, 256, 1, 0, 2, 0, 0.05)   </pre>
+<pre>    'Insert the variable pattern feature and access its feature data</pre>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swDimensionDrivenTablePatternFeat = 
+swFeatureManager.<b>CreateDefinition</b>(swFmDimPattern)<br>
+&nbsp;&nbsp;&nbsp; Set swFeature = swFeatureManager.<b>CreateFeature</b>(swDimensionDrivenTablePatternFeat)</p>
+<pre>
+    Set swDimensionDrivenTablePatternFeat = swFeature.<b>GetDefinition
+</b>    status = swDimensionDrivenTablePatternFeat.<b>AccessSelections</b>(swModel, Nothing)</pre>
+<pre>        nbr = swDimensionDrivenTablePatternFeat.<b>GetInstanceCount</b>
+        Debug.Print (&quot;Number of pattern instances: &quot; &amp; nbr)        </pre>
+<pre>        dimNbr = swDimensionDrivenTablePatternFeat.<b>GetControllingDimensionCount</b>
+        Debug.Print (&quot;Number of controlling dimensions: &quot; &amp; dimNbr)
+        Debug.Print (&quot;  Controlling dimension names: &quot;)
+        ReDim Preserve controllingDimNames(dimNbr)
+        For i = 0 To dimNbr - 1
+            controllingDimNames(i) = swDimensionDrivenTablePatternFeat.<b>GetControllingDimensionName</b>(i)
+            controllingDimName = controllingDimNames(i)
+            Debug.Print (&quot;     &quot; &amp; controllingDimName)
+        Next i        </pre>
+<pre>        Debug.Print (&quot;Names of pattern instances:&quot;)
+        ReDim Preserve instanceNames(nbr - 1)
+        j = 0
+        For i = 1 To nbr
+            instanceName = swDimensionDrivenTablePatternFeat.<b>GetInstanceNameByIndex</b>(i)
+            Debug.Print (&quot;  &quot; &amp; instanceName)
+            instanceNames(j) = instanceName
+            j = j + 1
+        Next i
+
+        Debug.Print (&quot;Table row indices of pattern instances:&quot;)
+        For i = 0 To nbr - 1
+            Debug.Print (&quot;  &quot; &amp; swDimensionDrivenTablePatternFeat.<b>GetTableRowIndex</b>(instanceNames(i)) &amp; &quot;: &quot; &amp; instanceNames(i))
+        Next i        </pre>
+<pre>        Debug.Print (&quot;Pattern dimension names: &quot;)
+        For i = 0 To nbr - 1
+	    For j = 1 to dimNbr -1
+                patternName = swDimensionDrivenTablePatternFeat.<b>GetInstanceDimensionName</b>(instanceNames(i), controllingDimNames(j))
+                Debug.Print (&quot;  &quot; &amp; patternName &amp; &quot;: &quot; &amp; instanceNames(i) &amp; &quot;: Controlling dimension name: &quot; &amp; swDimensionDrivenTablePatternFeat.<b>GetControllingDimensionName</b>(j))
+	    Next j
+        Next i        </pre>
+<pre>        Debug.Print (&quot;Pattern instance suppression state:&quot;)
+        For i = 0 To nbr - 1
+            Debug.Print (&quot;  &quot; &amp; swDimensionDrivenTablePatternFeat.<b>GetInstanceSuppressStateByIndex</b>(swDimensionDrivenTablePatternFeat.<b>GetTableRowIndex</b>(instanceNames(i))) &amp; &quot;: &quot; &amp; instanceNames(i))
+        Next i</pre>
+<pre>        ' Export table to Microsoft Excel file
+        errors = swDimensionDrivenTablePatternFeat.<b>ExportToExcel</b>(&quot;c:\temp\cstickVarPattern.xls&quot;, True)
+        Debug.Print &quot;Table exported to Microsoft Excel file (0 = Succeeded)? &quot; &amp; errors
+
+    swDimensionDrivenTablePatternFeat.<b>ReleaseSelectionAccess</b></pre>
+<pre>End Sub</pre>
+
+</body>
+
+</html>

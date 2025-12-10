@@ -1,0 +1,345 @@
+<!doctype HTML public "-//W3C//DTD HTML 4.0 Frameset//EN">
+
+<html>
+
+<!--(==============================================================)-->
+<!--(Document created with RoboEditor. )============================-->
+<!--(==============================================================)-->
+
+<head>
+
+<title>Insert DXF/DWG File and Add Dimensions Example (VBA)</title>
+
+<!--(Meta)==========================================================-->
+
+<meta http-equiv=content-type content="text/html; charset=windows-1252">
+<meta name=MS-HKWD content="VBA examples,autodimension">
+<meta name=MS-HKWD content="VBA examples,DXF/DWG files">
+<meta name=MS-HKWD content="DXF/DWG files">
+<meta name=generator content="RoboHELP by eHelp Corporation - www.ehelp.com">
+<meta name=generator-major-version content=0.1>
+<meta name=generator-minor-version content=1>
+<meta name=filetype content=kadov>
+<meta name=filetype-version content=1>
+<meta name=page-count content=1>
+<meta name=layout-height content=5857>
+<meta name=layout-width content=750>
+
+
+<!--(Links)=========================================================-->
+
+<link rel="StyleSheet" href="./APIHelp.css">
+
+
+
+</head>
+
+<!--(Body)==========================================================-->
+
+
+<body>
+
+<h1><span style="font-weight: normal; font-size: 7.5pt;">SOLIDWORKS API 
+ Help</span></h1>
+
+<h1>Insert DXF/DWG File and Add Dimensions Example (VBA)</h1>
+
+<p>This example shows how to insert a DXF/DWG image on a preselected plane 
+ or face and then autodimension it.</p>
+
+<pre>'----------------------------------------------------------------------------
+' Preconditions:
+' 1. Open a part.
+' 2. Replace <i>path_name</i> with the pathname of an existing DXF/DWG file.
+' 3. Select a plane or face on which to insert the DXF/DWG image.
+'
+' Postconditions:
+' 1. Adds the DXF/DWG image as a sketch.
+' 2. Autodimensions the sketch.
+' 3. Use <b>Zoom to Area</b> to inspect the sketch dimensioning.
+' 4. Press F5 to rebuild the model.
+'---------------------------------------------------------------------------
+Option Explicit</pre>
+<p class="APICODE">Const nTolerance 
+As Double = 0.00000001<br>
+Dim swModelView 
+As SldWorks.ModelView<br>
+Dim swSketchMgr 
+As SldWorks.SketchManager<br>
+Dim nRetVal 
+As Long</p>
+<p class="APICODE">Sub main()</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Const sDwgFileName&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As String = &quot;<i>path_name</i>&quot;</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim swApp 
+As SldWorks.SldWorks<br>
+&nbsp;&nbsp;&nbsp; Dim swModel 
+As SldWorks.ModelDoc2<br>
+&nbsp;&nbsp;&nbsp; Dim swFeatMgr 
+As SldWorks.FeatureManager<br>
+&nbsp;&nbsp;&nbsp; Dim swFeat 
+As SldWorks.Feature<br>
+&nbsp;&nbsp;&nbsp; Dim swSketch 
+As SldWorks.Sketch<br>
+&nbsp;&nbsp;&nbsp; Dim swSelMgr 
+As SldWorks.SelectionMgr<br>
+&nbsp;&nbsp;&nbsp; Dim swSelData 
+As SldWorks.SelectData<br>
+&nbsp;&nbsp;&nbsp; Dim bRet 
+As Boolean<br>
+&nbsp;&nbsp;&nbsp; Dim importData 
+As SldWorks.ImportDxfDwgData</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swApp = Application.SldWorks<br>
+&nbsp;&nbsp;&nbsp; Set swModel = swApp.<b>ActiveDoc</b><br>
+&nbsp;&nbsp;&nbsp; Set swModelView = swModel.<b>ActiveView</b><br>
+&nbsp;&nbsp;&nbsp; Set swFeatMgr = swModel.<b>FeatureManager</b><br>
+&nbsp;&nbsp;&nbsp; Set importData = swApp.<b>GetImportFileData</b>(sDwgFileName)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Unit<br>
+&nbsp;&nbsp;&nbsp; importData.<b>LengthUnit</b>(&quot;&quot;) = 
+SwConst.swLengthUnit_e.swMM<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Position<br>
+&nbsp;&nbsp;&nbsp; bRet = importData.<b>SetPosition</b>(&quot;&quot;, 
+swDwgEntitiesCentered, 0, 0)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Sheet scale<br>
+&nbsp;&nbsp;&nbsp; bRet = importData.<b>SetSheetScale</b>(&quot;&quot;, 1#, 2#)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Paper size<br>
+&nbsp;&nbsp;&nbsp; bRet = importData.<b>SetPaperSize</b>(&quot;&quot;, 
+SwConst.swDwgPaperSizes_e.swDwgPaperAsize, 0#, 0#)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; 'Import method<br>
+&nbsp;&nbsp;&nbsp; importData.<b>ImportMethod</b>(&quot;&quot;) = 
+swImportDxfDwg_ImportMethod_e.swImportDxfDwg_ImportToExistingPart</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swFeat = swFeatMgr.<b>InsertDwgOrDxfFile2</b>(sDwgFileName, 
+importData)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swSketch = swFeat.<b>GetSpecificFeature2</b><br>
+&nbsp;&nbsp;&nbsp; Set swSelMgr = swModel.<b>SelectionManager</b><br>
+&nbsp;&nbsp;&nbsp; Set swSelData = swSelMgr.<b>CreateSelectData</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; nRetVal = AutoDimensionSketch(swApp, 
+swModel, swSketch, swSelData)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Stop<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Rebuild to update sketch<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>EditRebuild3</b></p>
+<p class="APICODE">End Sub<br>
+</p>
+<p class="APICODE">Function GetAllSketchLines(swApp As SldWorks.SldWorks, 
+swModel As SldWorks.ModelDoc2, swSketch As SldWorks.Sketch) As Variant</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vSketchSegArr 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vSketchSeg 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchSeg 
+As SldWorks.SketchSegment<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchCurrLine 
+As SldWorks.SketchLine<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchLineArr( 
+As SldWorks.SketchLine<br>
+&nbsp;&nbsp;&nbsp; ReDim swSketchLineArr(0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; vSketchSegArr = swSketch.<b>GetSketchSegments</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If Not IsEmpty(vSketchSegArr) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For Each vSketchSeg In vSketchSegArr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set 
+swSketchSeg = vSketchSeg<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If 
+swSketchLINE = swSketchSeg.<b>GetType</b> Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swSketchCurrLine = swSketchSeg<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swSketchLineArr(UBound(swSketchLineArr)) = swSketchCurrLine<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+ReDim Preserve swSketchLineArr(UBound(swSketchLineArr) + 1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If 0 = UBound(swSketchLineArr) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' No straight lines in this sketch<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; GetAllSketchLines = Empty<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Exit Function<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Remove last, empty sketch line<br>
+&nbsp;&nbsp;&nbsp; ReDim Preserve swSketchLineArr(UBound(swSketchLineArr) - 1)<br>
+&nbsp;&nbsp;&nbsp; GetAllSketchLines = swSketchLineArr</p>
+<p class="APICODE">End Function</p>
+<p class="APICODE">Function GetSketchPoint(swApp As SldWorks.SldWorks, swModel 
+As SldWorks.ModelDoc2, swSketch As SldWorks.Sketch, swSketchPt As 
+SldWorks.SketchPoint) As Boolean</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vSketchPtArr&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; vSketchPtArr = swSketch.<b>GetSketchPoints2</b><br>
+&nbsp;&nbsp;&nbsp; If Not IsEmpty(vSketchPtArr) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Use first point<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swSketchPt = vSketchPtArr(0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; GetSketchPoint = True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Exit Function<br>
+&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; GetSketchPoint = False</p>
+<p class="APICODE">End Function</p>
+<p class="APICODE">Function FindVerticalOrigin(swApp As SldWorks.SldWorks, 
+swModel As SldWorks.ModelDoc2, swSketch As SldWorks.Sketch, swSketchSegVert As 
+SldWorks.SketchSegment, swSketchPtVert As SldWorks.SketchPoint) As Boolean</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vSketchLineArr 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vSketchLine 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchCurrLine 
+As SldWorks.SketchLine<br>
+&nbsp;&nbsp;&nbsp; Dim swStartPt&nbsp;As SldWorks.SketchPoint<br>
+&nbsp;&nbsp;&nbsp; Dim swEndPt&nbsp;As SldWorks.SketchPoint</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get first vertical line<br>
+&nbsp;&nbsp;&nbsp; vSketchLineArr = GetAllSketchLines(swApp, swModel, swSketch)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If Not IsEmpty(vSketchLineArr) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For Each vSketchLine In 
+vSketchLineArr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set 
+swSketchCurrLine = vSketchLine<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swStartPt 
+= swSketchCurrLine.<b>GetStartPoint2</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swEndPt = 
+swSketchCurrLine.<b>GetEndPoint2</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If Abs(swStartPt.<b>X</b> - swEndPt.<b>X</b>) &lt; nTolerance Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swSketchSegVert = swSketchCurrLine<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+FindVerticalOrigin = True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Exit Function<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get first point<br>
+&nbsp;&nbsp;&nbsp; FindVerticalOrigin = GetSketchPoint(swApp, swModel, swSketch, 
+swSketchPtVert)</p>
+<p class="APICODE">End Function</p>
+<p class="APICODE">Function FindHorizontalOrigin(swApp As SldWorks.SldWorks, 
+swModel As SldWorks.ModelDoc2, swSketch As SldWorks.Sketch, swSketchSegHoriz As 
+SldWorks.SketchSegment, swSketchPtHoriz As SldWorks.SketchPoint) As Boolean</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim vSketchLineArr 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim vSketchLine 
+As Variant<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchCurrLine 
+As SldWorks.SketchLine<br>
+&nbsp;&nbsp;&nbsp; Dim swStartPt 
+As SldWorks.SketchPoint<br>
+&nbsp;&nbsp;&nbsp; Dim swEndPt 
+As SldWorks.SketchPoint</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get first horizontal line<br>
+&nbsp;&nbsp;&nbsp; vSketchLineArr = GetAllSketchLines(swApp, swModel, swSketch)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If Not IsEmpty(vSketchLineArr) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; For Each vSketchLine In 
+vSketchLineArr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set 
+swSketchCurrLine = vSketchLine<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swStartPt 
+= swSketchCurrLine.<b>GetStartPoint2</b><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set swEndPt = 
+swSketchCurrLine.<b>GetEndPoint2</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+If Abs(swStartPt.<b>Y</b> - swEndPt.<b>Y</b>) &lt; nTolerance Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set swSketchSegHoriz = swSketchCurrLine<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+FindHorizontalOrigin = True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Exit Function<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Next<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Get first point<br>
+&nbsp;&nbsp;&nbsp; FindHorizontalOrigin = GetSketchPoint(swApp, swModel, 
+swSketch, swSketchPtHoriz)</p>
+<p class="APICODE">End Function</p>
+<p class="APICODE">Function AutoDimensionSketch(swApp As SldWorks.SldWorks, 
+swModel As SldWorks.ModelDoc2, swSketch As SldWorks.Sketch, swSelData As 
+SldWorks.SelectData) As Long</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Dim swFeat 
+As SldWorks.Feature<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchSegHoriz 
+As SldWorks.SketchSegment<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchPtHoriz 
+As SldWorks.SketchPoint<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchSegVert 
+As SldWorks.SketchSegment<br>
+&nbsp;&nbsp;&nbsp; Dim swSketchPtVert 
+As SldWorks.SketchPoint<br>
+&nbsp;&nbsp;&nbsp; Dim bRet 
+As Boolean</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If False = FindHorizontalOrigin(swApp, 
+swModel, swSketch, swSketchSegHoriz, swSketchPtHoriz) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; AutoDimensionSketch = 
+swAutodimStatusDatumLineNotHorizontal<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Exit Function<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If False = FindVerticalOrigin(swApp, 
+swModel, swSketch, swSketchSegVert, swSketchPtVert) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; AutoDimensionSketch = 
+swAutodimStatusDatumLineNotVertical<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Exit Function<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swFeat = swSketch</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; bRet = swFeat.<b>Select2</b>(False, 0)</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Editing sketch clears selections<br>
+&nbsp;&nbsp;&nbsp; swModel.<b>EditSketch</b></p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Reselect sketch segments with correct 
+marks for auto-dimensioning<br>
+&nbsp;&nbsp;&nbsp; If Not swSketchSegVert Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Vertical line is for horizontal 
+datum<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bRet = swSketchSegVert.<b>Select4</b>(True, swSelData)<br>
+&nbsp;&nbsp;&nbsp; ElseIf Not swSketchPtHoriz Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bRet = 
+swSketchPtHoriz.<b>Select4</b>(True, swSelData)<br>
+&nbsp;&nbsp;&nbsp; ElseIf Not swSketchPtVert Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Use any 
+sketch point for horizontal datum<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bRet = 
+swSketchPtVert.<b>Select4</b>(True, swSelData)<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; If Not swSketchSegHoriz Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Horizontal line is for vertical 
+datum<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bRet = swSketchSegHoriz.<b>Select4</b>(True, swSelData)<br>
+&nbsp;&nbsp;&nbsp; ElseIf Not swSketchPtVert Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bRet = swSketchPtVert.<b>Select4</b>(True, swSelData)<br>
+&nbsp;&nbsp;&nbsp; ElseIf Not swSketchPtHoriz Is Nothing Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' Use any 
+sketch point for vertical datum<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bRet = 
+swSketchPtHoriz.<b>Select4</b>(True, swSelData)<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' No straight lines, probably contains 
+circles<br>
+&nbsp;&nbsp;&nbsp; ' so use sketch points for datums<br>
+&nbsp;&nbsp;&nbsp; If IsEmpty(GetAllSketchLines(swApp, swModel, swSketch)) Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If Not swSketchPtHoriz Is Nothing 
+Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bRet = 
+swSketchPtHoriz.<b>Select4</b>(False, swSelData)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ElseIf Not swSketchPtVert Is Nothing 
+Then<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bRet = 
+swSketchPtVert.<b>Select4</b>(False, swSelData)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; End If<br>
+&nbsp;&nbsp;&nbsp; End If</p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; Set swSketchMgr = swModel.<b>SketchManager</b><br>
+&nbsp;&nbsp;&nbsp; nRetVal = swSketchMgr.<b>FullyDefineSketch</b>(True, True, 
+swSketchFullyDefineRelationType_e.swSketchFullyDefineRelationType_Vertical Or 
+swSketchFullyDefineRelationType_e.swSketchFullyDefineRelationType_Horizontal, 
+True, 1, Nothing, 1, Nothing, 1, 1)<br>
+&nbsp;&nbsp;&nbsp; </p>
+<p class="APICODE">&nbsp;&nbsp;&nbsp; ' Redraw so dimensions are displayed 
+immediately<br>
+&nbsp;&nbsp;&nbsp; Dim rect() As Double<br>
+&nbsp;&nbsp;&nbsp; swModelView.<b>GraphicsRedraw</b> (rect)<br>
+&nbsp;&nbsp; </p>
+<p class="APICODE">End Function</p>
+
+</body>
+
+</html>
