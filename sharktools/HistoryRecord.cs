@@ -116,6 +116,12 @@ namespace SharkTools
         public string UserNote { get; set; }
 
         /// <summary>
+        /// 记录类型: auto(自动记录), manual(手动保存点), important(重要变更)
+        /// </summary>
+        [JsonProperty("recordType")]
+        public string RecordType { get; set; }
+
+        /// <summary>
         /// 特征类型名称
         /// </summary>
         [JsonProperty("featureType")]
@@ -128,6 +134,7 @@ namespace SharkTools
             IsImportant = false;
             Branch = "main";  // 默认主分支
             Tags = new List<string>();
+            RecordType = "auto";  // 默认为自动记录
         }
     }
 
@@ -642,5 +649,119 @@ namespace SharkTools
             }
             catch { }
         }
+    }
+
+    /// <summary>
+    /// 草图详细信息
+    /// </summary>
+    public class SketchDetails
+    {
+        /// <summary>
+        /// 草图名称
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// 草图段数量（线、弧等）
+        /// </summary>
+        public int SegmentCount { get; set; }
+
+        /// <summary>
+        /// 草图点数量
+        /// </summary>
+        public int PointCount { get; set; }
+
+        /// <summary>
+        /// 约束数量
+        /// </summary>
+        public int ConstraintCount { get; set; }
+
+        /// <summary>
+        /// 尺寸数量
+        /// </summary>
+        public int DimensionCount { get; set; }
+
+        /// <summary>
+        /// 是否完全约束
+        /// </summary>
+        public bool IsFullyConstrained { get; set; }
+
+        /// <summary>
+        /// 草图段详细列表
+        /// </summary>
+        public List<SketchSegmentInfo> Segments { get; set; }
+
+        /// <summary>
+        /// 约束类型列表
+        /// </summary>
+        public List<string> RelationTypes { get; set; }
+
+        public SketchDetails()
+        {
+            Segments = new List<SketchSegmentInfo>();
+            RelationTypes = new List<string>();
+        }
+    }
+
+    /// <summary>
+    /// 草图段信息
+    /// </summary>
+    public class SketchSegmentInfo
+    {
+        /// <summary>
+        /// 段类型（直线、圆弧等）
+        /// </summary>
+        public string Type { get; set; }
+
+        /// <summary>
+        /// 长度
+        /// </summary>
+        public double Length { get; set; }
+
+        /// <summary>
+        /// 是否为构造线
+        /// </summary>
+        public bool IsConstruction { get; set; }
+    }
+
+    /// <summary>
+    /// 装配体配合信息
+    /// </summary>
+    public class MateInfo
+    {
+        /// <summary>
+        /// 配合名称
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// 配合类型（重合、同心等）
+        /// </summary>
+        public string Type { get; set; }
+
+        /// <summary>
+        /// 配合涉及的实体数量
+        /// </summary>
+        public int EntityCount { get; set; }
+
+        /// <summary>
+        /// 是否翻转
+        /// </summary>
+        public bool IsFlipped { get; set; }
+
+        /// <summary>
+        /// 是否被抑制
+        /// </summary>
+        public bool IsSuppressed { get; set; }
+
+        /// <summary>
+        /// 配合组件1名称
+        /// </summary>
+        public string Component1 { get; set; }
+
+        /// <summary>
+        /// 配合组件2名称
+        /// </summary>
+        public string Component2 { get; set; }
     }
 }

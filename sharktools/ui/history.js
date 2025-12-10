@@ -21,6 +21,32 @@ createApp({
             showNewBranch: false,
             newBranchName: '',
             newBranchDesc: '',
+            // 展开的记录ID集合
+            expandedRecords: new Set(),
+            // 编辑注释相关
+            editingNoteId: null,
+            editingNoteText: '',
+            // 编辑标签相关
+            editingTagsId: null,
+            newTagText: '',
+            // 比较功能相关
+            compareMode: false,
+            selectedForCompare: [],  // 选中用于比较的记录
+            showCompareDialog: false,
+            compareResult: null,
+            // 导入对话框
+            showImportDialog: false,
+            importFile: null,
+            // 分页相关（性能优化）
+            pageSize: 50,
+            currentPage: 1,
+            virtualScrollEnabled: true,
+            // 记录类型筛选（增加保存点类型）
+            filterRecordTypes: [
+                { value: 'auto', label: '自动记录', icon: '🔄', checked: true },
+                { value: 'manual', label: '手动保存', icon: '💾', checked: true },
+                { value: 'important', label: '重要变更', icon: '⭐', checked: true }
+            ],
             // 操作类型筛选
             filterTypes: [
                 { value: 'ProfileFeature', label: '草图', icon: '✏️', checked: true },
@@ -38,7 +64,9 @@ createApp({
                 { value: 'today', label: '今天' },
                 { value: 'week', label: '本周' },
                 { value: 'month', label: '本月' }
-            ]
+            ],
+            // 预定义标签颜色
+            tagColors: ['#667eea', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899']
         };
     },
     mounted() {
@@ -67,6 +95,25 @@ createApp({
             console.log('请求加载历史记录');
             this.loadHistory();
         }, 100);
+    },
+    computed: {
+        /**
+         * 获取当前页的记录（分页）
+         */
+        paginatedRecords() {
+            if (!this.virtualScrollEnabled) {
+                return this.filteredRecords;
+            }
+            const end = this.currentPage * this.pageSize;
+            return this.filteredRecords.slice(0, end);
+        },
+
+        /**
+         * 是否还有更多记录可加载
+         */
+        hasMoreRecords() {
+            return this.currentPage * this.pageSize < this.filteredRecords.length;
+        }
     },
     methods: {
         /**
@@ -172,6 +219,7 @@ createApp({
             }
             
             this.filteredRecords = filtered;
+            this.resetPagination();  // 重置分页
         },
 
         /**
@@ -256,6 +304,12 @@ createApp({
          */
         toggleImportant(record) {
             record.isImportant = !record.isImportant;
+            // 重要的记录设置为 'important' 类型
+            if (record.isImportant) {
+                record.recordType = 'important';
+            } else if (record.recordType === 'important') {
+                record.recordType = 'auto';
+            }
             this.callCSharp('toggleImportant', record.id);
         },
 
@@ -271,10 +325,399 @@ createApp({
         },
 
         /**
+         * 创建手动保存点
+         */
+        createSavePoint() {
+            const name = prompt('请输入保存点名称：', '手动保存点');
+            if (name) {
+                this.callCSharp('createSavePoint', name);
+            }
+        },
+
+        // ========== 展开/折叠功能 ==========
+
+        /**
+         * 切换记录展开状态
+         */
+        toggleExpand(record) {
+            if (this.expandedRecords.has(record.id)) {
+                this.expandedRecords.delete(record.id);
+            } else {
+                this.expandedRecords.add(record.id);
+            }
+            // 触发响应式更新
+            this.expandedRecords = new Set(this.expandedRecords);
+        },
+
+        /**
+         * 检查记录是否展开
+         */
+        isExpanded(record) {
+            return this.expandedRecords.has(record.id);
+        },
+
+        /**
+         * 展开所有记录
+         */
+        expandAll() {
+            this.filteredRecords.forEach(r => this.expandedRecords.add(r.id));
+            this.expandedRecords = new Set(this.expandedRecords);
+        },
+
+        /**
+         * 折叠所有记录
+         */
+        collapseAll() {
+            this.expandedRecords.clear();
+            this.expandedRecords = new Set(this.expandedRecords);
+        },
+
+        // ========== 标签功能 ==========
+
+        /**
+         * 开始编辑标签
+         */
+        startEditTags(record, event) {
+            event.stopPropagation();
+            this.editingTagsId = record.id;
+            this.newTagText = '';
+        },
+
+        /**
+         * 添加标签
+         */
+        addTag(record, event) {
+            event.stopPropagation();
+            const tag = this.newTagText.trim();
+            if (!tag) return;
+            
+            if (!record.tags) {
+                record.tags = [];
+            }
+            if (!record.tags.includes(tag)) {
+                record.tags.push(tag);
+                this.callCSharp('updateTags', record.id, JSON.stringify(record.tags));
+            }
+            this.newTagText = '';
+        },
+
+        /**
+         * 删除标签
+         */
+        removeTag(record, tag, event) {
+            event.stopPropagation();
+            if (record.tags) {
+                record.tags = record.tags.filter(t => t !== tag);
+                this.callCSharp('updateTags', record.id, JSON.stringify(record.tags));
+            }
+        },
+
+        /**
+         * 关闭标签编辑
+         */
+        closeTagEdit(event) {
+            event.stopPropagation();
+            this.editingTagsId = null;
+            this.newTagText = '';
+        },
+
+        /**
+         * 获取标签颜色
+         */
+        getTagColor(tag) {
+            // 根据标签内容生成一致的颜色
+            let hash = 0;
+            for (let i = 0; i < tag.length; i++) {
+                hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return this.tagColors[Math.abs(hash) % this.tagColors.length];
+        },
+
+        // ========== 注释功能 ==========
+
+        /**
+         * 开始编辑注释
+         */
+        startEditNote(record, event) {
+            event.stopPropagation();
+            this.editingNoteId = record.id;
+            this.editingNoteText = record.userNote || '';
+        },
+
+        /**
+         * 保存注释
+         */
+        saveNote(record, event) {
+            event.stopPropagation();
+            record.userNote = this.editingNoteText.trim();
+            this.callCSharp('updateUserNote', record.id, record.userNote);
+            this.editingNoteId = null;
+            this.editingNoteText = '';
+            this.showToast('注释已保存');
+        },
+
+        /**
+         * 取消编辑注释
+         */
+        cancelEditNote(event) {
+            event.stopPropagation();
+            this.editingNoteId = null;
+            this.editingNoteText = '';
+        },
+
+        // ========== 记录类型 ==========
+
+        /**
+         * 获取记录类型标签
+         */
+        getRecordTypeLabel(record) {
+            const type = record.recordType || 'auto';
+            const labels = {
+                'auto': '自动',
+                'manual': '保存点',
+                'important': '重要'
+            };
+            return labels[type] || '自动';
+        },
+
+        /**
+         * 获取记录类型图标
+         */
+        getRecordTypeIcon(record) {
+            const type = record.recordType || 'auto';
+            const icons = {
+                'auto': '🔄',
+                'manual': '💾',
+                'important': '⭐'
+            };
+            return icons[type] || '🔄';
+        },
+
+        /**
+         * 获取记录类型CSS类名
+         */
+        getRecordTypeClass(record) {
+            const type = record.recordType || 'auto';
+            return `record-type-${type}`;
+        },
+
+        /**
          * 导出历史记录
          */
         exportHistory() {
             this.callCSharp('exportHistory');
+        },
+
+        /**
+         * 显示导入对话框
+         */
+        showImport() {
+            this.showImportDialog = true;
+        },
+
+        /**
+         * 处理文件选择
+         */
+        handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.importFile = file;
+            }
+        },
+
+        /**
+         * 执行导入
+         */
+        doImport() {
+            if (!this.importFile) {
+                this.showToast('请选择要导入的文件');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target.result;
+                    this.callCSharp('importHistory', content);
+                    this.showImportDialog = false;
+                    this.importFile = null;
+                } catch (error) {
+                    this.showToast('文件读取失败: ' + error.message);
+                }
+            };
+            reader.readAsText(this.importFile);
+        },
+
+        /**
+         * 取消导入
+         */
+        cancelImport() {
+            this.showImportDialog = false;
+            this.importFile = null;
+        },
+
+        // ========== 比较功能 ==========
+
+        /**
+         * 切换比较模式
+         */
+        toggleCompareMode() {
+            this.compareMode = !this.compareMode;
+            if (!this.compareMode) {
+                this.selectedForCompare = [];
+            }
+        },
+
+        /**
+         * 选择记录用于比较
+         */
+        toggleSelectForCompare(record, event) {
+            event.stopPropagation();
+            
+            const index = this.selectedForCompare.findIndex(r => r.id === record.id);
+            if (index > -1) {
+                this.selectedForCompare.splice(index, 1);
+            } else {
+                if (this.selectedForCompare.length >= 2) {
+                    this.selectedForCompare.shift(); // 移除最早选中的
+                }
+                this.selectedForCompare.push(record);
+            }
+        },
+
+        /**
+         * 检查记录是否被选中用于比较
+         */
+        isSelectedForCompare(record) {
+            return this.selectedForCompare.some(r => r.id === record.id);
+        },
+
+        /**
+         * 执行比较
+         */
+        doCompare() {
+            if (this.selectedForCompare.length !== 2) {
+                this.showToast('请选择两条记录进行比较');
+                return;
+            }
+
+            const [record1, record2] = this.selectedForCompare;
+            this.compareResult = this.generateCompareResult(record1, record2);
+            this.showCompareDialog = true;
+        },
+
+        /**
+         * 生成比较结果
+         */
+        generateCompareResult(record1, record2) {
+            const result = {
+                record1: record1,
+                record2: record2,
+                differences: []
+            };
+
+            // 比较各个字段
+            const fields = [
+                { key: 'name', label: '名称' },
+                { key: 'featureType', label: '特征类型' },
+                { key: 'timestamp', label: '时间' },
+                { key: 'featureIndex', label: '特征索引' },
+                { key: 'description', label: '描述' },
+                { key: 'recordType', label: '记录类型' },
+                { key: 'isImportant', label: '重要标记' },
+                { key: 'isSuppressed', label: '压制状态' },
+                { key: 'userNote', label: '用户注释' }
+            ];
+
+            fields.forEach(field => {
+                const val1 = record1[field.key];
+                const val2 = record2[field.key];
+                
+                if (val1 !== val2) {
+                    result.differences.push({
+                        field: field.label,
+                        value1: this.formatCompareValue(val1),
+                        value2: this.formatCompareValue(val2),
+                        isDifferent: true
+                    });
+                } else {
+                    result.differences.push({
+                        field: field.label,
+                        value1: this.formatCompareValue(val1),
+                        value2: this.formatCompareValue(val2),
+                        isDifferent: false
+                    });
+                }
+            });
+
+            // 比较标签
+            const tags1 = (record1.tags || []).join(', ') || '无';
+            const tags2 = (record2.tags || []).join(', ') || '无';
+            result.differences.push({
+                field: '标签',
+                value1: tags1,
+                value2: tags2,
+                isDifferent: tags1 !== tags2
+            });
+
+            return result;
+        },
+
+        /**
+         * 格式化比较值
+         */
+        formatCompareValue(value) {
+            if (value === null || value === undefined || value === '') return '(空)';
+            if (typeof value === 'boolean') return value ? '是' : '否';
+            return String(value);
+        },
+
+        /**
+         * 关闭比较对话框
+         */
+        closeCompareDialog() {
+            this.showCompareDialog = false;
+            this.compareResult = null;
+        },
+
+        /**
+         * 退出比较模式
+         */
+        exitCompareMode() {
+            this.compareMode = false;
+            this.selectedForCompare = [];
+            this.showCompareDialog = false;
+            this.compareResult = null;
+        },
+
+        // ========== 分页和性能优化 ==========
+
+        /**
+         * 加载更多记录
+         */
+        loadMore() {
+            if (this.currentPage * this.pageSize < this.filteredRecords.length) {
+                this.currentPage++;
+            }
+        },
+
+        /**
+         * 重置分页
+         */
+        resetPagination() {
+            this.currentPage = 1;
+        },
+
+        /**
+         * 处理滚动事件（无限滚动）
+         */
+        handleScroll(event) {
+            const element = event.target;
+            const threshold = 100; // 距离底部100px时加载更多
+            
+            if (element.scrollHeight - element.scrollTop - element.clientHeight < threshold) {
+                this.loadMore();
+            }
         },
 
         /**

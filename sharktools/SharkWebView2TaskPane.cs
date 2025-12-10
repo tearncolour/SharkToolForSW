@@ -413,6 +413,44 @@ namespace SharkTools
                     LoadBranches();
                     break;
 
+                // 新增：更新标签
+                case "updateTags":
+                    if (args.Length >= 2)
+                    {
+                        string recordId = args[0]?.ToString();
+                        string tagsJson = args[1]?.ToString();
+                        UpdateRecordTags(recordId, tagsJson);
+                    }
+                    break;
+
+                // 新增：更新用户注释
+                case "updateUserNote":
+                    if (args.Length >= 2)
+                    {
+                        string recordId = args[0]?.ToString();
+                        string userNote = args[1]?.ToString();
+                        UpdateRecordUserNote(recordId, userNote);
+                    }
+                    break;
+
+                // 新增：创建手动保存点
+                case "createSavePoint":
+                    if (args.Length > 0)
+                    {
+                        string savePointName = args[0]?.ToString();
+                        CreateManualSavePoint(savePointName);
+                    }
+                    break;
+
+                // 新增：导入历史记录
+                case "importHistory":
+                    if (args.Length > 0)
+                    {
+                        string jsonContent = args[0]?.ToString();
+                        ImportHistoryFromJson(jsonContent);
+                    }
+                    break;
+
                 default:
                     Log($"未知方法: {method}");
                     break;
@@ -570,12 +608,14 @@ namespace SharkTools
                     type = r.Type.ToString(),           // 前端用 type 不是 operationType
                     name = r.FeatureName,               // 前端用 name 不是 featureName
                     featureType = r.FeatureType,
+                    featureName = r.FeatureName,        // 也传递原始特征名
                     featureIndex = idx,                 // 用于判断回溯位置
                     isImportant = r.IsImportant,
                     isSuppressed = IsFeatureSuppressed(doc, r.FeatureName),  // 检查压制状态
                     description = r.Description ?? r.FeatureName,
                     tags = r.Tags ?? new List<string>(),
-                    userNote = r.UserNote ?? ""
+                    userNote = r.UserNote ?? "",
+                    recordType = r.RecordType ?? "auto"  // 记录类型
                 }).ToList();
 
                 var historyData = new 
@@ -856,6 +896,108 @@ namespace SharkTools
         }
 
         /// <summary>
+        /// 从JSON导入历史记录
+        /// </summary>
+        private void ImportHistoryFromJson(string jsonContent)
+        {
+            try
+            {
+                var doc = _swProvider?.GetActiveDocument();
+                if (doc == null)
+                {
+                    CallJavaScript("showMessage", "请先打开文档");
+                    return;
+                }
+
+                string docPath = doc.GetPathName();
+                
+                // 解析导入数据
+                var importData = Newtonsoft.Json.Linq.JObject.Parse(jsonContent);
+                var importedRecords = importData["records"] as Newtonsoft.Json.Linq.JArray;
+                
+                if (importedRecords == null)
+                {
+                    CallJavaScript("showMessage", "无效的导入文件格式");
+                    return;
+                }
+                
+                int importedCount = 0;
+                int skippedCount = 0;
+                
+                // 获取现有记录ID列表
+                var existingRecords = HistoryDatabase.GetRecords(docPath);
+                var existingFeatureNames = new HashSet<string>(existingRecords.Select(r => r.FeatureName));
+                
+                foreach (var record in importedRecords)
+                {
+                    try
+                    {
+                        string featureName = record["FeatureName"]?.ToString() ?? record["featureName"]?.ToString() ?? "";
+                        
+                        // 跳过已存在的记录（根据特征名判断）
+                        if (existingFeatureNames.Contains(featureName))
+                        {
+                            skippedCount++;
+                            continue;
+                        }
+                        
+                        // 解析数值类型
+                        int featureIndex = 0;
+                        var indexToken = record["FeatureIndex"] ?? record["featureIndex"];
+                        if (indexToken != null) int.TryParse(indexToken.ToString(), out featureIndex);
+                        
+                        bool isImportant = false;
+                        var importantToken = record["IsImportant"] ?? record["isImportant"];
+                        if (importantToken != null) bool.TryParse(importantToken.ToString(), out isImportant);
+                        
+                        var newRecord = new HistoryRecord
+                        {
+                            Id = Guid.NewGuid().ToString(), // 生成新ID避免冲突
+                            Name = record["Name"]?.ToString() ?? record["name"]?.ToString() ?? "",
+                            FeatureName = featureName,
+                            FeatureType = record["FeatureType"]?.ToString() ?? record["featureType"]?.ToString() ?? "",
+                            FeatureIndex = featureIndex,
+                            Description = record["Description"]?.ToString() ?? record["description"]?.ToString() ?? "",
+                            IsImportant = isImportant,
+                            RecordType = record["RecordType"]?.ToString() ?? record["recordType"]?.ToString() ?? "auto",
+                            UserNote = record["UserNote"]?.ToString() ?? record["userNote"]?.ToString() ?? "",
+                            Branch = "main", // 导入到主分支
+                            Timestamp = DateTime.Now // 使用当前时间
+                        };
+                        
+                        // 导入标签
+                        var tagsToken = record["Tags"] ?? record["tags"];
+                        if (tagsToken != null && tagsToken is Newtonsoft.Json.Linq.JArray tagsArray)
+                        {
+                            newRecord.Tags = new List<string>();
+                            foreach (var tag in tagsArray)
+                            {
+                                newRecord.Tags.Add(tag.ToString());
+                            }
+                        }
+                        
+                        HistoryDatabase.AddRecord(docPath, newRecord);
+                        importedCount++;
+                        existingFeatureNames.Add(featureName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"导入单条记录失败: {ex.Message}");
+                    }
+                }
+                
+                LoadHistoryRecords();
+                CallJavaScript("showMessage", $"导入完成：{importedCount} 条新记录，{skippedCount} 条已跳过");
+                Log($"历史记录导入完成: {importedCount} 新增, {skippedCount} 跳过");
+            }
+            catch (Exception ex)
+            {
+                Log($"导入失败: {ex.Message}");
+                CallJavaScript("showMessage", $"导入失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// 切换记录的重要标记
         /// </summary>
         private void ToggleImportant(string recordId)
@@ -872,6 +1014,15 @@ namespace SharkTools
                 if (record != null)
                 {
                     record.IsImportant = !record.IsImportant;
+                    // 同步更新记录类型
+                    if (record.IsImportant)
+                    {
+                        record.RecordType = "important";
+                    }
+                    else if (record.RecordType == "important")
+                    {
+                        record.RecordType = "auto";
+                    }
                     HistoryDatabase.UpdateRecord(docPath, record);
                     LoadHistoryRecords();
                     Log($"切换重要标记: {recordId} -> {record.IsImportant}");
@@ -880,6 +1031,109 @@ namespace SharkTools
             catch (Exception ex)
             {
                 Log($"切换重要标记失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 更新记录的标签
+        /// </summary>
+        private void UpdateRecordTags(string recordId, string tagsJson)
+        {
+            try
+            {
+                var doc = _swProvider?.GetActiveDocument();
+                if (doc == null) return;
+
+                string docPath = doc.GetPathName();
+                var records = HistoryDatabase.GetRecords(docPath);
+                var record = records.FirstOrDefault(r => r.Id == recordId);
+
+                if (record != null)
+                {
+                    var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+                    record.Tags = serializer.Deserialize<List<string>>(tagsJson) ?? new List<string>();
+                    HistoryDatabase.UpdateRecord(docPath, record);
+                    Log($"更新标签: {recordId}, 标签数: {record.Tags.Count}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"更新标签失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 更新记录的用户注释
+        /// </summary>
+        private void UpdateRecordUserNote(string recordId, string userNote)
+        {
+            try
+            {
+                var doc = _swProvider?.GetActiveDocument();
+                if (doc == null) return;
+
+                string docPath = doc.GetPathName();
+                var records = HistoryDatabase.GetRecords(docPath);
+                var record = records.FirstOrDefault(r => r.Id == recordId);
+
+                if (record != null)
+                {
+                    record.UserNote = userNote;
+                    HistoryDatabase.UpdateRecord(docPath, record);
+                    Log($"更新注释: {recordId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"更新注释失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 创建手动保存点
+        /// </summary>
+        private void CreateManualSavePoint(string name)
+        {
+            try
+            {
+                var doc = _swProvider?.GetActiveDocument();
+                if (doc == null)
+                {
+                    CallJavaScript("showMessage", "请先打开文档");
+                    return;
+                }
+
+                string docPath = doc.GetPathName();
+                var docMeta = HistoryDatabase.GetDocumentMeta(docPath);
+                var currentBranch = docMeta?.CurrentBranch ?? "main";
+
+                // 获取当前特征数量作为索引
+                var records = HistoryDatabase.GetRecords(docPath, currentBranch);
+                int featureIndex = records.Count > 0 ? records.Max(r => r.FeatureIndex) + 1 : 0;
+
+                // 创建手动保存点记录
+                var savePointRecord = new HistoryRecord
+                {
+                    Name = name,
+                    FeatureName = $"SavePoint_{DateTime.Now:yyyyMMddHHmmss}",
+                    Type = OperationType.Unknown,
+                    FeatureType = "SavePoint",
+                    Description = $"手动保存点: {name}",
+                    FeatureIndex = featureIndex,
+                    Branch = currentBranch,
+                    RecordType = "manual",  // 标记为手动保存点
+                    IsImportant = true
+                };
+
+                HistoryDatabase.AddRecord(docPath, savePointRecord);
+                LoadHistoryRecords();
+                CallJavaScript("showMessage", $"已创建保存点: {name}");
+                Log($"创建手动保存点: {name}");
+            }
+            catch (Exception ex)
+            {
+                Log($"创建保存点失败: {ex.Message}");
+                CallJavaScript("showMessage", $"创建保存点失败: {ex.Message}");
             }
         }
 

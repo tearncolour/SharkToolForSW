@@ -99,6 +99,79 @@ namespace SharkTools
         }
 
         /// <summary>
+        /// 启动独立的 Electron 应用
+        /// </summary>
+        [ComVisible(true)]
+        public void LaunchElectronApp()
+        {
+            try {
+                System.IO.File.AppendAllText(
+                    @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                    $"{DateTime.Now}: LaunchElectronApp called!\r\n"
+                );
+            } catch {}
+
+            // 异步启动 Electron 应用
+            Task.Run(async () =>
+            {
+                try
+                {
+                    bool started = await ElectronBridge.Instance.StartElectronAppAsync();
+                    if (started)
+                    {
+                        // 显示窗口
+                        await ElectronBridge.Instance.ShowWindowAsync();
+                        
+                        // 发送当前文档信息
+                        var doc = _swApp?.ActiveDoc as IModelDoc2;
+                        if (doc != null)
+                        {
+                            string docName = System.IO.Path.GetFileName(doc.GetPathName());
+                            string docPath = doc.GetPathName();
+                            await ElectronBridge.Instance.NotifyDocumentOpenedAsync(docName, docPath);
+                            
+                            // 获取并发送历史记录
+                            if (_sharkCmdMgr?.HistoryTracker != null)
+                            {
+                                var records = _sharkCmdMgr.HistoryTracker.GetAllRecords();
+                                await ElectronBridge.Instance.SendHistoryUpdateAsync(records);
+                                
+                                System.IO.File.AppendAllText(
+                                    @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                                    $"{DateTime.Now}: Sent {records?.Count ?? 0} history records to Electron\r\n"
+                                );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _swApp?.SendMsgToUser2(
+                            "无法启动 SharkTools 应用。\n\n请确保 Electron 应用已正确安装。",
+                            (int)swMessageBoxIcon_e.swMbWarning,
+                            (int)swMessageBoxBtn_e.swMbOk
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.IO.File.AppendAllText(
+                        @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                        $"{DateTime.Now}: LaunchElectronApp Error: {ex.Message}\r\n"
+                    );
+                }
+            });
+        }
+
+        /// <summary>
+        /// 启动 Electron 应用按钮状态
+        /// </summary>
+        [ComVisible(true)]
+        public int LaunchElectronAppEnable()
+        {
+            return 1; // 始终启用
+        }
+
+        /// <summary>
         /// GitHub 登录回调 - 点击"登录 GitHub"按钮时调用
         /// </summary>
         [ComVisible(true)]
