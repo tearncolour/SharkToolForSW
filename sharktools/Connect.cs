@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
@@ -9,171 +10,89 @@ namespace SharkTools
 {
     [ComVisible(true)]
     [Guid("D7F5A4A3-9F38-4367-849A-5A7F6C26DFB1")]
+    [ClassInterface(ClassInterfaceType.AutoDual)]
     public class Connect : ISwAddin
     {
         private ISldWorks _swApp;
-        private ICommandManager _cmdMgr;
+        private SharkCommandManager _sharkCmdMgr;
         public int AddinCookie { get; set; }
-
-        private const int MainCommandGroupId = 1;
-        private const int HelloCommandIndex = 0; // first and only command
-        private const string TabName = "SharkTools";
-            private static bool EnableUI = true; // enable command group/menu/toolbar
-            private static bool EnableTabs = false; // set true to create command tabs per doc type
 
         public bool ConnectToSW(object ThisSW, int Cookie)
         {
-            _swApp = (ISldWorks)ThisSW;
-            AddinCookie = Cookie;
-            _cmdMgr = _swApp.GetCommandManager(Cookie);
-
-            if (EnableUI)
-            {
-                try
-                {
-                    SetupCommandUI();
-                }
-                catch (Exception ex)
-                {
-                    try { _swApp.SendMsgToUser2($"SharkTools UI init failed: {ex.Message}", 1, 0); } catch { }
-                }
-            }
-            else
-            {
-                try { _swApp.SendMsgToUser2("SharkTools Add-in 已连接（UI 暂未创建）", 0, 0); } catch { }
-            }
-
-            // TODO: 初始化命令、线程、监听事件等
-            // 示例：显示消息确认已连接
             try
             {
-                _swApp.SendMsgToUser2("SharkTools Add-in 已连接到 SOLIDWORKS", 0, 0);
-            }
-            catch { }
+                _swApp = (ISldWorks)ThisSW;
+                AddinCookie = Cookie;
+                
+                // CRITICAL FIX: Use SetAddinCallbackInfo2 for better compatibility
+                bool callbackRes = _swApp.SetAddinCallbackInfo2(0, this, AddinCookie);
+                try {
+                     System.IO.File.AppendAllText(
+                        @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                        $"{DateTime.Now}: SetAddinCallbackInfo2 result: {callbackRes}\r\n"
+                    );
+                } catch {}
 
-            return true;
+                // Initialize Command Manager
+                _sharkCmdMgr = new SharkCommandManager(_swApp, Cookie);
+                
+                // Try to initialize UI immediately
+                _sharkCmdMgr.Initialize();
+
+                // 弹窗确认插件已加载
+                _swApp.SendMsgToUser2("SharkTools 插件已成功加载！\n\n提示：\n1) 在顶部工具栏空白处右键，勾选 'SharkTools' 以显示工具栏。\n2) 或者在右侧任务窗格图标栏中打开 'SharkTools' 面板以查看更多功能。", 
+                    (int)swMessageBoxIcon_e.swMbInformation, 
+                    (int)swMessageBoxBtn_e.swMbOk);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                try {
+                    System.IO.File.AppendAllText(
+                        @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                        $"{DateTime.Now}: Connect Error: {ex.Message}\r\n"
+                    );
+                } catch {}
+                return false;
+            }
         }
 
         public bool DisconnectFromSW()
         {
-            if (EnableUI)
-            {
-                TeardownCommandUI();
-            }
-
-            // TODO: 取消注册命令、事件回调等，释放资源
             try
             {
-                _swApp.SendMsgToUser2("SharkTools Add-in 已从 SOLIDWORKS 断开", 0, 0);
-            }
-            catch { }
+                if (_sharkCmdMgr != null)
+                {
+                    _sharkCmdMgr.Teardown();
+                    _sharkCmdMgr = null;
+                }
 
-            _swApp = null;
-            _cmdMgr = null;
-            return true;
+                return true;
+            }
+            finally
+            {
+                _swApp = null;
+            }
         }
 
-        public void OnHello()
+        [ComVisible(true)]
+        public void SharkHello()
         {
+            try {
+                 System.IO.File.AppendAllText(
+                    @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                    $"{DateTime.Now}: SharkHello called!\r\n"
+                );
+            } catch {}
             ExampleCommand.ShowHello(_swApp);
         }
 
-        private void SetupCommandUI()
+        [ComVisible(true)]
+        public int SharkEnable()
         {
-            if (_cmdMgr == null)
-            {
-                return;
-            }
-
-            CommandGroup cmdGroup = _cmdMgr.GetCommandGroup(MainCommandGroupId);
-            if (cmdGroup == null)
-            {
-                int err = 0;
-                bool ignorePrev = false;
-                cmdGroup = _cmdMgr.CreateCommandGroup2(
-                    MainCommandGroupId,
-                    "SharkTools",
-                    "SharkTools commands",
-                    "SharkTools",
-                    -1,
-                    ignorePrev,
-                    ref err);
-            }
-
-            cmdGroup.HasMenu = true;
-            cmdGroup.HasToolbar = true;
-
-            cmdGroup.AddCommandItem2(
-                "Hello",
-                -1,
-                "Show hello message",
-                "Hello",
-                0,
-                nameof(OnHello),
-                "",
-                HelloCommandIndex,
-                (int)(swCommandItemType_e.swMenuItem | swCommandItemType_e.swToolbarItem));
-
-            cmdGroup.Activate();
-
-            AddCommandTab(cmdGroup, (int)swDocumentTypes_e.swDocPART);
-            AddCommandTab(cmdGroup, (int)swDocumentTypes_e.swDocASSEMBLY);
-            AddCommandTab(cmdGroup, (int)swDocumentTypes_e.swDocDRAWING);
-        }
-
-        private void AddCommandTab(CommandGroup cmdGroup, int docType)
-        {
-                if (cmdGroup == null || _cmdMgr == null || !EnableTabs)
-            {
-                return;
-            }
-
-            CommandTab existingTab = _cmdMgr.GetCommandTab(docType, TabName);
-            if (existingTab != null)
-            {
-                _cmdMgr.RemoveCommandTab(existingTab);
-            }
-
-            CommandTab cmdTab = _cmdMgr.AddCommandTab(docType, TabName);
-            if (cmdTab == null)
-            {
-                return;
-            }
-
-            CommandTabBox cmdBox = cmdTab.AddCommandTabBox();
-            int[] cmdIDs = { cmdGroup.CommandID[HelloCommandIndex] };
-            int[] textTypes = { (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow };
-            cmdBox.AddCommands(cmdIDs, textTypes);
-        }
-
-        private void TeardownCommandUI()
-        {
-            if (_cmdMgr == null)
-            {
-                return;
-            }
-
-            CommandTab tab;
-
-            tab = _cmdMgr.GetCommandTab((int)swDocumentTypes_e.swDocPART, TabName);
-            if (tab != null)
-            {
-                _cmdMgr.RemoveCommandTab(tab);
-            }
-
-            tab = _cmdMgr.GetCommandTab((int)swDocumentTypes_e.swDocASSEMBLY, TabName);
-            if (tab != null)
-            {
-                _cmdMgr.RemoveCommandTab(tab);
-            }
-
-            tab = _cmdMgr.GetCommandTab((int)swDocumentTypes_e.swDocDRAWING, TabName);
-            if (tab != null)
-            {
-                _cmdMgr.RemoveCommandTab(tab);
-            }
-
-            _cmdMgr.RemoveCommandGroup(MainCommandGroupId);
+            // 1 = Deselect and Enable, 2 = Deselect and Disable, 3 = Select and Enable, 4 = Select and Disable
+            return 1; 
         }
 
         // 注册到 SolidWorks 的注册表键

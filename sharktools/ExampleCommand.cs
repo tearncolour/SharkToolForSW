@@ -10,7 +10,7 @@ namespace SharkTools
         {
             if (swApp != null)
             {
-                swApp.SendMsgToUser2("Hello from SharkTools!", (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk);
+                swApp.SendMsgToUser2("来自 SharkTools 的问候！", (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk);
             }
         }
     }

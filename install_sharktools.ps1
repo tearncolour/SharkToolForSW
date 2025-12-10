@@ -79,6 +79,32 @@ try {
         Copy-Item -Force $src $dst
     }
 
+    # Copy icon files from logo.png
+    $logoPath = Join-Path $scriptDir "logo.png"
+    if (Test-Path $logoPath) {
+        Add-Type -AssemblyName System.Drawing
+        $originalImage = [System.Drawing.Image]::FromFile($logoPath)
+        foreach ($size in @(20, 32, 40, 64, 96, 128)) {
+            $bitmap = New-Object System.Drawing.Bitmap($size, $size)
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.DrawImage($originalImage, 0, 0, $size, $size)
+            $graphics.Dispose()
+            $bitmap.Save((Join-Path $outputDir "icon_$size.bmp"), [System.Drawing.Imaging.ImageFormat]::Bmp)
+            $bitmap.Dispose()
+        }
+        # toolbar.bmp (16x16)
+        $bitmap16 = New-Object System.Drawing.Bitmap(16, 16)
+        $g16 = [System.Drawing.Graphics]::FromImage($bitmap16)
+        $g16.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+        $g16.DrawImage($originalImage, 0, 0, 16, 16)
+        $g16.Dispose()
+        $bitmap16.Save((Join-Path $outputDir "toolbar.bmp"), [System.Drawing.Imaging.ImageFormat]::Bmp)
+        $bitmap16.Dispose()
+        $originalImage.Dispose()
+        Write-Host "Icon files created from logo.png"
+    }
+
     $regasm = if ($Platform -eq "x64") { "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\RegAsm.exe" } else { "C:\Windows\Microsoft.NET\Framework\v4.0.30319\RegAsm.exe" }
     if (-not (Test-Path $regasm)) { throw "RegAsm not found at $regasm" }
 
@@ -86,7 +112,7 @@ try {
     Write-Host "Registering via RegAsm..."
     & $regasm $dllPath /codebase /tlb:$tlbPath | Write-Host
 
-    Write-Host "Done. Enable SharkTools in SOLIDWORKS Add-Ins (Hello button on the toolbar)."
+    Write-Host "完成。请在 SOLIDWORKS 的加载项中打开 SharkTools：工具栏/标签页/任务窗格将显示插件控件（"打招呼" 按钮）。"
     Write-Host "Unregister with: `\"$regasm\" `\"$dllPath`\" /unregister"
 }
 catch {

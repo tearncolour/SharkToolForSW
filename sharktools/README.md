@@ -24,7 +24,10 @@ This repository contains a lightweight template for a SOLIDWORKS C# add-in. It's
      `powershell -ExecutionPolicy Bypass -File scripts\install_sharktools.ps1`
    - 如需 Release：`powershell -ExecutionPolicy Bypass -File scripts\install_sharktools.ps1 -Configuration Release`
    - 如安装路径非默认，可传入：`-SolidWorksInstallDir "D:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS"` 或设置环境变量 `SW_INSTALL_DIR`。
-   - 完成后在 SOLIDWORKS 的 `Add-ins` 中勾选 `SharkTools`，工具栏里可看到 “Hello” 按钮。
+   - 完成后在 SOLIDWORKS 的 `Add-ins` 中勾选 `SharkTools`：
+     - 工具栏（右键勾选）中会显示 "打招呼" 按钮。
+     - 顶部标签栏（与 "特征/草图" 并列）会显示 "SharkTools" 标签页。
+     - 右侧任务窗格（TaskPane）也将显示 "SharkTools" 面板，可直接点击面板上的按钮。
 4. 手工构建（可选）：
    - 使用管理员权限运行 Visual Studio（因为注册需要管理员权限）
    - 生成（Build）解决方案后，手动执行 RegAsm：
