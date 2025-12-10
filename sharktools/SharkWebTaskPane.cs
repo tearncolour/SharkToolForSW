@@ -71,7 +71,7 @@ namespace SharkTools
                 // 获取 HTML 文件路径
                 string assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
                 string assemblyDir = Path.GetDirectoryName(assemblyPath);
-                string htmlPath = Path.Combine(assemblyDir, "ui", "index.html");
+                string htmlPath = Path.Combine(assemblyDir, "ui", "app.html");
 
                 Log($"尝试加载 HTML: {htmlPath}");
 
@@ -92,14 +92,15 @@ namespace SharkTools
                             body { 
                                 font-family: 'Microsoft YaHei UI'; 
                                 padding: 20px; 
-                                background: #f5f5f5; 
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                color: white;
                             }
                             .error {
-                                background: #fff3cd;
-                                border: 1px solid #ffc107;
-                                padding: 15px;
-                                border-radius: 8px;
-                                color: #856404;
+                                background: rgba(255, 255, 255, 0.2);
+                                backdrop-filter: blur(10px);
+                                border: 1px solid rgba(255, 255, 255, 0.3);
+                                padding: 20px;
+                                border-radius: 16px;
                             }
                         </style>
                     </head>
@@ -107,7 +108,7 @@ namespace SharkTools
                         <div class='error'>
                             <h3>⚠️ 界面文件未找到</h3>
                             <p>HTML 文件路径: " + htmlPath + @"</p>
-                            <p>请确保 ui/index.html 文件存在</p>
+                            <p>请确保 ui/app.html 文件存在</p>
                         </div>
                     </body>
                     </html>";
