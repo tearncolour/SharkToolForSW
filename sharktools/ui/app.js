@@ -26,16 +26,21 @@ createApp({
         // === 方法定义 ===
         
         /**
-         * 调用 C# 方法
+         * 调用 C# 方法 (WebView2 方式)
          * @param {string} method - 方法名
          * @param {...any} args - 参数列表
          */
         const callCSharp = (method, ...args) => {
             try {
-                if (window.external && window.external[method]) {
-                    return window.external[method](...args);
+                // WebView2 使用 chrome.webview.postMessage
+                if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage({
+                        method: method,
+                        args: args
+                    });
+                    console.log('调用 C# 方法 (WebView2):', method, args);
                 } else {
-                    console.log('调用 C# 方法:', method, args);
+                    console.warn('WebView2 不可用，方法调用失败:', method);
                 }
             } catch (error) {
                 console.error('C# 调用失败:', error);
