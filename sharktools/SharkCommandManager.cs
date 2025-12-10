@@ -17,6 +17,7 @@ namespace SharkTools
         
         private const int MainCommandGroupId = 2001;
         private const int HelloCommandIndex = 0;
+        private const int GitHubLoginCommandIndex = 1;  // 新增：GitHub 登录命令索引
         private const string TabName = "SharkTools";
 
         public SharkCommandManager(ISldWorks app, int cookie)
@@ -45,13 +46,13 @@ namespace SharkTools
                 bool ignorePrev = false;
                 
                 _cmdGroup = _cmdMgr.CreateCommandGroup2(
-                    MainCommandGroupId,      // Unique ID
-                    "SharkTools",            // Title
-                    "SharkTools Add-in",     // ToolTip
-                    "SharkTools hint",       // Hint
-                    -1,                      // Position
-                    ignorePrev,              // Ignore previous
-                    ref errors               // Errors
+                    MainCommandGroupId,      // 唯一标识
+                    "SharkTools",            // 标题
+                    "SharkTools 插件工具",   // 工具提示
+                    "SharkTools 命令组",     // 提示
+                    -1,                      // 位置
+                    ignorePrev,              // 忽略旧版
+                    ref errors               // 错误码
                 );
                 Log($"CreateCommandGroup2 result: {_cmdGroup != null}, errors: {errors}");
 
@@ -61,7 +62,7 @@ namespace SharkTools
                     _cmdGroup.IconList = iconPaths;
                     _cmdGroup.MainIconList = iconPaths;
                     
-                    // 添加命令
+                    // 添加命令 1：打招呼
                     int cmdIndex = _cmdGroup.AddCommandItem2(
                         "打招呼",                         // Name（中文）
                         -1,                              // Position
@@ -73,7 +74,21 @@ namespace SharkTools
                         HelloCommandIndex,               // User command ID
                         (int)swCommandItemType_e.swMenuItem | (int)swCommandItemType_e.swToolbarItem
                     );
-                    Log($"AddCommandItem2 result: {cmdIndex}");
+                    Log($"AddCommandItem2 (打招呼) result: {cmdIndex}");
+
+                    // 添加命令 2：登录 GitHub
+                    int cmdIndex2 = _cmdGroup.AddCommandItem2(
+                        "登录 GitHub",                    // Name（中文）
+                        -1,                              // Position
+                        "使用 GitHub 账号登录",           // Hint
+                        "登录 GitHub",                    // Tooltip
+                        0,                               // Image index（使用同一图标）
+                        "GitHubLogin",                   // Callback
+                        "",                              // Enable method
+                        GitHubLoginCommandIndex,         // User command ID
+                        (int)swCommandItemType_e.swMenuItem | (int)swCommandItemType_e.swToolbarItem
+                    );
+                    Log($"AddCommandItem2 (登录 GitHub) result: {cmdIndex2}");
 
                     // 激活 CommandGroup（必须在创建 Tab 之前）
                     // 注意：Activate() 在某些版本可能崩溃，但需要它才能获取 CommandID
@@ -135,17 +150,21 @@ namespace SharkTools
 
                         if (cmdBox != null)
                         {
-                            // 获取命令 ID
-                            int cmdId = _cmdGroup.CommandID[HelloCommandIndex];
-                            Log($"Command ID for HelloCommandIndex: {cmdId}");
+                            // 获取两个命令的 ID
+                            int cmdId1 = _cmdGroup.CommandID[HelloCommandIndex];
+                            int cmdId2 = _cmdGroup.CommandID[GitHubLoginCommandIndex];
+                            Log($"命令 ID: 打招呼={cmdId1}, 登录GitHub={cmdId2}");
 
-                            // 添加命令到工具箱
+                            // 添加两个命令到工具箱
                             // 参数: CommandIDs, TextTypes
-                            int[] cmdIds = new int[] { cmdId };
-                            int[] textTypes = new int[] { (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow };
+                            int[] cmdIds = new int[] { cmdId1, cmdId2 };
+                            int[] textTypes = new int[] { 
+                                (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
+                                (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow
+                            };
                             
                             bool addResult = cmdBox.AddCommands(cmdIds, textTypes);
-                            Log($"AddCommands to CommandTabBox for docType {docType} result: {addResult}");
+                            Log($"添加命令到标签页 docType {docType}: {addResult}");
                         }
                     }
                 }
@@ -324,6 +343,10 @@ namespace SharkTools
             private ISldWorks _swApp;
             public TaskPaneProvider(ISldWorks app) { _swApp = app; }
             public void ShowHello() { ExampleCommand.ShowHello(_swApp); }
+            public void ShowMessage(string msg) 
+            { 
+                _swApp.SendMsgToUser2(msg, (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk); 
+            }
         }
 
         public void Teardown()
