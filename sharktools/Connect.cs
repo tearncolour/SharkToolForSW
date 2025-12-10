@@ -33,16 +33,19 @@ namespace SharkTools
                     );
                 } catch {}
 
+                // 初始化数据库
+                HistoryDatabase.Initialize();
+                
+                // 异步执行数据迁移
+                Task.Run(() => HistoryDatabase.MigrateFromJson());
+
                 // Initialize Command Manager
                 _sharkCmdMgr = new SharkCommandManager(_swApp, Cookie);
                 
                 // Try to initialize UI immediately
                 _sharkCmdMgr.Initialize();
 
-                // 弹窗确认插件已加载
-                _swApp.SendMsgToUser2("SharkTools 插件已成功加载！\n\n提示：\n1) 在顶部工具栏空白处右键，勾选 'SharkTools' 以显示工具栏。\n2) 或者在右侧任务窗格图标栏中打开 'SharkTools' 面板以查看更多功能。", 
-                    (int)swMessageBoxIcon_e.swMbInformation, 
-                    (int)swMessageBoxBtn_e.swMbOk);
+
 
                 return true;
             }

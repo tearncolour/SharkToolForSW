@@ -14,6 +14,8 @@ namespace SharkTools
         private int _cookie;
         private TaskpaneView _taskPaneView;
         private SharkTaskPaneControl _taskPaneControl;
+        private HistoryTracker _historyTracker;
+        private string _currentDocPath; // 当前追踪的文档路径
         
         private const int MainCommandGroupId = 2001;
         private const int HelloCommandIndex = 0;
@@ -30,11 +32,27 @@ namespace SharkTools
         public void Initialize()
         {
             Log("Initialize started");
+            
+            // 0. 创建 TaskPane（最可靠的方式）
             try 
             {
-                // 0. 创建 TaskPane（最可靠的方式）
+                Log("准备创建 TaskPane");
                 CreateTaskPane();
+                Log("TaskPane 创建完成");
+            }
+            catch (Exception ex)
+            {
+                Log($"CreateTaskPane error: {ex.Message}");
+            }
 
+            // 0.5 初始化历史追踪器（独立 try-catch，确保一定执行）
+            Log("准备初始化历史追踪器");
+            InitializeHistoryTracker();
+            Log("历史追踪器初始化完成");
+
+            try 
+            {
+                Log("准备创建图标文件和命令组");
                 // 1. Create icon files
                 string assemblyDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
                 string bmpPath = System.IO.Path.Combine(assemblyDir, "toolbar.bmp");
@@ -128,19 +146,17 @@ namespace SharkTools
             {
                 try
                 {
-                    // 获取或创建 CommandTab
-                    CommandTab cmdTab = _cmdMgr.GetCommandTab(docType, "SharkTools");
-                    
-                    if (cmdTab == null)
+                    // 先强制删除旧的标签页（如果存在）
+                    CommandTab existingTab = _cmdMgr.GetCommandTab(docType, "SharkTools");
+                    if (existingTab != null)
                     {
-                        // 创建新标签页
-                        cmdTab = _cmdMgr.AddCommandTab(docType, "SharkTools");
-                        Log($"AddCommandTab for docType {docType} result: {cmdTab != null}");
+                        bool removed = _cmdMgr.RemoveCommandTab(existingTab);
+                        Log($"删除旧标签页 docType {docType}: {removed}");
                     }
-                    else
-                    {
-                        Log($"GetCommandTab for docType {docType}: already exists");
-                    }
+
+                    // 创建全新的标签页
+                    CommandTab cmdTab = _cmdMgr.AddCommandTab(docType, "SharkTools");
+                    Log($"AddCommandTab for docType {docType} result: {cmdTab != null}");
 
                     if (cmdTab != null)
                     {
@@ -348,12 +364,28 @@ namespace SharkTools
             { 
                 _swApp.SendMsgToUser2(msg, (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk); 
             }
+            public IModelDoc2 GetActiveDocument()
+            {
+                return (IModelDoc2)_swApp.ActiveDoc;
+            }
         }
 
         public void Teardown()
         {
             try
             {
+                Log("Teardown started");
+                
+                // 停止历史追踪
+                if (_historyTracker != null)
+                {
+                    _historyTracker.StopTracking();
+                    _historyTracker = null;
+                }
+                
+                // 清理 CommandTabs
+                RemoveCommandTabs();
+                
                 if (_taskPaneView != null)
                 {
                     _taskPaneView.DeleteView();
@@ -372,6 +404,131 @@ namespace SharkTools
                 _cmdMgr.RemoveCommandGroup(MainCommandGroupId);
             }
             _cmdGroup = null;
+        }
+
+        /// <summary>
+        /// 清理所有 CommandTabs
+        /// </summary>
+        private void RemoveCommandTabs()
+        {
+            try
+            {
+                int[] docTypes = new int[] {
+                    (int)swDocumentTypes_e.swDocPART,
+                    (int)swDocumentTypes_e.swDocASSEMBLY,
+                    (int)swDocumentTypes_e.swDocDRAWING
+                };
+
+                foreach (int docType in docTypes)
+                {
+                    CommandTab cmdTab = _cmdMgr.GetCommandTab(docType, "SharkTools");
+                    if (cmdTab != null)
+                    {
+                        bool removed = _cmdMgr.RemoveCommandTab(cmdTab);
+                        Log($"RemoveCommandTab for docType {docType}: {removed}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"RemoveCommandTabs error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 初始化历史记录追踪器
+        /// </summary>
+        private void InitializeHistoryTracker()
+        {
+            try
+            {
+                Log("初始化历史追踪器");
+                
+                // 创建追踪器实例
+                _historyTracker = new HistoryTracker(_swApp);
+                
+                // 创建定时器监控文档切换
+                var docSwitchTimer = new System.Windows.Forms.Timer();
+                docSwitchTimer.Interval = 1000; // 每秒检查一次
+                docSwitchTimer.Tick += (sender, e) => CheckAndSwitchDocument();
+                docSwitchTimer.Start();
+                
+                Log("文档切换监控已启动");
+                
+                // 如果当前已有活动文档，立即开始追踪
+                CheckAndSwitchDocument();
+            }
+            catch (Exception ex)
+            {
+                Log($"初始化历史追踪器失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 检查并切换文档追踪
+        /// </summary>
+        private void CheckAndSwitchDocument()
+        {
+            try
+            {
+                IModelDoc2 activeDoc = (IModelDoc2)_swApp.ActiveDoc;
+                
+                if (activeDoc == null)
+                {
+                    // 没有活动文档，停止追踪
+                    if (!string.IsNullOrEmpty(_currentDocPath))
+                    {
+                        Log("没有活动文档，停止追踪");
+                        if (_historyTracker != null)
+                        {
+                            _historyTracker.StopTracking();
+                        }
+                        _currentDocPath = null;
+                    }
+                    return;
+                }
+
+                string docPath = activeDoc.GetPathName();
+                
+                // 文档未保存
+                if (string.IsNullOrEmpty(docPath))
+                {
+                    if (!string.IsNullOrEmpty(_currentDocPath))
+                    {
+                        Log("文档未保存，停止追踪");
+                        if (_historyTracker != null)
+                        {
+                            _historyTracker.StopTracking();
+                        }
+                        _currentDocPath = null;
+                    }
+                    return;
+                }
+
+                // 检查是否切换了文档
+                if (docPath != _currentDocPath)
+                {
+                    Log($"检测到文档切换: {_currentDocPath} -> {docPath}");
+                    
+                    // 停止旧文档的追踪
+                    if (_historyTracker != null && !string.IsNullOrEmpty(_currentDocPath))
+                    {
+                        _historyTracker.StopTracking();
+                    }
+                    
+                    // 开始新文档的追踪
+                    if (_historyTracker != null)
+                    {
+                        _historyTracker.StartTracking(activeDoc);
+                        _currentDocPath = docPath;
+                        Log($"已切换到新文档追踪: {docPath}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"CheckAndSwitchDocument 错误: {ex.Message}");
+            }
         }
     }
 }

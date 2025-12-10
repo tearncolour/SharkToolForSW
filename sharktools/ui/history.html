@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharkTools 历史记录</title>
+    <link rel="stylesheet" href="history.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航栏 -->
+        <div class="header">
+            <button class="back-button" @click="goBack">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M19 12H5M12 19l-7-7 7-7" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                返回主界面
+            </button>
+            <h1 class="title">历史记录</h1>
+        </div>
+
+        <!-- 文档信息卡片 -->
+        <div class="doc-info" v-if="documentInfo.name">
+            <div class="doc-icon">📄</div>
+            <div class="doc-details">
+                <div class="doc-name">{{ documentInfo.name }}</div>
+                <div class="doc-path">{{ documentInfo.path }}</div>
+                <div class="doc-stats">
+                    共 {{ records.length }} 条记录 · 最后更新 {{ lastUpdated }}
+                </div>
+            </div>
+        </div>
+
+        <!-- 分支选择器 -->
+        <div class="branch-selector">
+            <div class="branch-current" @click="toggleBranchMenu">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <line x1="6" y1="3" x2="6" y2="15" stroke-width="2"/>
+                    <circle cx="18" cy="6" r="3" stroke-width="2"/>
+                    <circle cx="6" cy="18" r="3" stroke-width="2"/>
+                    <path d="M18 9a9 9 0 0 1-9 9" stroke-width="2"/>
+                </svg>
+                <span>{{ currentBranch }}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="branch-menu" v-show="showBranchMenu">
+                <div class="branch-list">
+                    <div 
+                        v-for="branch in branches" 
+                        :key="branch.name"
+                        class="branch-item"
+                        :class="{ 'active': branch.name === currentBranch }"
+                        @click="switchBranch(branch.name)"
+                    >
+                        <span class="branch-name">{{ branch.name }}</span>
+                        <span class="branch-desc">{{ branch.description }}</span>
+                        <button 
+                            v-if="branch.name !== 'main'" 
+                            class="branch-delete" 
+                            @click.stop="deleteBranch(branch.name)"
+                            title="删除分支"
+                        >🗑️</button>
+                    </div>
+                </div>
+                <div class="branch-actions">
+                    <button class="branch-new-btn" @click="showNewBranchDialog">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        新建分支
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 回溯状态提示 -->
+        <div class="rollback-status" v-if="currentRollbackId">
+            <div class="rollback-info">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>当前处于历史回溯状态，部分特征已被抑制</span>
+            </div>
+            <button class="restore-latest-btn" @click="restoreToLatest">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M3 12a9 9 0 0114.5-7M21 12a9 9 0 01-14.5 7M3 4v5h5M21 20v-5h-5" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                恢复到最新
+            </button>
+        </div>
+
+        <!-- 新建分支对话框 -->
+        <div class="modal-overlay" v-show="showNewBranch" @click.self="showNewBranch = false">
+            <div class="modal-content">
+                <h3>新建分支</h3>
+                <div class="form-group">
+                    <label>分支名称</label>
+                    <input type="text" v-model="newBranchName" placeholder="输入分支名称">
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <input type="text" v-model="newBranchDesc" placeholder="可选描述">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" @click="showNewBranch = false">取消</button>
+                    <button class="btn-primary" @click="createBranch">创建</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <div class="search-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                    <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <input 
+                    type="text" 
+                    v-model="searchQuery" 
+                    placeholder="搜索历史记录..."
+                    @input="filterRecords"
+                />
+            </div>
+            <button class="toolbar-button" :class="{ 'active': showFilters }" @click="toggleFilters" title="筛选">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button class="toolbar-button" @click="exportHistory" title="导出历史记录">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button class="toolbar-button" @click="restoreAll" title="恢复所有特征">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M3 12a9 9 0 0114.5-7M21 12a9 9 0 01-14.5 7M3 4v5h5M21 20v-5h-5" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- 筛选面板 -->
+        <div class="filter-panel" v-show="showFilters">
+            <div class="filter-section">
+                <div class="filter-title">操作类型</div>
+                <div class="filter-options">
+                    <label class="filter-checkbox" v-for="type in filterTypes" :key="type.value">
+                        <input type="checkbox" v-model="type.checked" @change="filterRecords">
+                        <span class="checkmark"></span>
+                        <span class="filter-label">{{ type.icon }} {{ type.label }}</span>
+                    </label>
+                </div>
+            </div>
+            <div class="filter-section">
+                <div class="filter-title">时间范围</div>
+                <div class="filter-options time-range">
+                    <button 
+                        class="time-button" 
+                        :class="{ 'active': timeRange === range.value }"
+                        v-for="range in timeRanges" 
+                        :key="range.value"
+                        @click="setTimeRange(range.value)"
+                    >
+                        {{ range.label }}
+                    </button>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="filter-clear" @click="clearFilters">清除筛选</button>
+            </div>
+        </div>
+
+        <!-- 历史记录时间轴 -->
+        <div class="timeline-container">
+            <div v-if="filteredRecords.length === 0" class="empty-state">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <p>{{ searchQuery ? '未找到匹配的记录' : '暂无历史记录' }}</p>
+            </div>
+
+            <div 
+                v-for="(record, index) in filteredRecords" 
+                :key="record.id"
+                class="timeline-item"
+                :class="{ 
+                    'important': record.isImportant,
+                    'current-position': record.id === currentRollbackId,
+                    'suppressed': record.isSuppressed
+                }"
+                @click="rollbackTo(record)"
+            >
+                <div class="timeline-marker">
+                    <div class="marker-dot"></div>
+                    <div class="marker-line" v-if="index < filteredRecords.length - 1"></div>
+                </div>
+
+                <div class="timeline-content">
+                    <div class="record-header">
+                        <div class="record-icon" :class="getTypeClass(record.featureType)">{{ getTypeIcon(record.type, record.featureType) }}</div>
+                        <div class="record-info">
+                            <div class="record-name">{{ record.name }}</div>
+                            <div class="record-meta">
+                                <span class="record-type">{{ getTypeLabel(record.type, record.featureType) }}</span>
+                                <span class="record-time">{{ formatTime(record.timestamp) }}</span>
+                            </div>
+                        </div>
+                        <div class="record-actions">
+                            <button 
+                                class="action-button star" 
+                                :class="{ 'active': record.isImportant }"
+                                @click.stop="toggleImportant(record)"
+                                title="标记为重要"
+                            >
+                                ⭐
+                            </button>
+                            <button 
+                                class="action-button delete" 
+                                @click.stop="deleteRecord(record)"
+                                title="删除记录"
+                            >
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                    <div class="record-description" v-if="record.description">
+                        {{ record.description }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="history.js"></script>
+</body>
+</html>
