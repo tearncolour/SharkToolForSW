@@ -291,8 +291,8 @@ namespace SharkTools
         {
             try
             {
-                // 设置 Provider
-                SharkTaskPaneControl.SetProvider(new TaskPaneProvider(_swApp));
+                // 设置 Provider - 使用新的 WebBrowser 控件
+                SharkWebTaskPane.SetProvider(new WebTaskPaneProvider(_swApp));
                 
                 // 获取图标路径 - 使用多尺寸图标
                 string assemblyDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
@@ -315,16 +315,16 @@ namespace SharkTools
                 {
                     Log("TaskPane created successfully with custom icon");
                     
-                    // 使用 ProgID 添加控件
+                    // 使用新的 WebBrowser 控件 ProgID
                     object ctrl = _taskPaneView.AddControl(
-                        "SharkTools.TaskPaneControl",
+                        "SharkTools.WebTaskPane",
                         ""
                     );
                     Log($"TaskPane AddControl result: {ctrl != null}");
                     
                     if (ctrl != null)
                     {
-                        _taskPaneControl = ctrl as SharkTaskPaneControl;
+                        Log("WebTaskPane 控件加载成功");
                     }
                 }
                 else
@@ -338,10 +338,11 @@ namespace SharkTools
             }
         }
         
-        private class TaskPaneProvider : SharkTaskPaneControl.ISldWorksProvider
+        // 新的 WebBrowser Provider
+        private class WebTaskPaneProvider : SharkWebTaskPane.ISldWorksProvider
         {
             private ISldWorks _swApp;
-            public TaskPaneProvider(ISldWorks app) { _swApp = app; }
+            public WebTaskPaneProvider(ISldWorks app) { _swApp = app; }
             public void ShowHello() { ExampleCommand.ShowHello(_swApp); }
             public void ShowMessage(string msg) 
             { 

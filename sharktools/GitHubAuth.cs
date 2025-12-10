@@ -165,47 +165,65 @@ namespace SharkTools
 
             try
             {
-                using (var client = new HttpClient())
+                // 启用 TLS 1.2（GitHub API 需要）
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+                
+                using (var handler = new HttpClientHandler())
                 {
-                    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
-                    client.DefaultRequestHeaders.Add("User-Agent", "SharkTools-SolidWorks-Addin");
-                    client.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
-
-                    // 获取用户信息
-                    var response = await client.GetAsync("https://api.github.com/user");
+                    handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
                     
-                    if (response.IsSuccessStatusCode)
+                    using (var client = new HttpClient(handler))
                     {
-                        string json = await response.Content.ReadAsStringAsync();
-                        var userInfo = _jsonSerializer.Deserialize<Dictionary<string, object>>(json);
+                        client.DefaultRequestHeaders.Add("Authorization", $"token {token}");
+                        client.DefaultRequestHeaders.Add("User-Agent", "SharkTools-SolidWorks-Addin");
+                        client.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+                        client.Timeout = TimeSpan.FromSeconds(30);
+
+                        // 获取用户信息
+                        Log($"正在请求 GitHub API...");
+                        var response = await client.GetAsync("https://api.github.com/user");
                         
-                        CurrentUser = new GitHubUser
+                        Log($"响应状态: {response.StatusCode}");
+                        
+                        if (response.IsSuccessStatusCode)
                         {
-                            Login = userInfo.ContainsKey("login") ? userInfo["login"]?.ToString() : null,
-                            Name = userInfo.ContainsKey("name") ? userInfo["name"]?.ToString() : null,
-                            AvatarUrl = userInfo.ContainsKey("avatar_url") ? userInfo["avatar_url"]?.ToString() : null,
-                            AccessToken = token
-                        };
+                            string json = await response.Content.ReadAsStringAsync();
+                            Log($"响应内容: {json.Substring(0, Math.Min(200, json.Length))}...");
+                            
+                            var userInfo = _jsonSerializer.Deserialize<Dictionary<string, object>>(json);
+                            
+                            CurrentUser = new GitHubUser
+                            {
+                                Login = userInfo.ContainsKey("login") ? userInfo["login"]?.ToString() : null,
+                                Name = userInfo.ContainsKey("name") ? userInfo["name"]?.ToString() : null,
+                                AvatarUrl = userInfo.ContainsKey("avatar_url") ? userInfo["avatar_url"]?.ToString() : null,
+                                AccessToken = token
+                            };
 
-                        // 保存登录状态
-                        SaveLogin(CurrentUser);
+                            // 保存登录状态
+                            SaveLogin(CurrentUser);
 
-                        Log($"登录成功: {CurrentUser.Login}");
-                        onComplete?.Invoke(true, $"登录成功！欢迎 {CurrentUser.Name ?? CurrentUser.Login}");
-                        return true;
-                    }
-                    else
-                    {
-                        string error = await response.Content.ReadAsStringAsync();
-                        Log($"登录失败: {response.StatusCode} - {error}");
-                        onComplete?.Invoke(false, $"登录失败: Token 无效或已过期");
-                        return false;
+                            Log($"登录成功: {CurrentUser.Login}");
+                            onComplete?.Invoke(true, $"登录成功！欢迎 {CurrentUser.Name ?? CurrentUser.Login}");
+                            return true;
+                        }
+                        else
+                        {
+                            string error = await response.Content.ReadAsStringAsync();
+                            Log($"登录失败: {response.StatusCode} - {error}");
+                            onComplete?.Invoke(false, $"登录失败: Token 无效或已过期 ({response.StatusCode})");
+                            return false;
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Log($"登录异常: {ex.Message}");
+                Log($"登录异常: {ex.GetType().Name} - {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Log($"内部异常: {ex.InnerException.Message}");
+                }
                 onComplete?.Invoke(false, $"登录失败: {ex.Message}");
                 return false;
             }
