@@ -6,10 +6,12 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
+using SolidWorks.Interop.fworks;
 using WebSocketSharp;
 
 namespace SharkTools
@@ -28,12 +30,43 @@ namespace SharkTools
         private bool _isRunning = false;
         private System.Threading.Timer _reconnectTimer;
         private volatile bool _isConnecting = false;
+        
+        // 消息处理队列，确保串行处理
+        private readonly BlockingCollection<string> _messageQueue = new BlockingCollection<string>();
+        private Task _messageProcessorTask;
+        private CancellationTokenSource _messageProcessorCts;
 
         public ElectronServer(ISldWorks swApp, SharkCommandManager cmdMgr, SynchronizationContext uiContext)
         {
             _swApp = swApp;
             _cmdMgr = cmdMgr;
             _uiContext = uiContext;
+            
+            // 启动消息处理器
+            StartMessageProcessor();
+        }
+        
+        private void StartMessageProcessor()
+        {
+            _messageProcessorCts = new CancellationTokenSource();
+            _messageProcessorTask = Task.Run(async () =>
+            {
+                foreach (var message in _messageQueue.GetConsumingEnumerable(_messageProcessorCts.Token))
+                {
+                    try
+                    {
+                        string response = await HandleCommandAsync(message);
+                        if (!string.IsNullOrEmpty(response))
+                        {
+                            Send(response);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"消息处理错误: {ex.Message}");
+                    }
+                }
+            }, _messageProcessorCts.Token);
         }
 
         public void Start()
@@ -112,6 +145,15 @@ namespace SharkTools
         public void Stop()
         {
             _isRunning = false;
+            
+            // 停止消息处理器
+            try
+            {
+                _messageProcessorCts?.Cancel();
+                _messageQueue.CompleteAdding();
+            }
+            catch { }
+            
             if (_reconnectTimer != null)
             {
                 _reconnectTimer.Dispose();
@@ -143,15 +185,8 @@ namespace SharkTools
                 string message = e.Data;
                 Log($"收到消息: {message}");
                 
-                // 异步处理命令
-                Task.Run(async () =>
-                {
-                    string response = await HandleCommandAsync(message);
-                    if (!string.IsNullOrEmpty(response))
-                    {
-                        Send(response);
-                    }
-                });
+                // 将消息加入队列，确保串行处理
+                _messageQueue.Add(message);
             }
             catch (Exception ex)
             {
@@ -237,7 +272,35 @@ namespace SharkTools
                 string command = data["command"]?.ToString();
                 var payload = data["payload"];
 
+                Log($"Parsed Command: '{command}'"); // Debug log
+
                 if (string.IsNullOrEmpty(command)) return null;
+
+                if (command == "convert-and-recognize")
+                {
+                    Log($"Command: {command}, Payload: {payload}");
+                    string convertPath = payload?["path"]?.ToString();
+                    var options = payload?["options"];
+                    
+                    if (string.IsNullOrEmpty(convertPath))
+                    {
+                        return JsonConvert.SerializeObject(new 
+                        { 
+                            id = messageId,
+                            success = false, 
+                            message = "Path is required for conversion" 
+                        });
+                    }
+
+                    var converter = new ModelConverter(_swApp, RunOnUIThread);
+                    var convertResult = await converter.ConvertAsync(convertPath, options);
+                    return JsonConvert.SerializeObject(new 
+                    { 
+                        id = messageId,
+                        success = true, 
+                        data = convertResult 
+                    });
+                }
 
                 object result = null;
 
@@ -332,6 +395,8 @@ namespace SharkTools
             }
         }
 
+        // Removed ConvertAndRecognize as it is now in ModelConverter.cs
+
         private Task RunOnUIThread(Action action)
         {
             var tcs = new TaskCompletionSource<bool>();
@@ -357,7 +422,8 @@ namespace SharkTools
 
                 if (control != null && control.InvokeRequired)
                 {
-                    control.Invoke(new Action(() =>
+                    // 使用 BeginInvoke 避免死锁
+                    control.BeginInvoke(new Action(() =>
                     {
                         try
                         {

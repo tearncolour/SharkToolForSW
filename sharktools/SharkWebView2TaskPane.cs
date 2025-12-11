@@ -1172,26 +1172,32 @@ namespace SharkTools
         {
             try
             {
+                var optimizer = PerformanceOptimizer.Instance;
+                
                 // 获取优化前的状态
-                string beforeStatus = PerformanceOptimizer.GetResourceStatus();
+                var beforeSnapshot = optimizer.GetResourceSnapshot();
                 
-                // 执行优化
-                PerformanceOptimizer.Optimize();
+                // 执行中度优化（WebView2调用默认使用中度）
+                var afterSnapshot = optimizer.ExecuteOptimization(OptimizationLevel.Medium, silent: false);
                 
-                // 获取优化后的状态
-                string afterStatus = PerformanceOptimizer.GetResourceStatus();
+                // 计算释放量
+                long memoryFreed = beforeSnapshot.MemoryMB - afterSnapshot.MemoryMB;
+                int gdiFreed = (int)beforeSnapshot.GDIObjects - (int)afterSnapshot.GDIObjects;
                 
                 // 检查 GDI 限制
                 int currentLimit = PerformanceOptimizer.GetGDIProcessHandleQuota();
                 string gdiMsg = "";
                 
-                if (currentLimit < 65536)
+                if (currentLimit < 65536 && afterSnapshot.GDIObjects > currentLimit * 0.5)
                 {
-                    gdiMsg = $"\n\n检测到 GDI 限制为 {currentLimit}，建议提升至 65536。";
+                    gdiMsg = $"\n\n⚠️ GDI使用率: {(afterSnapshot.GDIObjects * 100 / currentLimit)}%，建议提升限制至 65536。";
                 }
 
                 _swProvider?.ShowMessage(
-                    $"性能优化完成！\n\n优化前:\n{beforeStatus}\n\n优化后:\n{afterStatus}{gdiMsg}"
+                    $"性能优化完成！[中度优化]\n\n" +
+                    $"优化前:\n{beforeSnapshot.ToShortString()}\n\n" +
+                    $"优化后:\n{afterSnapshot.ToShortString()}\n\n" +
+                    $"释放: 内存 {memoryFreed} MB | GDI {gdiFreed}{gdiMsg}"
                 );
             }
             catch (Exception ex)
