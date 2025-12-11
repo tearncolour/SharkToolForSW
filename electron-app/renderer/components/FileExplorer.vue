@@ -647,13 +647,45 @@ const refreshNode = async (key) => {
         return;
     }
 
-    // 简单实现：重新加载该节点
-    // 实际需要找到对应节点并重置 children
-    // 这里我们触发一次重新加载
     const node = findNode(treeData.value, key);
     if (node && node.isDirectory !== false && !node.isLeaf) {
-        node.children = []; // 清空子节点
-        await onLoadData(node); // 重新加载
+        try {
+            // 获取最新的子项
+            const items = await window.electronAPI.readDir(node.key);
+            const newChildren = items.map(item => ({
+                title: item.name,
+                key: item.path,
+                isLeaf: !item.isDirectory,
+                isDirectory: item.isDirectory,
+                parentKey: node.key
+            }));
+
+            // 合并逻辑：保留现有的子节点对象（以保持展开状态和子节点的子节点）
+            if (!node.children) {
+                node.children = newChildren;
+            } else {
+                const currentChildrenMap = new Map();
+                node.children.forEach(c => currentChildrenMap.set(c.key, c));
+
+                const mergedChildren = newChildren.map(newItem => {
+                    const existing = currentChildrenMap.get(newItem.key);
+                    if (existing) {
+                        // 更新属性但保留对象引用
+                        existing.title = newItem.title;
+                        existing.isLeaf = newItem.isLeaf;
+                        existing.isDirectory = newItem.isDirectory;
+                        return existing;
+                    }
+                    return newItem;
+                });
+                node.children = mergedChildren;
+            }
+            
+            // 触发响应式更新
+            treeData.value = [...treeData.value];
+        } catch (e) {
+            console.error('Refresh node error:', e);
+        }
     }
 };
 

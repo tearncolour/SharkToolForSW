@@ -136,7 +136,7 @@
       
       <div class="properties-content">
         <!-- 基本信息 -->
-        <div v-show="activeTab === 'info'" class="tab-content">
+        <div v-show="activeTab === 'info'" class="preview-tab-content">
           <div v-if="fileProperties" class="property-list">
             <div class="property-item" v-for="(value, key) in fileProperties" :key="key">
               <span class="property-key">{{ key }}</span>
@@ -149,7 +149,7 @@
         </div>
 
         <!-- 自定义属性 -->
-        <div v-show="activeTab === 'custom'" class="tab-content">
+        <div v-show="activeTab === 'custom'" class="preview-tab-content">
           <div v-if="customProperties && customProperties.length > 0" class="property-list">
             <div class="property-item" v-for="prop in customProperties" :key="prop.name">
               <span class="property-key">{{ prop.name }}</span>
@@ -526,7 +526,7 @@ const addCustomProperty = () => {
 .properties-area {
   display: flex;
   flex-direction: column;
-  background: #252526;
+  background: #1e1e1e;
   border-top: 1px solid #3e3e42;
   overflow: hidden;
 }
@@ -578,8 +578,9 @@ const addCustomProperty = () => {
   background-color: #1e1e1e;
 }
 
-.tab-content {
+.preview-tab-content {
   height: 100%;
+  background-color: #1e1e1e;
 }
 
 .property-list {
