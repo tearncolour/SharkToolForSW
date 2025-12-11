@@ -3,7 +3,7 @@
  * 独立桌面应用程序，与 SolidWorks 插件通信
  */
 
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, shell, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, shell, protocol, net: electronNet } = require('electron');
 const path = require('path');
 const net = require('net');
 const http = require('http');
@@ -1194,14 +1194,37 @@ if (!gotTheLock) {
     app.whenReady().then(() => {
         // 注册本地资源协议
         protocol.handle('local-resource', async (request) => {
-            const url = request.url.replace('local-resource://', '');
-            const decodedUrl = decodeURIComponent(url);
             try {
-                // 移除可能的 query parameters
-                const filePath = decodedUrl.split('?')[0];
+                let url = request.url;
+                // 处理 URL 编码
+                url = decodeURIComponent(url);
+                
+                // 移除协议头
+                // 支持 local-resource:// 和 local-resource:
+                let filePath = url.replace(/^local-resource:\/\//, '');
+                
+                // 如果还有 local-resource: 前缀（防止替换失败），再次尝试
+                if (filePath.startsWith('local-resource:')) {
+                    filePath = filePath.replace(/^local-resource:/, '');
+                }
+
+                // 处理 Windows 盘符前的斜杠
+                // 例如 /C:/Users/... -> C:/Users/...
+                if (process.platform === 'win32' && /^\/[a-zA-Z]:/.test(filePath)) {
+                    filePath = filePath.substring(1);
+                }
+                
+                // 移除 query parameters
+                filePath = filePath.split('?')[0];
+                
                 // 规范化路径
                 const normalizedPath = path.normalize(filePath);
-                return net.fetch('file:///' + normalizedPath);
+                
+                // console.log(`[LocalResource] Request: ${request.url}`);
+                // console.log(`[LocalResource] Path: ${normalizedPath}`);
+
+                const fileUrl = require('url').pathToFileURL(normalizedPath).toString();
+                return electronNet.fetch(fileUrl);
             } catch (error) {
                 console.error('Failed to load local resource:', error);
                 return new Response('Not Found', { status: 404 });

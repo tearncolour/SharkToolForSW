@@ -327,7 +327,7 @@ const onFileSelect = async (node) => {
     }
     // 图片文件
     else if (isImageFile(ext)) {
-      imageUrl.value = 'local-resource://' + node.key.replace(/\\/g, '/')
+      imageUrl.value = 'local-resource:///' + node.key.replace(/\\/g, '/')
       fileProperties.value = {
         '文件名': node.title,
         '文件类型': ext.toUpperCase() + ' 图片',
@@ -336,7 +336,7 @@ const onFileSelect = async (node) => {
     }
     // PDF 文件
     else if (ext === 'pdf') {
-      pdfUrl.value = 'local-resource://' + node.key.replace(/\\/g, '/')
+      pdfUrl.value = 'local-resource:///' + node.key.replace(/\\/g, '/')
       fileProperties.value = {
         '文件名': node.title,
         '文件类型': 'PDF 文档',
