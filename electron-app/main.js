@@ -13,6 +13,7 @@ const os = require('os');
 const Store = require('electron-store');
 const { exec } = require('child_process');
 const simpleGit = require('simple-git');
+const { Worker } = require('worker_threads');
 
 // 屏蔽安全警告（开发模式下 Vue/Vite 需要 unsafe-eval）
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
@@ -55,14 +56,25 @@ const WS_PORT = 52789;
 let isConnected = false;
 
 // 启动 SolidWorks
-ipcMain.handle('launch-solidworks', async () => {
+ipcMain.handle('launch-solidworks', async (event, silent = false) => {
     const swPath = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\SLDWORKS.exe';
     if (fs.existsSync(swPath)) {
-        exec(`"${swPath}"`, (error) => {
-            if (error) {
-                console.error(`启动 SolidWorks 失败: ${error}`);
-            }
-        });
+        if (silent) {
+            // 静默启动 (最小化/隐藏)
+            // 注意：完全隐藏可能导致 Add-in 加载问题或无法交互，这里使用 Minimized
+            const psCommand = `Start-Process -FilePath '${swPath}' -WindowStyle Minimized`;
+            exec(`powershell -Command "${psCommand}"`, (error) => {
+                if (error) {
+                    console.error(`静默启动 SolidWorks 失败: ${error}`);
+                }
+            });
+        } else {
+            exec(`"${swPath}"`, (error) => {
+                if (error) {
+                    console.error(`启动 SolidWorks 失败: ${error}`);
+                }
+            });
+        }
         return { success: true };
     } else {
         return { success: false, message: '未找到 SolidWorks 程序' };
@@ -236,7 +248,14 @@ function startWebSocketServer() {
             try {
                 const data = JSON.parse(message.toString());
                 console.log('收到 SW 消息:', data);
-                handleSolidWorksMessage(data);
+                
+                // 检查是否是转换响应（使用新的回调系统）
+                if (data.id && handleConversionResponse(data)) {
+                    // 转换响应已处理
+                } else {
+                    // 其他消息正常处理
+                    handleSolidWorksMessage(data);
+                }
             } catch (error) {
                 console.error('解析 WebSocket 消息失败:', error);
             }
@@ -574,6 +593,76 @@ ipcMain.handle('fs-create-file', async (event, filePath, content = '') => {
     }
 });
 
+ipcMain.handle('fs-copy-file', async (event, src, dest) => {
+    try {
+        await fs.promises.copyFile(src, dest);
+        return { success: true };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+});
+
+ipcMain.handle('fs-rename-path', async (event, oldPath, newPath) => {
+    try {
+        await fs.promises.rename(oldPath, newPath);
+        return { success: true };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+});
+
+ipcMain.handle('fs-path-exists', async (event, filePath) => {
+    try {
+        return fs.existsSync(filePath);
+    } catch (error) {
+        return false;
+    }
+});
+
+ipcMain.handle('fs-delete-path', async (event, filePath) => {
+    try {
+        // 尝试移动到回收站
+        const success = await shell.trashItem(filePath);
+        if (!success) {
+            // 如果回收站失败（例如网络驱动器），尝试直接删除
+            const stats = await fs.promises.stat(filePath);
+            if (stats.isDirectory()) {
+                await fs.promises.rm(filePath, { recursive: true, force: true });
+            } else {
+                await fs.promises.unlink(filePath);
+            }
+        }
+        return { success: true };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+});
+
+ipcMain.handle('fs-move-path', async (event, src, dest) => {
+    try {
+        await fs.promises.rename(src, dest);
+        return { success: true };
+    } catch (error) {
+        // 如果跨设备移动失败，尝试复制后删除
+        if (error.code === 'EXDEV') {
+            try {
+                const stats = await fs.promises.stat(src);
+                if (stats.isDirectory()) {
+                    // 简单实现：不支持跨设备文件夹移动（需要递归复制）
+                    return { success: false, message: '不支持跨设备移动文件夹' };
+                } else {
+                    await fs.promises.copyFile(src, dest);
+                    await fs.promises.unlink(src);
+                    return { success: true };
+                }
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+        return { success: false, message: error.message };
+    }
+});
+
 ipcMain.handle('clipboard-write-text', (event, text) => {
     const { clipboard } = require('electron');
     clipboard.writeText(text);
@@ -703,70 +792,59 @@ ipcMain.handle('notes-delete', async (event, rootPath, filePath) => {
     }
 });
 
-// 文件监视系统
-const watchers = new Map();
-const watchDebounce = new Map();
+// 文件监视系统 - 使用优化的 FileWatcher
+const FileWatcher = require('./workers/file-watcher.js');
+const fileWatcher = new FileWatcher({
+    debounceDelay: 100,      // 100ms 批处理延迟
+    coalesceWindow: 50,      // 50ms 合并窗口
+    maxPendingEvents: 500,   // 最大待处理事件数
+});
+
+// 监听文件变更事件
+fileWatcher.on('changes', (data) => {
+    if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('fs-change-batch', data);
+    }
+});
+
+fileWatcher.on('error', (data) => {
+    log(`File watcher error for ${data.path}: ${data.error.message}`, 'WARN');
+});
 
 ipcMain.handle('fs-watch-path', (event, folderPath) => {
-    if (watchers.has(folderPath)) return true;
-
-    try {
-        // 只监视目录，不监视单个文件
-        const stats = fs.statSync(folderPath);
-        if (!stats.isDirectory()) {
-            // 对于文件，监视其父目录
-            folderPath = path.dirname(folderPath);
-            if (watchers.has(folderPath)) return true;
-        }
-
-        // Windows 支持 recursive: true
-        const watcher = fs.watch(folderPath, { recursive: true }, (eventType, filename) => {
-            if (filename) {
-                // 防抖动：1000ms 内的相同文件变化只触发一次
-                const debounceKey = `${folderPath}:${filename}`;
-                
-                if (watchDebounce.has(debounceKey)) {
-                    clearTimeout(watchDebounce.get(debounceKey));
-                }
-                
-                const timer = setTimeout(() => {
-                    watchDebounce.delete(debounceKey);
-                    
-                    if (mainWindow && mainWindow.webContents) {
-                        mainWindow.webContents.send('fs-change', {
-                            type: eventType,
-                            filename: filename,
-                            rootPath: folderPath
-                        });
-                    }
-                }, 1000);
-                
-                watchDebounce.set(debounceKey, timer);
-            }
-        });
-
-        watcher.on('error', (error) => {
-            log(`Watcher error for ${folderPath}: ${error.message}`, 'ERROR');
-        });
-
-        watchers.set(folderPath, watcher);
-        return true;
-    } catch (error) {
-        log(`Failed to watch ${folderPath}: ${error.message}`, 'ERROR');
-        return false;
-    }
+    return fileWatcher.watch(folderPath);
 });
 
 ipcMain.handle('fs-unwatch-path', (event, folderPath) => {
-    if (watchers.has(folderPath)) {
-        const watcher = watchers.get(folderPath);
-        watcher.close();
-        watchers.delete(folderPath);
-        log(`Stopped watching: ${folderPath}`);
-    }
-    return true;
+    return fileWatcher.unwatch(folderPath);
 });
 
+// 获取文件监控统计信息
+ipcMain.handle('fs-watcher-stats', () => {
+    return fileWatcher.getStats();
+});
+
+// 暂停文件监控
+ipcMain.handle('fs-watcher-pause', () => {
+    fileWatcher.pause();
+    return { success: true };
+});
+
+// 恢复文件监控
+ipcMain.handle('fs-watcher-resume', () => {
+    fileWatcher.resume();
+    return { success: true };
+});
+
+// 添加忽略模式
+ipcMain.handle('fs-watcher-add-ignore', (event, pattern) => {
+    try {
+        fileWatcher.addIgnorePattern(pattern);
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
 ipcMain.handle('fs-get-drives', async () => {
     if (process.platform === 'win32') {
         const drives = [];
@@ -794,6 +872,18 @@ ipcMain.handle('dialog-open-directory', async () => {
     return result.filePaths[0];
 });
 
+// 文件选择对话框
+ipcMain.handle('dialog-open-file', async (event, filters) => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile'],
+        filters: filters
+    });
+    if (result.canceled) {
+        return null;
+    }
+    return result.filePaths[0];
+});
+
 // 存储 API
 ipcMain.handle('store-get', (event, key) => {
     return store.get(key);
@@ -801,6 +891,325 @@ ipcMain.handle('store-get', (event, key) => {
 
 ipcMain.handle('store-set', (event, key, value) => {
     store.set(key, value);
+});
+
+// 读取二进制文件
+ipcMain.handle('fs-read-file', async (event, filePath) => {
+    try {
+        const buffer = await fs.promises.readFile(filePath);
+        return buffer;
+    } catch (error) {
+        console.error('Read file error:', error);
+        throw error;
+    }
+});
+
+// OCCT 模型转换
+const previewCache = new Map(); // Key: filePath, Value: { mtime, meshes }
+
+ipcMain.handle('occt-convert-model', async (event, filePath) => {
+    try {
+        // 1. 检查缓存
+        const stats = await fs.promises.stat(filePath);
+        const mtime = stats.mtimeMs;
+        const cached = previewCache.get(filePath);
+        
+        if (cached && cached.mtime === mtime) {
+            console.log('Serving mesh from cache:', filePath);
+            return { success: true, meshes: cached.meshes, fromCache: true };
+        }
+
+        // 2. 使用 Worker 线程进行转换
+        return new Promise((resolve) => {
+            const worker = new Worker(path.join(__dirname, 'workers', 'occt-worker.js'), {
+                workerData: { 
+                    filePath,
+                    params: {
+                        // 极速预览模式：使用非常粗糙的网格
+                        linearDeflection: 2.0, 
+                        angularDeflection: 0.8
+                    }
+                }
+            });
+
+            worker.on('message', (result) => {
+                if (result.success) {
+                    // 存入缓存
+                    previewCache.set(filePath, { mtime, meshes: result.meshes });
+                    
+                    // 限制缓存大小 (简单的 LRU 策略)
+                    if (previewCache.size > 50) {
+                        const firstKey = previewCache.keys().next().value;
+                        previewCache.delete(firstKey);
+                    }
+                }
+                resolve(result);
+            });
+
+            worker.on('error', (err) => {
+                console.error('Worker error:', err);
+                resolve({ success: false, message: err.message });
+            });
+
+            worker.on('exit', (code) => {
+                if (code !== 0) {
+                    resolve({ success: false, message: `Worker stopped with exit code ${code}` });
+                }
+            });
+        });
+    } catch (error) {
+        console.error('OCCT convert error:', error);
+        return { success: false, message: error.message };
+    }
+});
+
+// STEP 转换 Worker 管理
+let conversionWorker = null;
+const conversionCallbacks = new Map(); // 存储每个转换任务的回调
+let conversionIdCounter = 0;
+let totalConversionCount = 0;
+let completedConversionCount = 0;
+let conversionResults = [];
+let conversionResolve = null;
+
+// 初始化转换 Worker
+function initConversionWorker() {
+    if (conversionWorker) return;
+    
+    const workerPath = path.join(__dirname, 'workers', 'conversion-worker.js');
+    conversionWorker = new Worker(workerPath);
+    
+    conversionWorker.on('message', async (message) => {
+        switch (message.type) {
+            case 'log':
+                log(message.message);
+                break;
+                
+            case 'start-conversion':
+                // Worker 请求开始转换，现在发送到 SW
+                await handleStartConversion(message);
+                break;
+                
+            case 'queue-empty':
+                // 队列处理完成
+                log('All conversions completed');
+                fileWatcher.resume();
+                log('File watcher resumed after all conversions completed');
+                
+                if (conversionResolve) {
+                    const results = [...conversionResults];
+                    conversionResults = [];
+                    conversionResolve(results);
+                    conversionResolve = null;
+                }
+                break;
+                
+            case 'status':
+                log(`Queue status: ${message.queueSize} pending, processing: ${message.isProcessing}`);
+                break;
+        }
+    });
+    
+    conversionWorker.on('error', (error) => {
+        log(`Conversion worker error: ${error.message}`, 'ERROR');
+    });
+    
+    log('Conversion worker initialized');
+}
+
+// 处理单个转换
+async function handleStartConversion(message) {
+    const { id, filePath, options, remaining } = message;
+    
+    completedConversionCount++;
+    
+    // 通知前端当前进度
+    if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('sw-message', {
+            type: 'conversion-progress',
+            current: completedConversionCount,
+            total: totalConversionCount,
+            file: path.basename(filePath)
+        });
+    }
+    
+    log(`Starting conversion ${completedConversionCount}/${totalConversionCount}: ${path.basename(filePath)}`);
+    
+    let result = { success: false, filePath, message: '未知错误' };
+    
+    try {
+        if (!swWebSocket || swWebSocket.readyState !== WebSocket.OPEN) {
+            result = { success: false, filePath, message: 'SolidWorks 未连接' };
+        } else {
+            // 发送转换请求并等待响应
+            const messageId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            const swResult = await new Promise((resolve) => {
+                // 设置超时（120秒）
+                const timeout = setTimeout(() => {
+                    conversionCallbacks.delete(messageId);
+                    log(`Conversion timeout for: ${path.basename(filePath)}`, 'WARN');
+                    resolve({ success: false, message: '转换超时（120秒）' });
+                }, 120000);
+                
+                // 存储回调
+                conversionCallbacks.set(messageId, (response) => {
+                    clearTimeout(timeout);
+                    conversionCallbacks.delete(messageId);
+                    resolve(response);
+                });
+                
+                // 发送请求
+                const msg = {
+                    id: messageId,
+                    command: 'convert-and-recognize',
+                    payload: {
+                        path: filePath,
+                        options: options || { holes: true, fillets: true, chamfers: true, extrudes: true }
+                    }
+                };
+                
+                try {
+                    swWebSocket.send(JSON.stringify(msg));
+                    log(`Sent conversion request: ${path.basename(filePath)} (ID: ${messageId})`);
+                } catch (e) {
+                    clearTimeout(timeout);
+                    conversionCallbacks.delete(messageId);
+                    resolve({ success: false, message: e.message });
+                }
+            });
+            
+            const success = swResult.success !== false && 
+                           !swResult.message?.includes('失败') && 
+                           !swResult.message?.includes('错误');
+            result = { success, filePath, message: swResult.message || '转换完成', data: swResult.data };
+        }
+    } catch (e) {
+        log(`Conversion error: ${e.message}`, 'ERROR');
+        result = { success: false, filePath, message: e.message };
+    }
+    
+    log(`Conversion ${result.success ? 'succeeded' : 'failed'} for: ${path.basename(filePath)}`);
+    
+    // 存储结果
+    conversionResults.push(result);
+    
+    // 通知 Worker 转换完成（Worker 会等待 2 秒后处理下一个）
+    conversionWorker.postMessage({
+        type: 'conversion-complete',
+        id: id,
+        filePath: filePath,
+        success: result.success
+    });
+}
+
+// 处理来自 SW 的转换响应
+function handleConversionResponse(data) {
+    if (data.id && conversionCallbacks.has(data.id)) {
+        const callback = conversionCallbacks.get(data.id);
+        callback(data);
+        return true;
+    }
+    return false;
+}
+
+// STEP 转换处理
+ipcMain.handle('convert-step', async (event, filePaths, options) => {
+    if (!swWebSocket || swWebSocket.readyState !== WebSocket.OPEN) {
+        return { success: false, message: 'SolidWorks 未连接' };
+    }
+    
+    try {
+        // 初始化 Worker
+        initConversionWorker();
+        
+        // 暂停文件监控
+        fileWatcher.pause();
+        log('File watcher paused for STEP conversion');
+        
+        // 确保 filePaths 是数组
+        const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
+        
+        // 重置计数器
+        totalConversionCount = paths.length;
+        completedConversionCount = 0;
+        conversionResults = [];
+        
+        // 通知前端已开始转换
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('sw-message', {
+                type: 'conversion-started',
+                count: paths.length,
+                files: paths.map(p => path.basename(p))
+            });
+        }
+        
+        log(`Queuing ${paths.length} file(s) for conversion`);
+        
+        // 添加任务到 Worker 队列
+        for (const filePath of paths) {
+            conversionIdCounter++;
+            conversionWorker.postMessage({
+                type: 'add-task',
+                id: conversionIdCounter,
+                filePath: filePath,
+                options: options
+            });
+        }
+        
+        // 等待所有转换完成
+        const results = await new Promise((resolve) => {
+            conversionResolve = resolve;
+        });
+        
+        // 统计结果
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.length - successCount;
+        
+        // 通知前端刷新文件列表
+        if (mainWindow && mainWindow.webContents) {
+            const affectedDirs = [...new Set(paths.map(p => path.dirname(p)))];
+            
+            const changes = [];
+            for (const dir of affectedDirs) {
+                changes.push({
+                    rootPath: dir,
+                    filename: '',
+                    type: 'change',
+                    fullPath: dir,
+                    parentPath: dir,
+                });
+                
+                for (const filePath of paths) {
+                    if (path.dirname(filePath) === dir) {
+                        const newFileName = path.basename(filePath).replace(/\.(step|stp)$/i, '.SLDPRT');
+                        changes.push({
+                            rootPath: dir,
+                            filename: newFileName,
+                            type: 'rename',
+                            fullPath: path.join(dir, newFileName),
+                            parentPath: dir,
+                        });
+                    }
+                }
+            }
+            
+            mainWindow.webContents.send('fs-change-batch', {
+                changes: changes,
+                affectedRoots: affectedDirs,
+            });
+        }
+        
+        let message = `转换完成: ${successCount} 成功`;
+        if (failCount > 0) {
+            message += `, ${failCount} 失败`;
+        }
+        
+        return { success: true, message, results };
+    } catch (e) {
+        fileWatcher.resume();
+        return { success: false, message: e.message };
+    }
 });
 
 // 上下文菜单
@@ -1289,6 +1698,10 @@ if (!gotTheLock) {
 
     app.on('before-quit', () => {
         app.isQuitting = true;
+        // 关闭文件监控器
+        if (fileWatcher) {
+            fileWatcher.close();
+        }
         if (wss) {
             wss.close();
         }

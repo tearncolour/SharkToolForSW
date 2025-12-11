@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAppInfo: () => ipcRenderer.invoke('get-app-info'),
     
     // 启动 SolidWorks
-    launchSolidWorks: () => ipcRenderer.invoke('launch-solidworks'),
+    launchSolidWorks: (silent) => ipcRenderer.invoke('launch-solidworks', silent),
 
     // 发送消息到 SolidWorks
     sendToSW: (data) => ipcRenderer.invoke('send-to-sw', data),
@@ -39,16 +39,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
     readSpreadsheetSheet: (path, sheetName, maxRows) => ipcRenderer.invoke('fs-read-spreadsheet-sheet', path, sheetName, maxRows),
     createFolder: (path) => ipcRenderer.invoke('fs-create-folder', path),
     createFile: (path, content) => ipcRenderer.invoke('fs-create-file', path, content),
+    copyFile: (src, dest) => ipcRenderer.invoke('fs-copy-file', src, dest),
+    renamePath: (oldPath, newPath) => ipcRenderer.invoke('fs-rename-path', oldPath, newPath),
+    deletePath: (path) => ipcRenderer.invoke('fs-delete-path', path),
+    movePath: (src, dest) => ipcRenderer.invoke('fs-move-path', src, dest),
+    pathExists: (path) => ipcRenderer.invoke('fs-path-exists', path),
     getHomeDir: () => ipcRenderer.invoke('fs-get-home-dir'),
     getDrives: () => ipcRenderer.invoke('fs-get-drives'),
     
     // 文件监视
     watchPath: (path) => ipcRenderer.invoke('fs-watch-path', path),
     unwatchPath: (path) => ipcRenderer.invoke('fs-unwatch-path', path),
+    getWatcherStats: () => ipcRenderer.invoke('fs-watcher-stats'),
+    addWatcherIgnore: (pattern) => ipcRenderer.invoke('fs-watcher-add-ignore', pattern),
+    pauseWatcher: () => ipcRenderer.invoke('fs-watcher-pause'),
+    resumeWatcher: () => ipcRenderer.invoke('fs-watcher-resume'),
     onFileSystemChange: (callback) => {
         const handler = (event, data) => callback(data);
-        ipcRenderer.on('fs-change', handler);
-        return () => ipcRenderer.removeListener('fs-change', handler);
+        ipcRenderer.on('fs-change-batch', handler);
+        return () => ipcRenderer.removeListener('fs-change-batch', handler);
     },
 
     // 文件注释 API
@@ -64,11 +73,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // 对话框 API
     openDirectory: () => ipcRenderer.invoke('dialog-open-directory'),
+    openFile: (filters) => ipcRenderer.invoke('dialog-open-file', filters),
     
     // 存储 API
     storeGet: (key) => ipcRenderer.invoke('store-get', key),
     storeSet: (key, value) => ipcRenderer.invoke('store-set', key, value),
     
+    // OCCT API
+    convertModelToMesh: (filePath) => ipcRenderer.invoke('occt-convert-model', filePath),
+    convertStep: (filePaths, options) => ipcRenderer.invoke('convert-step', filePaths, options),
+    
+    // 文件读取 API
+    readFile: (filePath) => ipcRenderer.invoke('fs-read-file', filePath),
+
     // Git API
     gitGetToken: () => ipcRenderer.invoke('git-get-token'),
     gitStatus: (cwd) => ipcRenderer.invoke('git-status', cwd),
