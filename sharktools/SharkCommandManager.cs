@@ -19,9 +19,11 @@ namespace SharkTools
         
         private const int MainCommandGroupId = 2001;
         private const int HelloCommandIndex = 0;
-        private const int GitHubLoginCommandIndex = 1;  // 新增：GitHub 登录命令索引
-        private const int LaunchElectronCommandIndex = 2;  // 新增：启动 Electron 应用命令索引
-        private const int OptimizeCommandIndex = 3;        // 新增：性能优化命令索引
+        private const int GitHubLoginCommandIndex = 1;  // GitHub 登录命令索引
+        private const int LaunchElectronCommandIndex = 2;  // 启动 Electron 应用命令索引
+        private const int DiagnoseCommandIndex = 3;        // 资源诊断命令索引
+        private const int CleanupCommandIndex = 4;         // 清理优化命令索引
+        private const int MemoryToolCommandIndex = 5;      // 妙妙内存清理工具命令索引
         private const string TabName = "SharkTools";
 
         /// <summary>
@@ -72,8 +74,52 @@ namespace SharkTools
                 CreateDummyBitmap(bmpPath);
 
                 // 2. 创建 CommandGroup
+                // 先尝试删除旧的命令组（如果存在）
+                // 【激进清理】先删除所有 CommandTab（SolidWorks可能缓存了5个按钮的布局）
+                try
+                {
+                    int[] docTypes = new int[] {
+                        (int)swDocumentTypes_e.swDocPART,
+                        (int)swDocumentTypes_e.swDocASSEMBLY,
+                        (int)swDocumentTypes_e.swDocDRAWING
+                    };
+                    
+                    foreach (int docType in docTypes)
+                    {
+                        CommandTab existingTab = _cmdMgr.GetCommandTab(docType, "SharkTools");
+                        if (existingTab != null)
+                        {
+                            bool removed = _cmdMgr.RemoveCommandTab(existingTab);
+                            Log($"【预清理】删除标签页 docType {docType}: {removed}");
+                        }
+                    }
+                }
+                catch (Exception tabEx)
+                {
+                    Log($"预清理标签页失败: {tabEx.Message}");
+                }
+                
+                // 然后删除旧的命令组
+                try
+                {
+                    ICommandGroup oldGroup = _cmdMgr.GetCommandGroup(MainCommandGroupId);
+                    if (oldGroup != null)
+                    {
+                        bool removed = _cmdMgr.RemoveCommandGroup(MainCommandGroupId);
+                        Log($"删除旧命令组: {removed}");
+                        
+                        // 等待确保删除生效
+                        System.Threading.Thread.Sleep(100);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"删除旧命令组失败: {ex.Message}");
+                }
+                
                 int errors = 0;
-                bool ignorePrev = false;
+                // ignorePrev = true 强制重新创建命令组（当命令数量改变时必须）
+                bool ignorePrev = true;
                 
                 _cmdGroup = _cmdMgr.CreateCommandGroup2(
                     MainCommandGroupId,      // 唯一标识
@@ -134,19 +180,47 @@ namespace SharkTools
                     );
                     Log($"AddCommandItem2 (启动工具箱) result: {cmdIndex3}");
 
-                    // 添加命令 4：性能优化
+                    // 添加命令 4：资源诊断
                     int cmdIndex4 = _cmdGroup.AddCommandItem2(
-                        "优化性能",                       // Name（中文）
+                        "资源诊断",                       // Name（中文）
                         -1,                              // Position
-                        "清理内存并释放资源",             // Hint
-                        "优化性能",                       // Tooltip
+                        "分析资源使用情况和问题",         // Hint
+                        "资源诊断",                       // Tooltip
                         0,                               // Image index
-                        "OptimizePerformance",           // Callback
+                        "DiagnoseResources",             // Callback
                         "",                              // Enable method
-                        OptimizeCommandIndex,            // User command ID
+                        DiagnoseCommandIndex,            // User command ID
                         (int)swCommandItemType_e.swMenuItem | (int)swCommandItemType_e.swToolbarItem
                     );
-                    Log($"AddCommandItem2 (优化性能) result: {cmdIndex4}");
+                    Log($"AddCommandItem2 (资源诊断) result: {cmdIndex4}");
+
+                    // 添加命令 5：清理优化
+                    int cmdIndex5 = _cmdGroup.AddCommandItem2(
+                        "清理优化",                       // Name（中文）
+                        -1,                              // Position
+                        "选择清理级别优化资源",           // Hint
+                        "清理优化",                       // Tooltip
+                        0,                               // Image index
+                        "CleanupOptimize",               // Callback
+                        "",                              // Enable method
+                        CleanupCommandIndex,             // User command ID
+                        (int)swCommandItemType_e.swMenuItem | (int)swCommandItemType_e.swToolbarItem
+                    );
+                    Log($"AddCommandItem2 (清理优化) result: {cmdIndex5}");
+
+                    // 添加命令 6：妙妙内存清理工具
+                    int cmdIndex6 = _cmdGroup.AddCommandItem2(
+                        "妙妙内存清理",                   // Name（中文）
+                        -1,                              // Position
+                        "强制GC和工作集压缩",            // Hint
+                        "妙妙内存清理工具",               // Tooltip
+                        0,                               // Image index
+                        "MemoryCleanupTool",             // Callback
+                        "",                              // Enable method
+                        MemoryToolCommandIndex,          // User command ID
+                        (int)swCommandItemType_e.swMenuItem | (int)swCommandItemType_e.swToolbarItem
+                    );
+                    Log($"AddCommandItem2 (妙妙内存清理) result: {cmdIndex6}");
 
                     // 激活 CommandGroup（必须在创建 Tab 之前）
                     // 注意：Activate() 在某些版本可能崩溃，但需要它才能获取 CommandID
@@ -186,15 +260,7 @@ namespace SharkTools
             {
                 try
                 {
-                    // 先强制删除旧的标签页（如果存在）
-                    CommandTab existingTab = _cmdMgr.GetCommandTab(docType, "SharkTools");
-                    if (existingTab != null)
-                    {
-                        bool removed = _cmdMgr.RemoveCommandTab(existingTab);
-                        Log($"删除旧标签页 docType {docType}: {removed}");
-                    }
-
-                    // 创建全新的标签页
+                    // 创建全新的标签页（已在Initialize开始时预清理）
                     CommandTab cmdTab = _cmdMgr.AddCommandTab(docType, "SharkTools");
                     Log($"AddCommandTab for docType {docType} result: {cmdTab != null}");
 
@@ -206,17 +272,28 @@ namespace SharkTools
 
                         if (cmdBox != null)
                         {
-                            // 获取四个命令的 ID
+                            // 获取六个命令的 ID
                             int cmdId1 = _cmdGroup.CommandID[HelloCommandIndex];
                             int cmdId2 = _cmdGroup.CommandID[GitHubLoginCommandIndex];
                             int cmdId3 = _cmdGroup.CommandID[LaunchElectronCommandIndex];
-                            int cmdId4 = _cmdGroup.CommandID[OptimizeCommandIndex];
-                            Log($"命令 ID: 打招呼={cmdId1}, 登录GitHub={cmdId2}, 启动工具箱={cmdId3}, 优化性能={cmdId4}");
+                            int cmdId4 = _cmdGroup.CommandID[DiagnoseCommandIndex];
+                            int cmdId5 = _cmdGroup.CommandID[CleanupCommandIndex];
+                            int cmdId6 = _cmdGroup.CommandID[MemoryToolCommandIndex];
+                            
+                            // 【诊断日志】验证所有命令ID是否有效
+                            Log($"=== 命令 ID 诊断 ===");
+                            Log($"[0] 打招呼 ID={cmdId1}");
+                            Log($"[1] 登录GitHub ID={cmdId2}");
+                            Log($"[2] 启动工具箱 ID={cmdId3}");
+                            Log($"[3] 资源诊断 ID={cmdId4}");
+                            Log($"[4] 清理优化 ID={cmdId5}");
+                            Log($"[5] 妙妙内存清理 ID={cmdId6}");
 
-                            // 添加四个命令到工具箱
-                            // 参数: CommandIDs, TextTypes
-                            int[] cmdIds = new int[] { cmdId1, cmdId2, cmdId3, cmdId4 };
+                            // 添加六个命令到工具箱
+                            int[] cmdIds = new int[] { cmdId1, cmdId2, cmdId3, cmdId4, cmdId5, cmdId6 };
                             int[] textTypes = new int[] { 
+                                (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
+                                (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
                                 (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
                                 (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
                                 (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
@@ -224,8 +301,21 @@ namespace SharkTools
                             };
                             
                             bool addResult = cmdBox.AddCommands(cmdIds, textTypes);
-                            Log($"添加命令到标签页 docType {docType}: {addResult}");
+                            Log($"添加 6 个命令到标签页 docType {docType}: {addResult}");
+                            
+                            if (!addResult)
+                            {
+                                Log($"【警告】命令添加失败！docType={docType}");
+                            }
                         }
+                        else
+                        {
+                            Log($"【错误】无法创建 CommandTabBox，docType={docType}");
+                        }
+                    }
+                    else
+                    {
+                        Log($"【错误】无法创建 CommandTab，docType={docType}");
                     }
                 }
                 catch (Exception tabEx)
