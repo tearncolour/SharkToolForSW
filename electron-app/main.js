@@ -1195,35 +1195,33 @@ if (!gotTheLock) {
         // 注册本地资源协议
         protocol.handle('local-resource', async (request) => {
             try {
-                let url = request.url;
-                // 处理 URL 编码
-                url = decodeURIComponent(url);
+                const url = request.url;
+                console.log(`[LocalResource] Request: ${url}`);
                 
-                // 移除协议头
-                // 支持 local-resource:// 和 local-resource:
-                let filePath = url.replace(/^local-resource:\/\//, '');
+                // 1. 解码 URL
+                const decodedUrl = decodeURIComponent(url);
                 
-                // 如果还有 local-resource: 前缀（防止替换失败），再次尝试
-                if (filePath.startsWith('local-resource:')) {
-                    filePath = filePath.replace(/^local-resource:/, '');
-                }
-
-                // 处理 Windows 盘符前的斜杠
-                // 例如 /C:/Users/... -> C:/Users/...
-                if (process.platform === 'win32' && /^\/[a-zA-Z]:/.test(filePath)) {
-                    filePath = filePath.substring(1);
-                }
+                // 2. 移除协议头和所有前导斜杠
+                // 匹配 local-resource: 后跟任意数量的 / 或 \
+                let filePath = decodedUrl.replace(/^local-resource:[\/\\]*/, '');
                 
-                // 移除 query parameters
-                filePath = filePath.split('?')[0];
+                // 3. 处理 Windows 盘符
+                // 如果路径看起来像 "C:/Users/..." 或 "C:\Users\..."，它已经是绝对路径了
+                // 如果路径看起来像 "drive/path" (没有冒号)，那可能是错误的，但我们假设它是 "C:/..." 格式
                 
-                // 规范化路径
+                // 4. 规范化路径 (处理 / 和 \ 的混用，解析 .. 等)
                 const normalizedPath = path.normalize(filePath);
-                
-                // console.log(`[LocalResource] Request: ${request.url}`);
-                // console.log(`[LocalResource] Path: ${normalizedPath}`);
+                console.log(`[LocalResource] Normalized Path: ${normalizedPath}`);
 
-                // 直接读取文件，确保 Content-Type 正确
+                // 5. 检查文件是否存在
+                try {
+                    await fs.promises.access(normalizedPath, fs.constants.R_OK);
+                } catch (e) {
+                    console.error(`[LocalResource] File not found: ${normalizedPath}`);
+                    return new Response('Not Found', { status: 404 });
+                }
+
+                // 6. 读取文件
                 const buffer = await fs.promises.readFile(normalizedPath);
                 const ext = path.extname(normalizedPath).toLowerCase();
                 let mimeType = 'application/octet-stream';
@@ -1237,7 +1235,12 @@ if (!gotTheLock) {
                     '.svg': 'image/svg+xml',
                     '.bmp': 'image/bmp',
                     '.webp': 'image/webp',
-                    '.ico': 'image/x-icon'
+                    '.ico': 'image/x-icon',
+                    '.txt': 'text/plain',
+                    '.json': 'application/json',
+                    '.html': 'text/html',
+                    '.css': 'text/css',
+                    '.js': 'text/javascript'
                 };
                 
                 if (mimeMap[ext]) {
@@ -1248,8 +1251,8 @@ if (!gotTheLock) {
                     headers: { 'Content-Type': mimeType }
                 });
             } catch (error) {
-                console.error('Failed to load local resource:', error);
-                return new Response('Not Found', { status: 404 });
+                console.error('[LocalResource] Error:', error);
+                return new Response('Internal Server Error', { status: 500 });
             }
         });
 
