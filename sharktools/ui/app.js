@@ -59,6 +59,13 @@ createApp({
             callCSharp('ShowHello');
             setTimeout(() => loading.value = false, 600);
         };
+
+        /**
+         * 启动桌面客户端
+         */
+        const launchClient = () => {
+            callCSharp('LaunchClient');
+        };
         
         /**
          * 切换登录表单显示
@@ -179,6 +186,7 @@ createApp({
             loading,
             currentPage,
             sayHello,
+            launchClient,
             toggleLoginForm,
             login,
             cancelLogin,
