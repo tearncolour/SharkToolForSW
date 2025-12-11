@@ -216,6 +216,15 @@ function startWebSocketServer() {
         console.log('SolidWorks 客户端已连接');
         log('SolidWorks 已连接');
         
+        // 如果已经有连接，关闭旧连接
+        if (swWebSocket && swWebSocket !== ws) {
+            try {
+                swWebSocket.close();
+            } catch (e) {
+                console.error('关闭旧连接失败:', e);
+            }
+        }
+
         swWebSocket = ws;
         isConnected = true;
         

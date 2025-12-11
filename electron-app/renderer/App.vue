@@ -530,16 +530,18 @@ const loadFileProperties = async (filePath) => {
     })
     
     if (res && res.success && res.data) {
+      const props = res.data.properties || res.data;
       // 基本属性
       fileProperties.value = {
-        '文件名': res.data.fileName || filePath.split('\\').pop(),
-        '文件类型': res.data.fileType || getFileTypeLabel(filePath),
-        '材料': res.data.material || '-',
-        '质量': res.data.mass ? `${res.data.mass} kg` : '-',
-        '体积': res.data.volume ? `${res.data.volume} mm³` : '-',
-        '表面积': res.data.surfaceArea ? `${res.data.surfaceArea} mm²` : '-',
-        '修改日期': res.data.modifiedDate || '-',
-        '作者': res.data.author || '-'
+        '文件名': props.fileName || filePath.split('\\').pop(),
+        '路径': props.filePath || filePath,
+        '文件类型': props.fileType || getFileTypeLabel(filePath),
+        '材料': props.material || '-',
+        '质量': props.mass ? `${props.mass} kg` : '-',
+        '体积': props.volume ? `${props.volume} mm³` : '-',
+        '表面积': props.surfaceArea ? `${props.surfaceArea} mm²` : '-',
+        '修改日期': props.modifiedDate || '-',
+        '作者': props.author || '-'
       }
       
       // 自定义属性
@@ -660,6 +662,10 @@ const handleSWMessage = (data) => {
       connectionStatus.value = 'success'
       message.success('已连接到 SolidWorks')
       loadHistory()
+      break
+    case 'disconnected':
+      connectionStatus.value = 'default'
+      message.warning('SolidWorks 已断开连接')
       break
     case 'document-opened':
       connectionStatus.value = 'success'

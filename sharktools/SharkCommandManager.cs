@@ -21,6 +21,7 @@ namespace SharkTools
         private const int HelloCommandIndex = 0;
         private const int GitHubLoginCommandIndex = 1;  // 新增：GitHub 登录命令索引
         private const int LaunchElectronCommandIndex = 2;  // 新增：启动 Electron 应用命令索引
+        private const int OptimizeCommandIndex = 3;        // 新增：性能优化命令索引
         private const string TabName = "SharkTools";
 
         /// <summary>
@@ -133,6 +134,20 @@ namespace SharkTools
                     );
                     Log($"AddCommandItem2 (启动工具箱) result: {cmdIndex3}");
 
+                    // 添加命令 4：性能优化
+                    int cmdIndex4 = _cmdGroup.AddCommandItem2(
+                        "优化性能",                       // Name（中文）
+                        -1,                              // Position
+                        "清理内存并释放资源",             // Hint
+                        "优化性能",                       // Tooltip
+                        0,                               // Image index
+                        "OptimizePerformance",           // Callback
+                        "",                              // Enable method
+                        OptimizeCommandIndex,            // User command ID
+                        (int)swCommandItemType_e.swMenuItem | (int)swCommandItemType_e.swToolbarItem
+                    );
+                    Log($"AddCommandItem2 (优化性能) result: {cmdIndex4}");
+
                     // 激活 CommandGroup（必须在创建 Tab 之前）
                     // 注意：Activate() 在某些版本可能崩溃，但需要它才能获取 CommandID
                     try 
@@ -191,16 +206,18 @@ namespace SharkTools
 
                         if (cmdBox != null)
                         {
-                            // 获取三个命令的 ID
+                            // 获取四个命令的 ID
                             int cmdId1 = _cmdGroup.CommandID[HelloCommandIndex];
                             int cmdId2 = _cmdGroup.CommandID[GitHubLoginCommandIndex];
                             int cmdId3 = _cmdGroup.CommandID[LaunchElectronCommandIndex];
-                            Log($"命令 ID: 打招呼={cmdId1}, 登录GitHub={cmdId2}, 启动工具箱={cmdId3}");
+                            int cmdId4 = _cmdGroup.CommandID[OptimizeCommandIndex];
+                            Log($"命令 ID: 打招呼={cmdId1}, 登录GitHub={cmdId2}, 启动工具箱={cmdId3}, 优化性能={cmdId4}");
 
-                            // 添加三个命令到工具箱
+                            // 添加四个命令到工具箱
                             // 参数: CommandIDs, TextTypes
-                            int[] cmdIds = new int[] { cmdId1, cmdId2, cmdId3 };
+                            int[] cmdIds = new int[] { cmdId1, cmdId2, cmdId3, cmdId4 };
                             int[] textTypes = new int[] { 
+                                (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
                                 (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
                                 (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow,
                                 (int)swCommandTabButtonTextDisplay_e.swCommandTabButton_TextBelow

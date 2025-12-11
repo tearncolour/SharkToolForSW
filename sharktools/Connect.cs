@@ -144,8 +144,11 @@ namespace SharkTools
                     bool started = await ElectronBridge.Instance.StartElectronAppAsync();
                     if (started)
                     {
+                        // 等待连接建立
+                        await Task.Delay(1000);
+
                         // 显示窗口
-                        await ElectronBridge.Instance.ShowWindowAsync();
+                        _electronServer?.ShowWindow();
                         
                         // 发送当前文档信息
                         var doc = _swApp?.ActiveDoc as IModelDoc2;
@@ -153,13 +156,13 @@ namespace SharkTools
                         {
                             string docName = System.IO.Path.GetFileName(doc.GetPathName());
                             string docPath = doc.GetPathName();
-                            await ElectronBridge.Instance.NotifyDocumentOpenedAsync(docName, docPath);
+                            _electronServer?.NotifyDocumentOpened(docName, docPath);
                             
                             // 获取并发送历史记录
                             if (_sharkCmdMgr?.HistoryTracker != null)
                             {
                                 var records = _sharkCmdMgr.HistoryTracker.GetAllRecords();
-                                await ElectronBridge.Instance.SendHistoryUpdateAsync(records);
+                                _electronServer?.SendHistoryUpdate(records);
                                 
                                 System.IO.File.AppendAllText(
                                     @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
@@ -257,16 +260,100 @@ namespace SharkTools
             return 1; // 始终启用
         }
 
+        /// <summary>
+        /// 性能优化回调 - 点击"优化性能"按钮时调用
+        /// </summary>
+        [ComVisible(true)]
+        public void OptimizePerformance()
+        {
+            try {
+                System.IO.File.AppendAllText(
+                    @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                    $"{DateTime.Now}: OptimizePerformance called!\r\n"
+                );
+            } catch {}
+
+            try
+            {
+                // 获取优化前的状态
+                string beforeStatus = PerformanceOptimizer.GetResourceStatus();
+                
+                // 执行优化
+                PerformanceOptimizer.Optimize();
+                
+                // 获取优化后的状态
+                string afterStatus = PerformanceOptimizer.GetResourceStatus();
+                
+                _swApp.SendMsgToUser2(
+                    $"性能优化完成！\n\n优化前:\n{beforeStatus}\n\n优化后:\n{afterStatus}",
+                    (int)swMessageBoxIcon_e.swMbInformation,
+                    (int)swMessageBoxBtn_e.swMbOk
+                );
+
+                // 检查 GDI 限制
+                int currentLimit = PerformanceOptimizer.GetGDIProcessHandleQuota();
+                if (currentLimit < 65536)
+                {
+                    int result = _swApp.SendMsgToUser2(
+                        $"检测到系统 GDI 对象限制为 {currentLimit} (默认值通常为 10000)。\n" +
+                        $"SolidWorks 在处理大型装配体时容易达到此限制导致崩溃。\n\n" +
+                        $"是否将限制增加到最大值 65536？\n" +
+                        $"(注意：此操作需要管理员权限，且修改后需重启电脑生效)",
+                        (int)swMessageBoxIcon_e.swMbQuestion,
+                        (int)swMessageBoxBtn_e.swMbYesNo
+                    );
+                    
+                    if (result == (int)swMessageBoxResult_e.swMbHitYes)
+                    {
+                        string error;
+                        if (PerformanceOptimizer.SetGDIProcessHandleQuota(65536, out error))
+                        {
+                            _swApp.SendMsgToUser2(
+                                "GDI 限制已成功修改！\n请重启电脑以使更改生效。", 
+                                (int)swMessageBoxIcon_e.swMbInformation, 
+                                (int)swMessageBoxBtn_e.swMbOk
+                            );
+                        }
+                        else
+                        {
+                            _swApp.SendMsgToUser2(
+                                $"修改失败: {error}\n\n请尝试以管理员身份运行 SolidWorks 后重试。", 
+                                (int)swMessageBoxIcon_e.swMbWarning, 
+                                (int)swMessageBoxBtn_e.swMbOk
+                            );
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _swApp.SendMsgToUser2(
+                    $"优化过程中发生错误: {ex.Message}",
+                    (int)swMessageBoxIcon_e.swMbWarning,
+                    (int)swMessageBoxBtn_e.swMbOk
+                );
+            }
+        }
+
+        /// <summary>
+        /// 性能优化按钮启用状态回调
+        /// </summary>
+        [ComVisible(true)]
+        public int OptimizePerformanceEnable()
+        {
+            return 1; // 始终启用
+        }
+
         // 注册到 SolidWorks 的注册表键
         [ComRegisterFunction]
         public static void Register(Type t)
         {
             try
             {
-                // 使用 Addins 注册表键
+                // 使用 Addins 注册表键 (尝试写入 HKCU 以避免权限问题)
                 string key = $"SOFTWARE\\SolidWorks\\Addins\\{t.GUID.ToString("B").ToUpper()}";
 
-                using (RegistryKey regKey = Registry.LocalMachine.CreateSubKey(key))
+                using (RegistryKey regKey = Registry.CurrentUser.CreateSubKey(key))
                 {
                     regKey.SetValue("Description", "SharkTools: SOLIDWORKS 智能工具插件");
                     regKey.SetValue("Title", "SharkTools 工具箱");
@@ -285,7 +372,7 @@ namespace SharkTools
             try
             {
                 string key = $"SOFTWARE\\SolidWorks\\Addins\\{t.GUID.ToString("B").ToUpper()}";
-                Registry.LocalMachine.DeleteSubKey(key, false);
+                Registry.CurrentUser.DeleteSubKey(key, false);
             }
             catch { }
         }

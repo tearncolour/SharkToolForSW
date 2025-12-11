@@ -24,6 +24,12 @@ namespace SharkTools
         private Panel _loginPanel;
         private static ISldWorksProvider _swProvider;
 
+        // GDI Resources
+        private Font _titleFont;
+        private Font _userFont;
+        private Font _buttonFont;
+        private Font _smallFont;
+
         public interface ISldWorksProvider
         {
             void ShowHello();
@@ -42,9 +48,27 @@ namespace SharkTools
             LoadLoginState();
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _titleFont?.Dispose();
+                _userFont?.Dispose();
+                _buttonFont?.Dispose();
+                _smallFont?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
         private void InitializeComponent()
         {
             this.SuspendLayout();
+
+            // Initialize Fonts
+            _titleFont = new Font("Microsoft YaHei UI", 14, FontStyle.Bold);
+            _userFont = new Font("Microsoft YaHei UI", 9);
+            _buttonFont = new Font("Microsoft YaHei UI", 10);
+            _smallFont = new Font("Microsoft YaHei UI", 9);
 
             // 设置控件大小和背景
             this.Size = new Size(250, 400);
@@ -58,7 +82,7 @@ namespace SharkTools
             _titleLabel = new Label
             {
                 Text = "🦈 SharkTools",
-                Font = new Font("Microsoft YaHei UI", 14, FontStyle.Bold),
+                Font = _titleFont,
                 ForeColor = Color.FromArgb(0, 82, 147),
                 Location = new Point(10, yPos),
                 Size = new Size(230, 30),
@@ -71,7 +95,7 @@ namespace SharkTools
             _userLabel = new Label
             {
                 Text = "未登录",
-                Font = new Font("Microsoft YaHei UI", 9),
+                Font = _userFont,
                 ForeColor = Color.Gray,
                 Location = new Point(10, yPos),
                 Size = new Size(230, 20),
@@ -94,7 +118,7 @@ namespace SharkTools
             _helloButton = new Button
             {
                 Text = "🦈 打招呼",
-                Font = new Font("Microsoft YaHei UI", 10),
+                Font = _buttonFont,
                 Location = new Point(10, yPos),
                 Size = new Size(230, 40),
                 FlatStyle = FlatStyle.Flat,
@@ -111,7 +135,7 @@ namespace SharkTools
             _loginButton = new Button
             {
                 Text = "🔗 登录 GitHub",
-                Font = new Font("Microsoft YaHei UI", 10),
+                Font = _buttonFont,
                 Location = new Point(10, yPos),
                 Size = new Size(230, 40),
                 FlatStyle = FlatStyle.Flat,
@@ -136,7 +160,7 @@ namespace SharkTools
             Label tokenLabel = new Label
             {
                 Text = "请输入 GitHub Token:",
-                Font = new Font("Microsoft YaHei UI", 9),
+                Font = _smallFont,
                 Location = new Point(0, 0),
                 Size = new Size(230, 20)
             };
@@ -146,7 +170,7 @@ namespace SharkTools
             {
                 Location = new Point(0, 22),
                 Size = new Size(230, 25),
-                Font = new Font("Microsoft YaHei UI", 9),
+                Font = _smallFont,
                 UseSystemPasswordChar = true  // 隐藏输入
             };
             _loginPanel.Controls.Add(_tokenTextBox);
@@ -154,7 +178,7 @@ namespace SharkTools
             _confirmTokenButton = new Button
             {
                 Text = "确认登录",
-                Font = new Font("Microsoft YaHei UI", 9),
+                Font = _smallFont,
                 Location = new Point(0, 52),
                 Size = new Size(110, 28),
                 FlatStyle = FlatStyle.Flat,
@@ -169,7 +193,7 @@ namespace SharkTools
             Button cancelButton = new Button
             {
                 Text = "取消",
-                Font = new Font("Microsoft YaHei UI", 9),
+                Font = _smallFont,
                 Location = new Point(120, 52),
                 Size = new Size(110, 28),
                 FlatStyle = FlatStyle.Flat,
@@ -187,7 +211,7 @@ namespace SharkTools
             _logoutButton = new Button
             {
                 Text = "退出登录",
-                Font = new Font("Microsoft YaHei UI", 9),
+                Font = _smallFont,
                 Location = new Point(10, yPos),
                 Size = new Size(230, 30),
                 FlatStyle = FlatStyle.Flat,

@@ -26,10 +26,6 @@
       <!-- SolidWorks 预览 -->
       <div v-else-if="previewImage" class="sw-preview">
         <img :src="previewImage" alt="Preview" class="preview-image" />
-        <div class="preview-info" v-if="selectedFile">
-          <h3>{{ selectedFile.title }}</h3>
-          <p>{{ selectedFile.key }}</p>
-        </div>
       </div>
 
       <!-- 文本预览 -->
@@ -436,32 +432,14 @@ const addCustomProperty = () => {
   justify-content: center;
   height: 100%;
   width: 100%;
-  padding: 20px;
+  padding: 0;
+  background: #1e1e1e;
 }
 
 .preview-image {
-  max-width: 100%;
-  max-height: 70%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.preview-info {
-  text-align: center;
-  color: #cccccc;
-}
-
-.preview-info h3 {
-  margin-bottom: 8px;
-  color: #ffffff;
-}
-
-.preview-info p {
-  font-size: 12px;
-  color: #888888;
-  word-break: break-all;
 }
 
 /* 最近文件 */

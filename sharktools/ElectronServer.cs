@@ -11,22 +11,23 @@ using Newtonsoft.Json.Linq;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using WebSocketSharp;
-using WebSocketSharp.Server;
 
 namespace SharkTools
 {
     /// <summary>
-    /// Electron 通信服务端
-    /// 通过 WebSocket 与 Electron 应用通信
+    /// Electron 通信客户端
+    /// 通过 WebSocket 连接到 Electron 应用
     /// </summary>
     public class ElectronServer
     {
         private readonly ISldWorks _swApp;
         private readonly SharkCommandManager _cmdMgr;
         private readonly SynchronizationContext _uiContext;
-        private WebSocketServer _wsServer;
-        private const int PORT = 52789;
+        private WebSocket _wsClient;
+        private const string WS_URL = "ws://127.0.0.1:52789";
         private bool _isRunning = false;
+        private System.Threading.Timer _reconnectTimer;
+        private volatile bool _isConnecting = false;
 
         public ElectronServer(ISldWorks swApp, SharkCommandManager cmdMgr, SynchronizationContext uiContext)
         {
@@ -38,98 +39,173 @@ namespace SharkTools
         public void Start()
         {
             if (_isRunning) return;
+            _isRunning = true;
 
-            try
+            Connect();
+
+            // 启动重连定时器，每5秒检查一次连接
+            _reconnectTimer = new System.Threading.Timer(CheckConnection, null, 5000, 5000);
+            
+            Log($"正在连接 WebSocket 服务: {WS_URL}");
+        }
+
+        private void Connect()
+        {
+            if (_isConnecting) return;
+            _isConnecting = true;
+
+            Task.Run(() =>
             {
-                _wsServer = new WebSocketServer($"ws://127.0.0.1:{PORT}");
-                _wsServer.AddWebSocketService<SharkToolsService>("/", () => new SharkToolsService(_swApp, _cmdMgr, _uiContext));
-                _wsServer.Start();
-                _isRunning = true;
-                
-                Log($"WebSocket 服务已启动: ws://127.0.0.1:{PORT}");
-            }
-            catch (Exception ex)
+                try
+                {
+                    if (!_isRunning) return;
+
+                    if (_wsClient != null)
+                    {
+                        _wsClient.OnOpen -= OnOpen;
+                        _wsClient.OnMessage -= OnMessage;
+                        _wsClient.OnClose -= OnClose;
+                        _wsClient.OnError -= OnError;
+                        try { _wsClient.Close(); } catch { }
+                        _wsClient = null;
+                    }
+
+                    var client = new WebSocket(WS_URL);
+                    client.OnOpen += OnOpen;
+                    client.OnMessage += OnMessage;
+                    client.OnClose += OnClose;
+                    client.OnError += OnError;
+                    client.Connect();
+
+                    if (_isRunning)
+                    {
+                        _wsClient = client;
+                    }
+                    else
+                    {
+                        client.Close();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"连接失败: {ex.Message}");
+                }
+                finally
+                {
+                    _isConnecting = false;
+                }
+            });
+        }
+
+        private void CheckConnection(object state)
+        {
+            if (!_isRunning) return;
+            if (_isConnecting) return;
+
+            if (_wsClient == null || !_wsClient.IsAlive)
             {
-                Log($"启动 WebSocket 服务失败: {ex.Message}");
+                Log("连接断开，尝试重连...");
+                Connect();
             }
         }
 
         public void Stop()
         {
             _isRunning = false;
+            if (_reconnectTimer != null)
+            {
+                _reconnectTimer.Dispose();
+                _reconnectTimer = null;
+            }
+
             try
             {
-                if (_wsServer != null && _wsServer.IsListening)
+                if (_wsClient != null)
                 {
-                    _wsServer.Stop();
+                    _wsClient.Close();
+                    _wsClient = null;
                 }
             }
             catch { }
         }
 
-        private void Log(string message)
+        private void OnOpen(object sender, EventArgs e)
         {
-            try
-            {
-                string logFile = @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt";
-                File.AppendAllText(logFile, $"{DateTime.Now}: ElectronServer - {message}\r\n");
-            }
-            catch { }
-        }
-    }
-
-    /// <summary>
-    /// WebSocket 服务行为类
-    /// </summary>
-    public class SharkToolsService : WebSocketBehavior
-    {
-        private ISldWorks _swApp;
-        private SharkCommandManager _cmdMgr;
-        private SynchronizationContext _uiContext;
-
-        public SharkToolsService() { }
-
-        public SharkToolsService(ISldWorks swApp, SharkCommandManager cmdMgr, SynchronizationContext uiContext)
-        {
-            _swApp = swApp;
-            _cmdMgr = cmdMgr;
-            _uiContext = uiContext;
+            Log("已连接到 Electron 应用");
+            // 发送身份标识
+            Send(JsonConvert.SerializeObject(new { type = "identify", client = "solidworks" }));
         }
 
-        protected override void OnOpen()
-        {
-            WriteLog("Electron 客户端已连接");
-        }
-
-        protected override void OnMessage(MessageEventArgs e)
+        private void OnMessage(object sender, MessageEventArgs e)
         {
             try
             {
                 string message = e.Data;
-                WriteLog($"收到消息: {message}");
+                Log($"收到消息: {message}");
                 
                 // 异步处理命令
                 Task.Run(async () =>
                 {
                     string response = await HandleCommandAsync(message);
-                    Send(response);
+                    if (!string.IsNullOrEmpty(response))
+                    {
+                        Send(response);
+                    }
                 });
             }
             catch (Exception ex)
             {
-                WriteLog($"处理消息错误: {ex.Message}");
+                Log($"处理消息错误: {ex.Message}");
                 SendError(ex.Message);
             }
         }
 
-        protected override void OnClose(CloseEventArgs e)
+        private void OnClose(object sender, CloseEventArgs e)
         {
-            WriteLog($"Electron 客户端已断开: {e.Reason}");
+            Log($"连接断开: {e.Reason}");
         }
 
-        protected override void OnError(WebSocketSharp.ErrorEventArgs e)
+        private void OnError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
-            WriteLog($"WebSocket 错误: {e.Message}");
+            Log($"WebSocket 错误: {e.Message}");
+        }
+
+        private void Send(string data)
+        {
+            if (_wsClient != null && _wsClient.IsAlive)
+            {
+                _wsClient.Send(data);
+            }
+        }
+
+        public void ShowWindow()
+        {
+            Send(JsonConvert.SerializeObject(new { type = "show" }));
+        }
+
+        public void HideWindow()
+        {
+            Send(JsonConvert.SerializeObject(new { type = "hide" }));
+        }
+
+        public void NotifyDocumentOpened(string name, string path)
+        {
+            var message = new 
+            {
+                type = "document-opened",
+                payload = new { name = name, path = path }
+            };
+            Send(JsonConvert.SerializeObject(message));
+        }
+
+        public void SendHistoryUpdate(object records)
+        {
+            var message = new 
+            {
+                type = "history-update",
+                payload = new { records = records }
+            };
+            Send(JsonConvert.SerializeObject(message));
         }
 
         private void SendError(string message)
@@ -138,15 +214,30 @@ namespace SharkTools
             Send(JsonConvert.SerializeObject(response));
         }
 
+        private void Log(string message)
+        {
+            try
+            {
+                string logFile = @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt";
+                File.AppendAllText(logFile, $"{DateTime.Now}: ElectronClient - {message}\r\n");
+            }
+            catch { }
+        }
+
         private async Task<string> HandleCommandAsync(string jsonBody)
         {
             string messageId = "";
             try
             {
                 var data = JObject.Parse(jsonBody);
+                // 忽略非命令消息（如连接确认）
+                if (data["type"]?.ToString() == "connected") return null;
+
                 messageId = data["id"]?.ToString();
                 string command = data["command"]?.ToString();
                 var payload = data["payload"];
+
+                if (string.IsNullOrEmpty(command)) return null;
 
                 object result = null;
 
@@ -450,7 +541,7 @@ namespace SharkTools
                 
                 if (!string.IsNullOrEmpty(base64))
                 {
-                    return new { success = true, image = "data:image/png;base64," + base64 };
+                    return new { success = true, image = base64 };
                 }
                 else
                 {
@@ -492,12 +583,7 @@ namespace SharkTools
 
         private void WriteLog(string message)
         {
-            try
-            {
-                string logFile = @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt";
-                File.AppendAllText(logFile, $"{DateTime.Now}: SharkToolsService - {message}\r\n");
-            }
-            catch { }
+            Log(message);
         }
     }
 }

@@ -384,6 +384,10 @@ namespace SharkTools
                     LaunchElectronClient();
                     break;
 
+                case "OptimizePerformance":
+                    OptimizePerformance();
+                    break;
+
                 // 新增：更新标签
                 case "updateTags":
                     if (args.Length >= 2)
@@ -1154,23 +1158,45 @@ namespace SharkTools
         {
             try
             {
-                string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
-                string clientPath = Path.Combine(desktopPath, "SharkToolForSW", "electron-app", "release", "win-unpacked", "SharkTools.exe");
-
-                if (File.Exists(clientPath))
-                {
-                    System.Diagnostics.Process.Start(clientPath);
-                    Log("已启动客户端");
-                }
-                else
-                {
-                    CallJavaScript("showMessage", $"未找到客户端程序: {clientPath}");
-                }
+                // 调用 Connect 类中的方法
+                var connect = new Connect();
+                connect.LaunchElectronApp();
             }
             catch (Exception ex)
             {
                 Log($"启动客户端失败: {ex.Message}");
-                CallJavaScript("showMessage", $"启动客户端失败: {ex.Message}");
+            }
+        }
+
+        private void OptimizePerformance()
+        {
+            try
+            {
+                // 获取优化前的状态
+                string beforeStatus = PerformanceOptimizer.GetResourceStatus();
+                
+                // 执行优化
+                PerformanceOptimizer.Optimize();
+                
+                // 获取优化后的状态
+                string afterStatus = PerformanceOptimizer.GetResourceStatus();
+                
+                // 检查 GDI 限制
+                int currentLimit = PerformanceOptimizer.GetGDIProcessHandleQuota();
+                string gdiMsg = "";
+                
+                if (currentLimit < 65536)
+                {
+                    gdiMsg = $"\n\n检测到 GDI 限制为 {currentLimit}，建议提升至 65536。";
+                }
+
+                _swProvider?.ShowMessage(
+                    $"性能优化完成！\n\n优化前:\n{beforeStatus}\n\n优化后:\n{afterStatus}{gdiMsg}"
+                );
+            }
+            catch (Exception ex)
+            {
+                _swProvider?.ShowMessage($"优化失败: {ex.Message}");
             }
         }
 

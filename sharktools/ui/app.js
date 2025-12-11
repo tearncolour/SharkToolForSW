@@ -14,6 +14,7 @@ createApp({
         const showLoginForm = ref(false);
         const token = ref('');
         const loading = ref(false);
+        const optimizing = ref(false);
         const currentPage = ref('main');  // 当前页面: 'main' 或 'history'
 
         // === 计算属性 ===
@@ -65,6 +66,16 @@ createApp({
          */
         const launchClient = () => {
             callCSharp('LaunchClient');
+        };
+
+        /**
+         * 优化性能
+         */
+        const optimizePerformance = () => {
+            optimizing.value = true;
+            callCSharp('OptimizePerformance');
+            // 2秒后重置状态，实际完成由 C# 回调通知
+            setTimeout(() => optimizing.value = false, 2000);
         };
         
         /**
@@ -187,6 +198,7 @@ createApp({
             currentPage,
             sayHello,
             launchClient,
+            optimizePerformance,
             toggleLoginForm,
             login,
             cancelLogin,
