@@ -1223,8 +1223,30 @@ if (!gotTheLock) {
                 // console.log(`[LocalResource] Request: ${request.url}`);
                 // console.log(`[LocalResource] Path: ${normalizedPath}`);
 
-                const fileUrl = require('url').pathToFileURL(normalizedPath).toString();
-                return electronNet.fetch(fileUrl);
+                // 直接读取文件，确保 Content-Type 正确
+                const buffer = await fs.promises.readFile(normalizedPath);
+                const ext = path.extname(normalizedPath).toLowerCase();
+                let mimeType = 'application/octet-stream';
+                
+                const mimeMap = {
+                    '.pdf': 'application/pdf',
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif',
+                    '.svg': 'image/svg+xml',
+                    '.bmp': 'image/bmp',
+                    '.webp': 'image/webp',
+                    '.ico': 'image/x-icon'
+                };
+                
+                if (mimeMap[ext]) {
+                    mimeType = mimeMap[ext];
+                }
+                
+                return new Response(buffer, {
+                    headers: { 'Content-Type': mimeType }
+                });
             } catch (error) {
                 console.error('Failed to load local resource:', error);
                 return new Response('Not Found', { status: 404 });
