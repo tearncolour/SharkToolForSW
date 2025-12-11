@@ -1206,9 +1206,13 @@ if (!gotTheLock) {
                 let filePath = decodedUrl.replace(/^local-resource:[\/\\]*/, '');
                 
                 // 3. 处理 Windows 盘符
-                // 如果路径看起来像 "C:/Users/..." 或 "C:\Users\..."，它已经是绝对路径了
-                // 如果路径看起来像 "drive/path" (没有冒号)，那可能是错误的，但我们假设它是 "C:/..." 格式
-                
+                // 关键修复：检查是否缺少驱动器冒号 (例如 "c/Users/..." -> "c:/Users/...")
+                // 匹配：单个字母 + 斜杠/反斜杠 (意味着缺少冒号)
+                if (/^[a-zA-Z][\/\\].*/.test(filePath)) {
+                    console.log(`[LocalResource] Adding missing colon to path: ${filePath}`);
+                    filePath = filePath[0] + ':' + filePath.substring(1);
+                }
+
                 // 4. 规范化路径 (处理 / 和 \ 的混用，解析 .. 等)
                 const normalizedPath = path.normalize(filePath);
                 console.log(`[LocalResource] Normalized Path: ${normalizedPath}`);
