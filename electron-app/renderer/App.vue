@@ -25,32 +25,43 @@
 
       <!-- 主界面 -->
       <div class="main-container">
-        <!-- 侧边栏 - VSCode 风格图标导航 -->
-        <div class="sidebar">
-          <div class="sidebar-icons">
-            <a-tooltip placement="right" title="历史记录">
+        <!-- 活动栏 (最左侧图标栏) -->
+        <div class="activity-bar">
+          <div class="activity-icons">
+            <a-tooltip placement="right" title="资源管理器">
               <div 
-                class="sidebar-icon" 
-                :class="{ active: currentView === 'history' }"
-                @click="currentView = 'history'; selectedKeys = ['history']"
+                class="activity-icon" 
+                :class="{ active: currentView === 'explorer' }"
+                @click="setView('explorer')"
               >
-                <HistoryOutlined />
+                <FolderOpenOutlined />
               </div>
             </a-tooltip>
-            <a-tooltip placement="right" title="分支管理">
+            <a-tooltip placement="right" title="Git 版本控制">
               <div 
-                class="sidebar-icon" 
-                :class="{ active: currentView === 'branches' }"
-                @click="currentView = 'branches'; selectedKeys = ['branches']"
+                class="activity-icon" 
+                :class="{ active: currentView === 'git' }"
+                @click="setView('git')"
               >
                 <BranchesOutlined />
               </div>
             </a-tooltip>
+            <a-tooltip placement="right" title="历史记录">
+              <div 
+                class="activity-icon" 
+                :class="{ active: currentView === 'history' }"
+                @click="setView('history')"
+              >
+                <HistoryOutlined />
+              </div>
+            </a-tooltip>
+          </div>
+          <div class="activity-bottom">
             <a-tooltip placement="right" title="设置">
               <div 
-                class="sidebar-icon" 
+                class="activity-icon" 
                 :class="{ active: currentView === 'settings' }"
-                @click="currentView = 'settings'; selectedKeys = ['settings']"
+                @click="setView('settings')"
               >
                 <SettingOutlined />
               </div>
@@ -58,152 +69,109 @@
           </div>
         </div>
 
-        <!-- 内容区 -->
-        <div class="content-area">
+        <!-- 侧边栏 (左侧面板) -->
+        <div class="side-panel" :style="{ width: sidePanelWidth + 'px' }">
+          <!-- 资源管理器视图 -->
+          <div v-show="currentView === 'explorer'" class="panel-content">
+            <FileExplorer @select-file="onFileSelect" />
+          </div>
+
+          <!-- Git 视图 -->
+          <div v-show="currentView === 'git'" class="panel-content">
+            <GitPanel :current-path="currentDocumentDir" />
+          </div>
+
+          <!-- 历史记录视图 -->
+          <div v-show="currentView === 'history'" class="panel-content">
+            <HistoryPanel 
+              :records="historyRecords"
+              @refresh="loadHistory"
+              @rollback="rollbackTo"
+              @delete="deleteRecord"
+              @restore-all="restoreAll"
+            />
+          </div>
+
+          <!-- 设置视图 -->
+          <div v-show="currentView === 'settings'" class="panel-content">
+            <SettingsPanel 
+              :settings="settings"
+              @save="saveSettings"
+            />
+          </div>
+        </div>
+
+        <!-- 侧边栏调整条 -->
+        <div 
+          class="sash-vertical" 
+          @mousedown="startResizeSidePanel"
+        ></div>
+
+        <!-- 右侧内容区 -->
+        <div class="editor-area">
           <!-- 状态栏 -->
           <div class="status-bar">
             <a-space>
               <a-badge :status="connectionStatus" :text="connectionText" />
+              <a-button size="small" type="primary" @click="launchSolidWorks" v-if="connectionStatus !== 'success'">
+                启动 SolidWorks
+              </a-button>
               <span v-if="currentDocument.path" class="doc-path">{{ currentDocument.path }}</span>
             </a-space>
           </div>
 
-          <!-- 主内容 -->
-          <div class="main-content">
-            <!-- 历史记录页面 -->
-            <div v-show="currentView === 'history'" class="view-container">
-              <a-card title="操作历史" :bordered="false">
-                <template #extra>
-                  <a-space>
-                    <a-button @click="loadHistory" size="small">
-                      <template #icon><ReloadOutlined /></template>
-                      刷新
-                    </a-button>
-                    <a-button @click="restoreAll" size="small" type="primary">
-                      <template #icon><RollbackOutlined /></template>
-                      恢复全部
-                    </a-button>
-                  </a-space>
-                </template>
-              
-                <a-timeline mode="left">
-                  <a-timeline-item
-                    v-for="record in historyRecords"
-                    :key="record.id"
-                  :color="record.isImportant ? 'red' : 'blue'"
-                >
-                  <template #dot>
-                    <ClockCircleOutlined v-if="record.isImportant" style="font-size: 16px" />
-                  </template>
-                  <a-card size="small" :title="record.name" hoverable>
-                    <template #extra>
-                      <a-space>
-                        <a-button size="small" @click="rollbackTo(record.id)">回溯</a-button>
-                        <a-button size="small" danger @click="deleteRecord(record.id)">删除</a-button>
-                      </a-space>
-                    </template>
-                    <p><strong>类型:</strong> {{ record.featureType }}</p>
-                    <p><strong>时间:</strong> {{ record.timestamp }}</p>
-                    <p v-if="record.userNote"><strong>备注:</strong> {{ record.userNote }}</p>
-                    <a-tag v-for="tag in record.tags" :key="tag" color="blue">{{ tag }}</a-tag>
-                  </a-card>
-                </a-timeline-item>
-              </a-timeline>
-
-              <a-empty v-if="historyRecords.length === 0" description="暂无历史记录" />
-            </a-card>
-          </div>
-
-          <!-- 分支管理页面 -->
-          <div v-show="currentView === 'branches'" class="view-container">
-            <a-card title="分支管理" :bordered="false">
-              <template #extra>
-                <a-button type="primary" @click="showNewBranchModal">
-                  <template #icon><PlusOutlined /></template>
-                  新建分支
-                </a-button>
-              </template>
-
-              <a-list :data-source="branches" item-layout="horizontal">
-                <template #renderItem="{ item }">
-                  <a-list-item>
-                    <template #actions>
-                      <a-button v-if="!item.isActive" size="small" @click="switchBranch(item.name)">切换</a-button>
-                      <a-button v-if="!item.isActive" size="small" danger @click="deleteBranch(item.name)">删除</a-button>
-                    </template>
-                    <a-list-item-meta>
-                      <template #title>
-                        <a-space>
-                          {{ item.name }}
-                          <a-tag v-if="item.isActive" color="green">当前分支</a-tag>
-                        </a-space>
-                      </template>
-                      <template #description>
-                        {{ item.description }} · 创建于 {{ item.createdAt }}
-                      </template>
-                    </a-list-item-meta>
-                  </a-list-item>
-                </template>
-              </a-list>
-            </a-card>
-          </div>
-
-          <!-- 设置页面 -->
-          <div v-show="currentView === 'settings'" class="view-container">
-            <a-card title="设置" :bordered="false">
-              <a-form :model="settings" layout="vertical">
-                <a-form-item label="自动保存间隔（秒）">
-                  <a-input-number v-model:value="settings.autoSaveInterval" :min="10" :max="300" />
-                </a-form-item>
-                <a-form-item label="最大历史记录数">
-                  <a-input-number v-model:value="settings.maxHistoryRecords" :min="50" :max="1000" />
-                </a-form-item>
-                <a-form-item>
-                  <a-checkbox v-model:checked="settings.autoBackup">启用自动备份</a-checkbox>
-                </a-form-item>
-                <a-form-item>
-                  <a-button type="primary" @click="saveSettings">保存设置</a-button>
-                </a-form-item>
-              </a-form>
-            </a-card>
-          </div>
+          <!-- 预览和属性面板 -->
+          <PreviewPanel 
+            :preview-image="previewImage"
+            :selected-file="selectedFile"
+            :recent-files="recentFiles"
+            :file-properties="fileProperties"
+            :custom-properties="customProperties"
+            :text-content="textContent"
+            :image-url="imageUrl"
+            :pdf-url="pdfUrl"
+            :spreadsheet-data="spreadsheetData"
+            @open-recent="openRecent"
+            @property-change="onPropertyChange"
+            @add-property="addCustomProperty"
+            @switch-sheet="switchSheet"
+          />
         </div>
       </div>
-    </div>
-
-    <!-- 新建分支对话框 -->
-    <a-modal
-      v-model:open="showNewBranch"
-      title="创建新分支"
-      @ok="createBranch"
-      @cancel="showNewBranch = false"
-    >
-      <a-form layout="vertical">
-        <a-form-item label="分支名称" required>
-          <a-input v-model:value="newBranchName" placeholder="输入分支名称" />
-        </a-form-item>
-        <a-form-item label="分支描述">
-          <a-textarea v-model:value="newBranchDesc" placeholder="输入分支描述（可选）" :rows="3" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
     </div>
   </a-config-provider>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue'
-import { theme } from 'ant-design-vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { theme, message } from 'ant-design-vue'
 import {
-  ReloadOutlined,
-  RollbackOutlined,
-  ClockCircleOutlined,
-  PlusOutlined,
   HistoryOutlined,
   BranchesOutlined,
-  SettingOutlined
+  SettingOutlined,
+  FolderOpenOutlined
 } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
+
+// 组件导入
+import FileExplorer from './components/FileExplorer.vue'
+import GitPanel from './components/GitPanel.vue'
+import PreviewPanel from './components/PreviewPanel.vue'
+import HistoryPanel from './components/HistoryPanel.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
+
+// 启动 SolidWorks
+const launchSolidWorks = async () => {
+  try {
+    const result = await window.electronAPI.launchSolidWorks();
+    if (!result.success) {
+      message.error(result.message);
+    } else {
+      message.success('正在启动 SolidWorks...');
+    }
+  } catch (e) {
+    message.error('启动失败: ' + e.message);
+  }
+}
 
 // 暗色主题配置
 const themeConfig = {
@@ -219,44 +187,43 @@ const themeConfig = {
 }
 
 // 状态
-const currentView = ref('history')
-const selectedKeys = ref(['history'])
+const currentView = ref('explorer')
+const sidePanelWidth = ref(300)
 const connectionStatus = ref('default')
 const currentDocument = ref({ name: '', path: '' })
+const workspaceFolders = ref([])
+const selectedFile = ref(null)
+const previewImage = ref('')
+const textContent = ref('')
+const imageUrl = ref('')
+const pdfUrl = ref('')
+const spreadsheetData = ref(null)
+const recentFiles = ref([])
+const fileProperties = ref(null)
+const customProperties = ref([])
+
+// 计算当前文档目录
+const currentDocumentDir = computed(() => {
+  if (currentDocument.value.path) {
+    const parts = currentDocument.value.path.split('\\');
+    parts.pop();
+    return parts.join('\\');
+  }
+  if (workspaceFolders.value.length > 0) {
+    return workspaceFolders.value[0];
+  }
+  return '';
+});
+
+// 历史记录
 const historyRecords = ref([])
-const branches = ref([])
+
+// 设置
 const settings = ref({
   autoSaveInterval: 30,
   maxHistoryRecords: 200,
   autoBackup: true
 })
-
-// 对话框
-const showNewBranch = ref(false)
-const newBranchName = ref('')
-const newBranchDesc = ref('')
-
-// 菜单配置
-const menuItems = [
-  {
-    key: 'history',
-    icon: () => h(HistoryOutlined),
-    label: '历史记录',
-    title: '历史记录'
-  },
-  {
-    key: 'branches',
-    icon: () => h(BranchesOutlined),
-    label: '分支管理',
-    title: '分支管理'
-  },
-  {
-    key: 'settings',
-    icon: () => h(SettingOutlined),
-    label: '设置',
-    title: '设置'
-  }
-]
 
 // 连接状态文本
 const connectionText = computed(() => {
@@ -269,36 +236,403 @@ const connectionText = computed(() => {
   return statusMap[connectionStatus.value] || '未知'
 })
 
+// 视图切换
+const setView = (view) => {
+  currentView.value = view
+}
+
 // 窗口控制
 const minimize = () => window.electronAPI?.windowMinimize()
 const maximize = () => window.electronAPI?.windowMaximize()
 const close = () => window.electronAPI?.windowClose()
 
-// 菜单点击
-const handleMenuClick = ({ key }) => {
-  currentView.value = key
-  selectedKeys.value = [key]
+// 侧边栏宽度调整
+let isResizingSidePanel = false
+let startX = 0
+let startWidth = 0
+
+const startResizeSidePanel = (e) => {
+  isResizingSidePanel = true
+  startX = e.clientX
+  startWidth = sidePanelWidth.value
+  
+  document.addEventListener('mousemove', doResizeSidePanel)
+  document.addEventListener('mouseup', stopResizeSidePanel)
+  document.body.style.cursor = 'ew-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const doResizeSidePanel = (e) => {
+  if (!isResizingSidePanel) return
+  const deltaX = e.clientX - startX
+  let newWidth = startWidth + deltaX
+  // 限制范围 200 - 600px
+  newWidth = Math.max(200, Math.min(600, newWidth))
+  sidePanelWidth.value = newWidth
+}
+
+const stopResizeSidePanel = () => {
+  isResizingSidePanel = false
+  document.removeEventListener('mousemove', doResizeSidePanel)
+  document.removeEventListener('mouseup', stopResizeSidePanel)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+// 文件选择
+const onFileSelect = async (node) => {
+  selectedFile.value = { title: node.title, key: node.key, isLeaf: node.isLeaf }
+  previewImage.value = ''
+  textContent.value = ''
+  imageUrl.value = ''
+  pdfUrl.value = ''
+  spreadsheetData.value = null
+  fileProperties.value = null
+  customProperties.value = []
+  
+  if (node && node.title) {
+    const ext = node.title.split('.').pop().toLowerCase()
+    
+    // SolidWorks 文件
+    if (['sldprt', 'sldasm', 'slddrw'].includes(ext)) {
+      addToRecent({ title: node.title, key: node.key })
+      
+      // 获取缩略图
+      try {
+        console.log('Requesting thumbnail for:', node.key);
+        const res = await window.electronAPI.sendToSW({
+          type: 'get-thumbnail',
+          path: node.key
+        })
+        
+        if (res && res.success && res.data && res.data.image) {
+          previewImage.value = res.data.image
+        } else {
+          console.warn('Thumbnail failed:', res?.data?.message || 'Unknown error')
+        }
+      } catch (e) {
+        console.error('Failed to get thumbnail:', e)
+      }
+
+      // 获取文件属性
+      await loadFileProperties(node.key)
+    }
+    // 电子表格文件 (Excel/CSV)
+    else if (isSpreadsheetFile(ext)) {
+      await loadSpreadsheetFile(node.key, ext)
+    }
+    // 文本文件
+    else if (isTextFile(ext)) {
+      await loadTextFile(node.key, ext)
+    }
+    // 图片文件
+    else if (isImageFile(ext)) {
+      imageUrl.value = 'file:///' + node.key.replace(/\\/g, '/')
+      fileProperties.value = {
+        '文件名': node.title,
+        '文件类型': ext.toUpperCase() + ' 图片',
+        '路径': node.key
+      }
+    }
+    // PDF 文件
+    else if (ext === 'pdf') {
+      pdfUrl.value = 'file:///' + node.key.replace(/\\/g, '/')
+      fileProperties.value = {
+        '文件名': node.title,
+        '文件类型': 'PDF 文档',
+        '路径': node.key
+      }
+    }
+  }
+}
+
+// 判断是否为电子表格文件
+const isSpreadsheetFile = (ext) => {
+  const spreadsheetExtensions = ['xlsx', 'xls', 'csv', 'ods']
+  return spreadsheetExtensions.includes(ext.toLowerCase())
+}
+
+// 判断是否为文本文件
+const isTextFile = (ext) => {
+  const textExtensions = [
+    // 代码文件
+    'txt', 'md', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 
+    'jsx', 'tsx', 'vue', 'py', 'java', 'c', 'cpp', 'h', 'hpp',
+    'cs', 'vb', 'rb', 'php', 'go', 'rs', 'swift', 'kt', 'scala',
+    // 配置文件
+    'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'env',
+    'gitignore', 'editorconfig', 'eslintrc', 'prettierrc',
+    // 脚本文件
+    'sh', 'bash', 'ps1', 'bat', 'cmd',
+    // 数据文件
+    'log', 'sql',
+    // 其他
+    'svg', 'makefile', 'dockerfile', 'license', 'readme'
+  ]
+  return textExtensions.includes(ext.toLowerCase())
+}
+
+// 判断是否为图片文件
+const isImageFile = (ext) => {
+  const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'ico', 'svg']
+  return imageExtensions.includes(ext.toLowerCase())
+}
+
+// 加载电子表格文件
+const loadSpreadsheetFile = async (filePath, ext) => {
+  try {
+    const result = await window.electronAPI.readSpreadsheet(filePath)
+    
+    if (result.success) {
+      spreadsheetData.value = {
+        sheets: result.sheets,
+        activeSheet: result.activeSheet,
+        headers: result.headers,
+        data: result.data,
+        totalRows: result.totalRows,
+        truncated: result.truncated
+      }
+      
+      const activeSheetInfo = result.sheets.find(s => s.name === result.activeSheet)
+      fileProperties.value = {
+        '文件名': filePath.split('\\').pop(),
+        '文件类型': ext.toUpperCase() === 'CSV' ? 'CSV 文件' : 'Excel 文件',
+        '工作表': result.sheets.length + ' 个',
+        '行数': activeSheetInfo ? activeSheetInfo.rows + ' 行' : '-',
+        '列数': activeSheetInfo ? activeSheetInfo.cols + ' 列' : '-',
+        '大小': formatFileSize(result.size),
+        '路径': filePath
+      }
+    } else {
+      message.error(result.message || '无法读取文件')
+    }
+  } catch (e) {
+    console.error('Failed to load spreadsheet:', e)
+    message.error('读取电子表格失败')
+  }
+}
+
+// 切换工作表
+const switchSheet = async (sheetName) => {
+  if (!selectedFile.value) return
+  
+  try {
+    const result = await window.electronAPI.readSpreadsheetSheet(selectedFile.value.key, sheetName)
+    
+    if (result.success) {
+      spreadsheetData.value = {
+        ...spreadsheetData.value,
+        activeSheet: sheetName,
+        headers: result.headers,
+        data: result.data,
+        totalRows: result.totalRows,
+        truncated: result.truncated
+      }
+    }
+  } catch (e) {
+    console.error('Failed to switch sheet:', e)
+  }
+}
+
+// 加载文本文件
+const loadTextFile = async (filePath, ext) => {
+  try {
+    const result = await window.electronAPI.readTextFile(filePath)
+    
+    if (result.success) {
+      textContent.value = result.content
+      fileProperties.value = {
+        '文件名': filePath.split('\\').pop(),
+        '文件类型': getLanguageName(ext),
+        '大小': formatFileSize(result.size),
+        '行数': result.lines + ' 行',
+        '路径': filePath
+      }
+    } else {
+      message.error(result.message || '无法读取文件')
+    }
+  } catch (e) {
+    console.error('Failed to load text file:', e)
+    message.error('读取文件失败')
+  }
+}
+
+// 获取语言名称
+const getLanguageName = (ext) => {
+  const langMap = {
+    'js': 'JavaScript',
+    'ts': 'TypeScript',
+    'jsx': 'JavaScript (React)',
+    'tsx': 'TypeScript (React)',
+    'vue': 'Vue',
+    'py': 'Python',
+    'java': 'Java',
+    'c': 'C',
+    'cpp': 'C++',
+    'cs': 'C#',
+    'go': 'Go',
+    'rs': 'Rust',
+    'rb': 'Ruby',
+    'php': 'PHP',
+    'swift': 'Swift',
+    'kt': 'Kotlin',
+    'json': 'JSON',
+    'xml': 'XML',
+    'html': 'HTML',
+    'css': 'CSS',
+    'md': 'Markdown',
+    'yaml': 'YAML',
+    'yml': 'YAML',
+    'sql': 'SQL',
+    'sh': 'Shell',
+    'ps1': 'PowerShell',
+    'bat': 'Batch',
+    'txt': '纯文本'
+  }
+  return langMap[ext.toLowerCase()] || ext.toUpperCase()
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes) => {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / 1024 / 1024).toFixed(2) + ' MB'
+}
+
+// 添加到最近文件
+const addToRecent = async (fileNode) => {
+  const file = {
+    title: fileNode.title,
+    key: fileNode.key,
+    timestamp: Date.now()
+  }
+  
+  let files = recentFiles.value.filter(f => f.key !== file.key)
+  files.unshift(file)
+  if (files.length > 10) files = files.slice(0, 10)
+  
+  recentFiles.value = files
+  await window.electronAPI.storeSet('workspace.recentFiles', JSON.parse(JSON.stringify(files)))
+}
+
+// 打开最近文件
+const openRecent = (file) => {
+  onFileSelect({ title: file.title, key: file.key, isLeaf: true })
+}
+
+// 加载文件属性
+const loadFileProperties = async (filePath) => {
+  try {
+    // 首先尝试从 SolidWorks 获取
+    const res = await window.electronAPI.sendToSW({
+      type: 'get-properties',
+      path: filePath
+    })
+    
+    if (res && res.success && res.data) {
+      // 基本属性
+      fileProperties.value = {
+        '文件名': res.data.fileName || filePath.split('\\').pop(),
+        '文件类型': res.data.fileType || getFileTypeLabel(filePath),
+        '材料': res.data.material || '-',
+        '质量': res.data.mass ? `${res.data.mass} kg` : '-',
+        '体积': res.data.volume ? `${res.data.volume} mm³` : '-',
+        '表面积': res.data.surfaceArea ? `${res.data.surfaceArea} mm²` : '-',
+        '修改日期': res.data.modifiedDate || '-',
+        '作者': res.data.author || '-'
+      }
+      
+      // 自定义属性
+      if (res.data.customProperties && Array.isArray(res.data.customProperties)) {
+        customProperties.value = res.data.customProperties.map(p => ({
+          name: p.name,
+          value: p.value
+        }))
+      }
+    } else {
+      // 如果无法从 SolidWorks 获取，使用基本文件信息
+      fileProperties.value = {
+        '文件名': filePath.split('\\').pop(),
+        '文件类型': getFileTypeLabel(filePath),
+        '路径': filePath
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load file properties:', e)
+    // 显示基本信息
+    fileProperties.value = {
+      '文件名': filePath.split('\\').pop(),
+      '文件类型': getFileTypeLabel(filePath),
+      '路径': filePath
+    }
+  }
+}
+
+// 获取文件类型标签
+const getFileTypeLabel = (filePath) => {
+  const ext = filePath.split('.').pop().toLowerCase()
+  const typeMap = {
+    'sldprt': 'SolidWorks 零件',
+    'sldasm': 'SolidWorks 装配体',
+    'slddrw': 'SolidWorks 工程图'
+  }
+  return typeMap[ext] || ext.toUpperCase()
+}
+
+// 属性变更
+const onPropertyChange = async (prop) => {
+  console.log('Property changed:', prop)
+  
+  // 保存属性到 SolidWorks
+  if (selectedFile.value && selectedFile.value.key) {
+    try {
+      await window.electronAPI.sendToSW({
+        type: 'set-property',
+        path: selectedFile.value.key,
+        property: prop
+      })
+      message.success('属性已保存')
+    } catch (e) {
+      console.error('Failed to save property:', e)
+      message.error('保存失败')
+    }
+  }
+}
+
+// 添加自定义属性
+const addCustomProperty = () => {
+  customProperties.value.push({
+    name: '新属性',
+    value: ''
+  })
 }
 
 // 历史记录操作
-const loadHistory = () => {
+const loadHistory = async () => {
   message.loading('加载历史记录...', 0.5)
-  window.electronAPI?.sendToSW({ type: 'load-history' })
+  try {
+    const response = await window.electronAPI?.sendToSW({ type: 'load-history' })
+    console.log('load-history response:', response)
+    
+    if (response && response.success && response.data && response.data.records) {
+      historyRecords.value = response.data.records
+      message.success(`已加载 ${historyRecords.value.length} 条记录`)
+    } else {
+      console.warn('未获取到历史记录或格式错误', response)
+    }
+  } catch (e) {
+    console.error('加载历史记录失败:', e)
+    message.error('加载失败')
+  }
 }
 
 const rollbackTo = (recordId) => {
-  window.electronAPI?.sendToSW({ 
-    type: 'rollback', 
-    recordId 
-  })
+  window.electronAPI?.sendToSW({ type: 'rollback', recordId })
   message.success('已发送回溯命令')
 }
 
 const deleteRecord = (recordId) => {
-  window.electronAPI?.sendToSW({ 
-    type: 'delete-record', 
-    recordId 
-  })
+  window.electronAPI?.sendToSW({ type: 'delete-record', recordId })
   message.success('已删除记录')
 }
 
@@ -307,47 +641,9 @@ const restoreAll = () => {
   message.success('已恢复所有特征')
 }
 
-// 分支操作
-const showNewBranchModal = () => {
-  showNewBranch.value = true
-  newBranchName.value = ''
-  newBranchDesc.value = ''
-}
-
-const createBranch = () => {
-  if (!newBranchName.value) {
-    message.error('请输入分支名称')
-    return
-  }
-  
-  window.electronAPI?.sendToSW({
-    type: 'create-branch',
-    name: newBranchName.value,
-    description: newBranchDesc.value
-  })
-  
-  showNewBranch.value = false
-  message.success('已创建分支')
-}
-
-const switchBranch = (branchName) => {
-  window.electronAPI?.sendToSW({
-    type: 'switch-branch',
-    name: branchName
-  })
-  message.success(`已切换到分支: ${branchName}`)
-}
-
-const deleteBranch = (branchName) => {
-  window.electronAPI?.sendToSW({
-    type: 'delete-branch',
-    name: branchName
-  })
-  message.success('已删除分支')
-}
-
 // 设置操作
-const saveSettings = () => {
+const saveSettings = (newSettings) => {
+  settings.value = { ...settings.value, ...newSettings }
   window.electronAPI?.sendToSW({
     type: 'save-settings',
     settings: settings.value
@@ -363,6 +659,7 @@ const handleSWMessage = (data) => {
     case 'connected':
       connectionStatus.value = 'success'
       message.success('已连接到 SolidWorks')
+      loadHistory()
       break
     case 'document-opened':
       connectionStatus.value = 'success'
@@ -370,34 +667,43 @@ const handleSWMessage = (data) => {
         name: data.name || '未知文档',
         path: data.path || ''
       }
-      // 自动加载历史记录
       loadHistory()
       break
     case 'history-update':
       historyRecords.value = data.records || []
       console.log('历史记录已更新:', historyRecords.value.length, '条')
       break
-    case 'branches-update':
-      branches.value = data.branches || []
-      break
     case 'show':
-      // 窗口显示事件
       break
   }
 }
+
+// 监听视图切换
+watch(currentView, async (newView) => {
+  if (newView === 'git') {
+    const folders = await window.electronAPI.storeGet('workspace.folders');
+    if (folders) workspaceFolders.value = folders;
+  }
+});
 
 // 初始化
 onMounted(() => {
   console.log('Vue 应用已挂载，检查 electronAPI:', !!window.electronAPI)
   
-  // 监听来自 SolidWorks 的消息
   if (window.electronAPI) {
     window.electronAPI.onSWMessage(handleSWMessage)
     console.log('已注册 SW 消息监听器')
     
-    // 获取应用信息
     window.electronAPI.getAppInfo().then(info => {
       console.log('应用信息:', info)
+    })
+
+    window.electronAPI.storeGet('workspace.folders').then(folders => {
+      if (folders) workspaceFolders.value = folders;
+    })
+
+    window.electronAPI.storeGet('workspace.recentFiles').then(files => {
+      if (files) recentFiles.value = files;
     })
   } else {
     console.error('electronAPI 不可用！')
@@ -407,12 +713,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 性能优化：启用 GPU 加速和布局隔离 */
 .shark-tools {
   display: flex;
   flex-direction: column;
   height: 100vh;
   background: #1e1e1e;
   color: #cccccc;
+  contain: layout style;
+  transform: translateZ(0);
 }
 
 /* 标题栏 */
@@ -495,23 +804,32 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 侧边栏 - VSCode 风格 */
-.sidebar {
+/* 活动栏 (最左侧图标栏) */
+.activity-bar {
   width: 48px;
   background: #333333;
   border-right: 1px solid #252526;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
 }
 
-.sidebar-icons {
+.activity-icons {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding-top: 4px;
 }
 
-.sidebar-icon {
+.activity-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+.activity-icon {
   width: 48px;
   height: 48px;
   display: flex;
@@ -524,15 +842,15 @@ onMounted(() => {
   transition: color 0.15s;
 }
 
-.sidebar-icon:hover {
+.activity-icon:hover {
   color: #ffffff;
 }
 
-.sidebar-icon.active {
+.activity-icon.active {
   color: #ffffff;
 }
 
-.sidebar-icon.active::before {
+.activity-icon.active::before {
   content: '';
   position: absolute;
   left: 0;
@@ -542,8 +860,35 @@ onMounted(() => {
   background: #007acc;
 }
 
-/* 内容区 */
-.content-area {
+/* 侧边栏 */
+.side-panel {
+  background: #252526;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.panel-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 侧边栏调整条 */
+.sash-vertical {
+  width: 4px;
+  background: transparent;
+  cursor: ew-resize;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.sash-vertical:hover {
+  background: #007acc;
+}
+
+/* 编辑区 */
+.editor-area {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -551,6 +896,7 @@ onMounted(() => {
   overflow: hidden;
 }
 
+/* 状态栏 */
 .status-bar {
   height: 22px;
   background: #007acc;
@@ -559,6 +905,7 @@ onMounted(() => {
   align-items: center;
   padding: 0 12px;
   font-size: 12px;
+  flex-shrink: 0;
 }
 
 .doc-path {
@@ -566,49 +913,26 @@ onMounted(() => {
   font-size: 11px;
 }
 
-.main-content {
-  flex: 1;
-  overflow: auto;
-  padding: 16px;
+/* 全局滚动条样式 - 现代化窄条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.view-container {
-  max-width: 1200px;
-  margin: 0 auto;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* Ant Design 暗色主题覆盖 */
-.view-container :deep(.ant-card) {
-  background: #252526;
-  border-color: #3e3e42;
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 100, 100, 0.4);
+  border-radius: 4px;
 }
 
-.view-container :deep(.ant-card-head) {
-  color: #cccccc;
-  border-color: #3e3e42;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.6);
 }
 
-.view-container :deep(.ant-card-body) {
-  color: #cccccc;
-}
-
-.view-container :deep(.ant-timeline-item-content) {
-  color: #cccccc;
-}
-
-.view-container :deep(.ant-list-item) {
-  border-color: #3e3e42;
-}
-
-.view-container :deep(.ant-input),
-.view-container :deep(.ant-input-number),
-.view-container :deep(.ant-select-selector) {
-  background: #3c3c3c;
-  border-color: #3e3e42;
-  color: #cccccc;
-}
-
-.view-container :deep(.ant-form-item-label > label) {
-  color: #cccccc;
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 </style>
