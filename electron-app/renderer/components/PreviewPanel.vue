@@ -575,6 +575,7 @@ const addCustomProperty = () => {
   flex: 1;
   overflow: auto;
   padding: 8px;
+  background-color: #1e1e1e;
 }
 
 .tab-content {

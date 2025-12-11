@@ -695,23 +695,43 @@ ipcMain.handle('notes-delete', async (event, rootPath, filePath) => {
 
 // 文件监视系统
 const watchers = new Map();
+const watchDebounce = new Map();
 
 ipcMain.handle('fs-watch-path', (event, folderPath) => {
     if (watchers.has(folderPath)) return true;
 
     try {
+        // 只监视目录，不监视单个文件
+        const stats = fs.statSync(folderPath);
+        if (!stats.isDirectory()) {
+            // 对于文件，监视其父目录
+            folderPath = path.dirname(folderPath);
+            if (watchers.has(folderPath)) return true;
+        }
+
         // Windows 支持 recursive: true
         const watcher = fs.watch(folderPath, { recursive: true }, (eventType, filename) => {
             if (filename) {
-                // 防抖动：避免短时间内发送大量事件
-                // 这里简单实现，直接发送，由前端决定如何刷新
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('fs-change', {
-                        type: eventType,
-                        filename: filename,
-                        rootPath: folderPath
-                    });
+                // 防抖动：1000ms 内的相同文件变化只触发一次
+                const debounceKey = `${folderPath}:${filename}`;
+                
+                if (watchDebounce.has(debounceKey)) {
+                    clearTimeout(watchDebounce.get(debounceKey));
                 }
+                
+                const timer = setTimeout(() => {
+                    watchDebounce.delete(debounceKey);
+                    
+                    if (mainWindow && mainWindow.webContents) {
+                        mainWindow.webContents.send('fs-change', {
+                            type: eventType,
+                            filename: filename,
+                            rootPath: folderPath
+                        });
+                    }
+                }, 1000);
+                
+                watchDebounce.set(debounceKey, timer);
             }
         });
 
@@ -720,7 +740,6 @@ ipcMain.handle('fs-watch-path', (event, folderPath) => {
         });
 
         watchers.set(folderPath, watcher);
-        log(`Started watching: ${folderPath}`);
         return true;
     } catch (error) {
         log(`Failed to watch ${folderPath}: ${error.message}`, 'ERROR');
