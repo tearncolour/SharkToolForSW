@@ -479,6 +479,31 @@ ipcMain.handle('fs-read-text-file', async (event, filePath, maxSize = 1024 * 102
     }
 });
 
+// 写入文本文件
+ipcMain.handle('fs-write-text-file', async (event, filePath, content) => {
+    try {
+        // 确保目录存在
+        const dir = path.dirname(filePath);
+        await fs.promises.mkdir(dir, { recursive: true });
+        
+        // 写入文件（使用 UTF-8 编码）
+        await fs.promises.writeFile(filePath, content, 'utf-8');
+        
+        // 获取写入后的文件信息
+        const stats = await fs.promises.stat(filePath);
+        
+        return { 
+            success: true, 
+            size: stats.size,
+            lines: content.split('\n').length,
+            message: '文件保存成功'
+        };
+    } catch (error) {
+        console.error('Write text file error:', error);
+        return { success: false, message: error.message };
+    }
+});
+
 // 读取 Excel/CSV 文件
 ipcMain.handle('fs-read-spreadsheet', async (event, filePath, maxRows = 1000) => {
     try {

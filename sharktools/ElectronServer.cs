@@ -309,6 +309,11 @@ namespace SharkTools
                 {
                     switch (command)
                     {
+                        case "ping":
+                            // 心跳检查
+                            result = new { pong = true, timestamp = DateTime.Now };
+                            break;
+
                         case "open":
                             string path = payload?["path"]?.ToString();
                             if (!string.IsNullOrEmpty(path))

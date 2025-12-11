@@ -28,18 +28,16 @@
         <img :src="previewImage" alt="Preview" class="preview-image" />
       </div>
 
-      <!-- 文本预览 -->
-      <div v-else-if="textContent" class="text-preview">
-        <div class="text-header">
-          <span class="file-name">{{ selectedFile?.title }}</span>
-          <span class="line-count">{{ lineCount }} 行</span>
-        </div>
-        <div class="code-container">
-          <pre class="code-content"><code v-html="highlightedCode"></code></pre>
-        </div>
-        <div v-if="lineCount > maxDisplayLines" class="truncate-notice">
-          文件过长，仅显示前 {{ maxDisplayLines }} 行
-        </div>
+      <!-- 文本编辑器 -->
+      <div v-else-if="textContent" class="text-editor">
+        <TextEditor 
+          :file-name="selectedFile?.title || ''"
+          :file-path="selectedFile?.key || ''"
+          :initial-content="textContent"
+          :language="getFileLanguage(selectedFile?.title)"
+          @save="onTextFileSave"
+          @content-change="onTextContentChange"
+        />
       </div>
 
       <!-- 图片预览 -->
@@ -191,6 +189,7 @@ import 'highlight.js/styles/vs2015.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import PdfViewer from './PdfViewer.vue';
+import TextEditor from './TextEditor.vue';
 
 const props = defineProps({
   previewImage: { type: String, default: '' },
@@ -551,6 +550,62 @@ const getColumnLetter = (index) => {
     index = Math.floor(index / 26) - 1;
   }
   return letter;
+};
+
+// 获取文件语言类型（用于语法高亮）
+const getFileLanguage = (fileName) => {
+  if (!fileName) return 'plaintext';
+  
+  const ext = fileName.split('.').pop().toLowerCase();
+  const langMap = {
+    'js': 'javascript',
+    'ts': 'typescript',
+    'jsx': 'javascript',
+    'tsx': 'typescript',
+    'vue': 'html',
+    'py': 'python',
+    'java': 'java',
+    'c': 'c',
+    'cpp': 'cpp',
+    'h': 'cpp',
+    'hpp': 'cpp',
+    'cs': 'csharp',
+    'go': 'go',
+    'rs': 'rust',
+    'rb': 'ruby',
+    'php': 'php',
+    'swift': 'swift',
+    'kt': 'kotlin',
+    'json': 'json',
+    'xml': 'xml',
+    'html': 'html',
+    'htm': 'html',
+    'css': 'css',
+    'scss': 'scss',
+    'less': 'less',
+    'md': 'markdown',
+    'yaml': 'yaml',
+    'yml': 'yaml',
+    'sql': 'sql',
+    'sh': 'shell',
+    'bash': 'shell',
+    'ps1': 'powershell',
+    'bat': 'batch',
+    'cmd': 'batch',
+    'txt': 'plaintext'
+  };
+  
+  return langMap[ext] || 'plaintext';
+};
+
+// 文本文件保存回调
+const onTextFileSave = (content) => {
+  console.log('文本文件已保存:', content.length, '字符');
+};
+
+// 文本内容变化回调
+const onTextContentChange = (content) => {
+  // 可以在这里实现实时预览或其他功能
 };
 
 // 格式化单元格内容

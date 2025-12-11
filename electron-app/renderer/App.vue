@@ -161,7 +161,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { theme, message } from 'ant-design-vue'
 import {
   HistoryOutlined,
@@ -781,6 +781,56 @@ const handleSWMessage = (data) => {
       break
     case 'show':
       break
+    case 'pong':
+      // 心跳响应
+      connectionStatus.value = 'success'
+      break
+  }
+}
+
+// 定时检查连接状态（每5秒）
+let connectionCheckInterval = null
+
+const startConnectionCheck = () => {
+  if (connectionCheckInterval) {
+    clearInterval(connectionCheckInterval)
+  }
+  
+  connectionCheckInterval = setInterval(async () => {
+    try {
+      // 发送心跳消息
+      const response = await Promise.race([
+        window.electronAPI?.sendToSW({ type: 'ping' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+      ])
+      
+      if (response && response.success) {
+        // 连接正常
+        if (connectionStatus.value !== 'success') {
+          connectionStatus.value = 'success'
+          console.log('SW 连接已恢复')
+        }
+      } else {
+        // 连接失败
+        if (connectionStatus.value === 'success') {
+          connectionStatus.value = 'default'
+          console.log('SW 连接已断开')
+        }
+      }
+    } catch (error) {
+      // 超时或错误
+      if (connectionStatus.value === 'success') {
+        connectionStatus.value = 'default'
+        console.log('SW 连接检查失败:', error.message)
+      }
+    }
+  }, 5000) // 每5秒检查一次
+}
+
+const stopConnectionCheck = () => {
+  if (connectionCheckInterval) {
+    clearInterval(connectionCheckInterval)
+    connectionCheckInterval = null
   }
 }
 
@@ -818,10 +868,18 @@ onMounted(() => {
         sidebarCollapsed.value = collapsed
       }
     })
+
+    // 启动连接状态检查
+    startConnectionCheck()
   } else {
     console.error('electronAPI 不可用！')
     message.error('Electron API 未加载')
   }
+})
+
+// 组件卸载时清理
+onBeforeUnmount(() => {
+  stopConnectionCheck()
 })
 </script>
 

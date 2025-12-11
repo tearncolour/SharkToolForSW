@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 文件系统 API
     readDir: (path) => ipcRenderer.invoke('fs-read-dir', path),
     readTextFile: (path, maxSize) => ipcRenderer.invoke('fs-read-text-file', path, maxSize),
+    writeTextFile: (path, content) => ipcRenderer.invoke('fs-write-text-file', path, content),
     readSpreadsheet: (path, maxRows) => ipcRenderer.invoke('fs-read-spreadsheet', path, maxRows),
     readSpreadsheetSheet: (path, sheetName, maxRows) => ipcRenderer.invoke('fs-read-spreadsheet-sheet', path, sheetName, maxRows),
     createFolder: (path) => ipcRenderer.invoke('fs-create-folder', path),
