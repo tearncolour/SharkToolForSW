@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 using SolidWorks.Interop.sldworks;
@@ -15,6 +16,7 @@ namespace SharkTools
     {
         private ISldWorks _swApp;
         private SharkCommandManager _sharkCmdMgr;
+        private ElectronServer _electronServer;
         public int AddinCookie { get; set; }
 
         public bool ConnectToSW(object ThisSW, int Cookie)
@@ -42,10 +44,27 @@ namespace SharkTools
                 // Initialize Command Manager
                 _sharkCmdMgr = new SharkCommandManager(_swApp, Cookie);
                 
+                // 获取当前 UI 线程上下文
+                var uiContext = SynchronizationContext.Current;
+
+                // 初始化并启动 Electron 通信服务 (优先启动服务，确保通信正常)
+                try
+                {
+                    _electronServer = new ElectronServer(_swApp, _sharkCmdMgr, uiContext);
+                    _electronServer.Start();
+                }
+                catch (Exception ex)
+                {
+                    try {
+                        System.IO.File.AppendAllText(
+                            @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                            $"{DateTime.Now}: ElectronServer init error: {ex.Message}\r\n"
+                        );
+                    } catch {}
+                }
+
                 // Try to initialize UI immediately
                 _sharkCmdMgr.Initialize();
-
-
 
                 return true;
             }
@@ -65,6 +84,12 @@ namespace SharkTools
         {
             try
             {
+                if (_electronServer != null)
+                {
+                    _electronServer.Stop();
+                    _electronServer = null;
+                }
+
                 if (_sharkCmdMgr != null)
                 {
                     _sharkCmdMgr.Teardown();

@@ -33,6 +33,14 @@ namespace SharkTools
             _monitorTimer.Tick += MonitorTimer_Tick;
         }
 
+        public void SetInterval(int intervalMs)
+        {
+            if (_monitorTimer != null)
+            {
+                _monitorTimer.Interval = intervalMs;
+            }
+        }
+
         /// <summary>
         /// 获取当前文档的所有历史记录
         /// </summary>
@@ -51,24 +59,6 @@ namespace SharkTools
             {
                 LogInfo($"获取历史记录失败: {ex.Message}");
                 return new System.Collections.Generic.List<HistoryRecord>();
-            }
-        }
-
-        /// <summary>
-        /// 获取当前文档的活跃分支
-        /// </summary>
-        private string GetCurrentBranch()
-        {
-            if (string.IsNullOrEmpty(_currentDocPath)) return "main";
-            
-            try
-            {
-                var meta = HistoryDatabase.GetDocumentMeta(_currentDocPath);
-                return meta?.CurrentBranch ?? "main";
-            }
-            catch
-            {
-                return "main";
             }
         }
 
@@ -205,8 +195,7 @@ namespace SharkTools
                                     FeatureType = featureType,
                                     FeatureIndex = index,
                                     Description = $"类型: {featureType}",
-                                    Timestamp = DateTime.Now,
-                                    Branch = GetCurrentBranch()
+                                    Timestamp = DateTime.Now
                                 };
                                 
                                 // 使用数据库添加记录
@@ -292,8 +281,7 @@ namespace SharkTools
                             FeatureType = featureType,
                             FeatureIndex = index,
                             Description = $"类型: {featureType}",
-                            Timestamp = DateTime.Now,
-                            Branch = GetCurrentBranch()
+                            Timestamp = DateTime.Now
                         };
 
                         // 使用数据库添加记录（内部会检查重复）
@@ -469,8 +457,7 @@ namespace SharkTools
                     Name = name,
                     FeatureName = name,
                     FeatureIndex = featureIndex,
-                    Description = description,
-                    Branch = GetCurrentBranch()
+                    Description = description
                 };
 
                 // 添加到历史记录
@@ -925,8 +912,7 @@ namespace SharkTools
                     FeatureType = "SketchEdit",
                     FeatureIndex = featureIndex,
                     Description = description,
-                    RecordType = "auto",
-                    Branch = GetCurrentBranch()
+                    RecordType = "auto"
                 };
 
                 HistoryDatabase.AddRecord(_currentDocPath, record);
@@ -959,8 +945,7 @@ namespace SharkTools
                     FeatureType = "Mate",
                     FeatureIndex = featureIndex,
                     Description = $"配合{changeType}: {mateName}",
-                    RecordType = "auto",
-                    Branch = GetCurrentBranch()
+                    RecordType = "auto"
                 };
 
                 HistoryDatabase.AddRecord(_currentDocPath, record);

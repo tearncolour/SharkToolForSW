@@ -28,6 +28,11 @@ namespace SharkTools
         /// </summary>
         public HistoryTracker HistoryTracker => _historyTracker;
 
+        /// <summary>
+        /// 公开 TaskPane 控件以便进行 UI 线程调用
+        /// </summary>
+        public SharkTaskPaneControl TaskPaneControl => _taskPaneControl;
+
         public SharkCommandManager(ISldWorks app, int cookie)
         {
             _swApp = app;

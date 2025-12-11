@@ -65,16 +65,6 @@ namespace SharkTools
         public bool IsImportant { get; set; }
 
         /// <summary>
-        /// 所属分支
-        /// </summary>
-        public string Branch { get; set; }
-
-        /// <summary>
-        /// 父记录ID（用于分支）
-        /// </summary>
-        public string ParentId { get; set; }
-
-        /// <summary>
         /// 用户自定义标签
         /// </summary>
         public List<string> Tags { get; set; }
@@ -105,8 +95,6 @@ namespace SharkTools
                 Description = Description,
                 Timestamp = Timestamp,
                 IsImportant = IsImportant,
-                Branch = Branch,
-                ParentId = ParentId,
                 Tags = Tags,
                 UserNote = UserNote
             };
@@ -129,64 +117,8 @@ namespace SharkTools
                 Description = record.Description,
                 Timestamp = record.Timestamp,
                 IsImportant = record.IsImportant,
-                Branch = record.Branch ?? "main",
-                ParentId = record.ParentId,
                 Tags = record.Tags ?? new List<string>(),
                 UserNote = record.UserNote
-            };
-        }
-    }
-
-    /// <summary>
-    /// 分支实体类
-    /// </summary>
-    public class BranchEntity
-    {
-        [BsonId]
-        public ObjectId Id { get; set; }
-
-        /// <summary>
-        /// 所属文档路径
-        /// </summary>
-        public string DocumentPath { get; set; }
-
-        /// <summary>
-        /// 分支名称
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// 分支描述
-        /// </summary>
-        public string Description { get; set; }
-
-        /// <summary>
-        /// 创建时间
-        /// </summary>
-        public DateTime CreatedAt { get; set; }
-
-        /// <summary>
-        /// 起始记录ID
-        /// </summary>
-        public string FromRecordId { get; set; }
-
-        /// <summary>
-        /// 是否为活动分支
-        /// </summary>
-        public bool IsActive { get; set; }
-
-        /// <summary>
-        /// 转换为 HistoryBranch
-        /// </summary>
-        public HistoryBranch ToHistoryBranch()
-        {
-            return new HistoryBranch
-            {
-                Name = Name,
-                Description = Description,
-                CreatedAt = CreatedAt,
-                FromRecordId = FromRecordId,
-                IsActive = IsActive
             };
         }
     }
@@ -203,11 +135,6 @@ namespace SharkTools
         /// 文档名称
         /// </summary>
         public string DocumentName { get; set; }
-
-        /// <summary>
-        /// 当前活动分支
-        /// </summary>
-        public string CurrentBranch { get; set; }
 
         /// <summary>
         /// 最后更新时间
@@ -263,14 +190,9 @@ namespace SharkTools
                 {
                     var records = db.GetCollection<HistoryRecordEntity>("records");
                     records.EnsureIndex(x => x.DocumentPath);
-                    records.EnsureIndex(x => x.Branch);
                     records.EnsureIndex(x => x.Timestamp);
                     records.EnsureIndex(x => x.FeatureIndex);
                     records.EnsureIndex(x => x.Tags);
-
-                    var branches = db.GetCollection<BranchEntity>("branches");
-                    branches.EnsureIndex(x => x.DocumentPath);
-                    branches.EnsureIndex(x => x.Name);
 
                     LogInfo("数据库初始化完成");
                 }
@@ -329,7 +251,7 @@ namespace SharkTools
         /// <summary>
         /// 获取文档的所有记录
         /// </summary>
-        public static List<HistoryRecord> GetRecords(string documentPath, string branch = null)
+        public static List<HistoryRecord> GetRecords(string documentPath)
         {
             try
             {
@@ -337,15 +259,7 @@ namespace SharkTools
                 {
                     var records = db.GetCollection<HistoryRecordEntity>("records");
 
-                    IEnumerable<HistoryRecordEntity> query;
-                    if (string.IsNullOrEmpty(branch))
-                    {
-                        query = records.Find(r => r.DocumentPath == documentPath);
-                    }
-                    else
-                    {
-                        query = records.Find(r => r.DocumentPath == documentPath && r.Branch == branch);
-                    }
+                    var query = records.Find(r => r.DocumentPath == documentPath);
 
                     // 按 FeatureIndex 降序排列（最新特征在前面）
                     return query
@@ -482,198 +396,6 @@ namespace SharkTools
 
         #endregion
 
-        #region 分支操作
-
-        /// <summary>
-        /// 获取文档的所有分支
-        /// </summary>
-        public static List<HistoryBranch> GetBranches(string documentPath)
-        {
-            try
-            {
-                using (var db = GetDatabase())
-                {
-                    var branches = db.GetCollection<BranchEntity>("branches");
-                    var result = branches.Find(b => b.DocumentPath == documentPath)
-                        .Select(b => b.ToHistoryBranch())
-                        .ToList();
-
-                    // 确保有主分支
-                    if (!result.Exists(b => b.Name == "main"))
-                    {
-                        result.Insert(0, new HistoryBranch { Name = "main", Description = "主分支", IsActive = true });
-                    }
-
-                    return result;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogError($"获取分支失败: {ex.Message}");
-                return new List<HistoryBranch> { new HistoryBranch { Name = "main", Description = "主分支", IsActive = true } };
-            }
-        }
-
-        /// <summary>
-        /// 创建新分支
-        /// </summary>
-        public static bool CreateBranch(string documentPath, string branchName, string description, string fromRecordId = null)
-        {
-            lock (_lock)
-            {
-                try
-                {
-                    using (var db = GetDatabase())
-                    {
-                        var branches = db.GetCollection<BranchEntity>("branches");
-
-                        // 检查分支是否已存在
-                        if (branches.Exists(b => b.DocumentPath == documentPath && b.Name == branchName))
-                        {
-                            LogInfo($"分支已存在: {branchName}");
-                            return false;
-                        }
-
-                        var entity = new BranchEntity
-                        {
-                            DocumentPath = documentPath,
-                            Name = branchName,
-                            Description = description,
-                            CreatedAt = DateTime.Now,
-                            FromRecordId = fromRecordId,
-                            IsActive = false
-                        };
-
-                        branches.Insert(entity);
-                        LogInfo($"创建分支: {branchName}");
-                        return true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogError($"创建分支失败: {ex.Message}");
-                    return false;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 切换分支
-        /// </summary>
-        public static bool SwitchBranch(string documentPath, string branchName)
-        {
-            lock (_lock)
-            {
-                try
-                {
-                    using (var db = GetDatabase())
-                    {
-                        // 更新文档元数据中的当前分支
-                        var metas = db.GetCollection<DocumentMetaEntity>("document_meta");
-                        var meta = metas.FindById(documentPath);
-
-                        if (meta == null)
-                        {
-                            meta = new DocumentMetaEntity
-                            {
-                                DocumentPath = documentPath,
-                                DocumentName = Path.GetFileName(documentPath),
-                                CurrentBranch = branchName,
-                                LastUpdated = DateTime.Now
-                            };
-                            metas.Insert(meta);
-                        }
-                        else
-                        {
-                            meta.CurrentBranch = branchName;
-                            meta.LastUpdated = DateTime.Now;
-                            metas.Update(meta);
-                        }
-
-                        LogInfo($"切换到分支: {branchName}");
-                        return true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogError($"切换分支失败: {ex.Message}");
-                    return false;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 删除分支
-        /// </summary>
-        public static bool DeleteBranch(string documentPath, string branchName)
-        {
-            if (branchName == "main") return false; // 不能删除主分支
-
-            lock (_lock)
-            {
-                try
-                {
-                    using (var db = GetDatabase())
-                    {
-                        var branches = db.GetCollection<BranchEntity>("branches");
-                        branches.DeleteMany(b => b.DocumentPath == documentPath && b.Name == branchName);
-
-                        // 同时删除该分支的记录
-                        var records = db.GetCollection<HistoryRecordEntity>("records");
-                        records.DeleteMany(r => r.DocumentPath == documentPath && r.Branch == branchName);
-
-                        LogInfo($"删除分支: {branchName}");
-                        return true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogError($"删除分支失败: {ex.Message}");
-                    return false;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 设置分支的回滚状态
-        /// </summary>
-        /// <param name="documentPath">文档路径</param>
-        /// <param name="branchName">分支名称</param>
-        /// <param name="fromRecordId">回滚点记录ID，null表示清除回滚状态</param>
-        public static bool SetBranchRollbackState(string documentPath, string branchName, string fromRecordId)
-        {
-            lock (_lock)
-            {
-                try
-                {
-                    using (var db = GetDatabase())
-                    {
-                        var branches = db.GetCollection<BranchEntity>("branches");
-                        var branch = branches.FindOne(b => b.DocumentPath == documentPath && b.Name == branchName);
-
-                        if (branch == null)
-                        {
-                            LogError($"未找到分支: {branchName}");
-                            return false;
-                        }
-
-                        branch.FromRecordId = fromRecordId;
-                        branches.Update(branch);
-
-                        LogInfo($"设置分支 {branchName} 回滚状态: {fromRecordId ?? "(已清除)"}");
-                        return true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogError($"设置分支回滚状态失败: {ex.Message}");
-                    return false;
-                }
-            }
-        }
-
-        #endregion
-
         #region 文档元数据
 
         /// <summary>
@@ -694,7 +416,6 @@ namespace SharkTools
                         {
                             DocumentPath = documentPath,
                             DocumentName = Path.GetFileName(documentPath),
-                            CurrentBranch = "main",
                             LastUpdated = DateTime.Now,
                             UndoPosition = -1
                         };
@@ -709,8 +430,7 @@ namespace SharkTools
                 return new DocumentMetaEntity
                 {
                     DocumentPath = documentPath,
-                    DocumentName = Path.GetFileName(documentPath),
-                    CurrentBranch = "main"
+                    DocumentName = Path.GetFileName(documentPath)
                 };
             }
         }
@@ -729,7 +449,6 @@ namespace SharkTools
                 {
                     DocumentPath = documentPath,
                     DocumentName = Path.GetFileName(documentPath),
-                    CurrentBranch = "main",
                     LastUpdated = DateTime.Now,
                     UndoPosition = -1
                 };
@@ -782,7 +501,7 @@ namespace SharkTools
             try
             {
                 var meta = GetDocumentMeta(documentPath);
-                var records = GetRecords(documentPath, meta.CurrentBranch);
+                var records = GetRecords(documentPath);
 
                 // 按时间排序（最新在前）
                 records = records.OrderByDescending(r => r.Timestamp).ToList();
@@ -810,7 +529,7 @@ namespace SharkTools
             try
             {
                 var meta = GetDocumentMeta(documentPath);
-                var records = GetRecords(documentPath, meta.CurrentBranch);
+                var records = GetRecords(documentPath);
 
                 records = records.OrderByDescending(r => r.Timestamp).ToList();
 
@@ -864,15 +583,6 @@ namespace SharkTools
                         foreach (var record in history.Records)
                         {
                             AddRecord(history.DocumentPath, record);
-                        }
-
-                        // 迁移分支
-                        foreach (var branch in history.Branches)
-                        {
-                            if (branch.Name != "main")
-                            {
-                                CreateBranch(history.DocumentPath, branch.Name, branch.Description, branch.FromRecordId);
-                            }
                         }
 
                         // 迁移完成后重命名 JSON 文件

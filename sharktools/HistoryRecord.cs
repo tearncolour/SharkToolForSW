@@ -92,18 +92,6 @@ namespace SharkTools
         public int FeatureIndex { get; set; }
 
         /// <summary>
-        /// 所属分支名称
-        /// </summary>
-        [JsonProperty("branch")]
-        public string Branch { get; set; }
-
-        /// <summary>
-        /// 父记录ID（用于分支追踪）
-        /// </summary>
-        [JsonProperty("parentId")]
-        public string ParentId { get; set; }
-
-        /// <summary>
         /// 用户自定义标签
         /// </summary>
         [JsonProperty("tags")]
@@ -132,61 +120,8 @@ namespace SharkTools
             Id = Guid.NewGuid().ToString();
             Timestamp = DateTime.Now;
             IsImportant = false;
-            Branch = "main";  // 默认主分支
             Tags = new List<string>();
             RecordType = "auto";  // 默认为自动记录
-        }
-    }
-
-    /// <summary>
-    /// 历史分支信息
-    /// </summary>
-    public class HistoryBranch
-    {
-        /// <summary>
-        /// 分支名称
-        /// </summary>
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        /// <summary>
-        /// 分支描述
-        /// </summary>
-        [JsonProperty("description")]
-        public string Description { get; set; }
-
-        /// <summary>
-        /// 创建时间
-        /// </summary>
-        [JsonProperty("createdAt")]
-        public DateTime CreatedAt { get; set; }
-
-        /// <summary>
-        /// 分支起点的记录ID
-        /// </summary>
-        [JsonProperty("startRecordId")]
-        public string StartRecordId { get; set; }
-
-        /// <summary>
-        /// 分支起点记录ID（别名，兼容数据库）
-        /// </summary>
-        [JsonIgnore]
-        public string FromRecordId 
-        { 
-            get => StartRecordId; 
-            set => StartRecordId = value; 
-        }
-
-        /// <summary>
-        /// 是否为活动分支
-        /// </summary>
-        [JsonProperty("isActive")]
-        public bool IsActive { get; set; }
-
-        public HistoryBranch()
-        {
-            CreatedAt = DateTime.Now;
-            IsActive = false;
         }
     }
 
@@ -214,18 +149,6 @@ namespace SharkTools
         public List<HistoryRecord> Records { get; set; }
 
         /// <summary>
-        /// 分支列表
-        /// </summary>
-        [JsonProperty("branches")]
-        public List<HistoryBranch> Branches { get; set; }
-
-        /// <summary>
-        /// 当前活动分支
-        /// </summary>
-        [JsonProperty("currentBranch")]
-        public string CurrentBranch { get; set; }
-
-        /// <summary>
         /// 最后更新时间
         /// </summary>
         [JsonProperty("lastUpdated")]
@@ -234,105 +157,12 @@ namespace SharkTools
         public DocumentHistory()
         {
             Records = new List<HistoryRecord>();
-            Branches = new List<HistoryBranch>();
-            CurrentBranch = "main";
             LastUpdated = DateTime.Now;
         }
-
-        /// <summary>
-        /// 确保主分支存在（加载后调用）
-        /// </summary>
-        public void EnsureMainBranch()
-        {
-            if (!Branches.Exists(b => b.Name == "main"))
-            {
-                Branches.Insert(0, new HistoryBranch { Name = "main", Description = "主分支", IsActive = true });
-            }
-        }
-
-        /// <summary>
-        /// 清理重复的分支（保留第一个）
-        /// </summary>
-        public void CleanupDuplicateBranches()
-        {
-            var seen = new HashSet<string>();
-            Branches.RemoveAll(b => !seen.Add(b.Name));
-        }
-
-        /// <summary>
-        /// 获取当前分支的记录
-        /// </summary>
-        public List<HistoryRecord> GetCurrentBranchRecords()
-        {
-            return Records.FindAll(r => r.Branch == CurrentBranch);
-        }
-
-        /// <summary>
-        /// 创建新分支
-        /// </summary>
-        public bool CreateBranch(string branchName, string description, string fromRecordId = null)
-        {
-            if (Branches.Exists(b => b.Name == branchName))
-                return false;
-
-            var branch = new HistoryBranch
-            {
-                Name = branchName,
-                Description = description,
-                StartRecordId = fromRecordId,
-                IsActive = false
-            };
-            
-            Branches.Add(branch);
-            return true;
-        }
-
-        /// <summary>
-        /// 切换分支
-        /// </summary>
-        public bool SwitchBranch(string branchName)
-        {
-            var branch = Branches.Find(b => b.Name == branchName);
-            if (branch == null) return false;
-
-            // 取消所有分支的活动状态
-            Branches.ForEach(b => b.IsActive = false);
-            
-            // 激活目标分支
-            branch.IsActive = true;
-            CurrentBranch = branchName;
-            
-            return true;
-        }
-
-        /// <summary>
-        /// 合并分支到当前分支
-        /// </summary>
-        public bool MergeBranch(string sourceBranch)
-        {
-            if (sourceBranch == CurrentBranch) return false;
-            
-            var sourceRecords = Records.FindAll(r => r.Branch == sourceBranch);
-            foreach (var record in sourceRecords)
-            {
-                // 复制记录到当前分支
-                var newRecord = new HistoryRecord
-                {
-                    Type = record.Type,
-                    Name = record.Name + " (合并自 " + sourceBranch + ")",
-                    FeatureName = record.FeatureName,
-                    FeatureIndex = record.FeatureIndex,
-                    Description = record.Description,
-                    IsImportant = record.IsImportant,
-                    Branch = CurrentBranch,
-                    ParentId = record.Id
-                };
-                Records.Add(newRecord);
-            }
-            
-            return true;
-        }
     }
+
+
+
 
     /// <summary>
     /// 历史记录管理�?- 负责持久化存�?
@@ -394,7 +224,6 @@ namespace SharkTools
                         DocumentPath = documentPath,
                         DocumentName = Path.GetFileName(documentPath)
                     };
-                    newHistory.EnsureMainBranch();
                     return newHistory;
                 }
 
@@ -408,10 +237,6 @@ namespace SharkTools
                     history.DocumentName = Path.GetFileName(documentPath);
                 }
 
-                // 清理重复的主分支并确保只有一个
-                history.CleanupDuplicateBranches();
-                history.EnsureMainBranch();
-
                 return history;
             }
             catch (Exception ex)
@@ -422,7 +247,6 @@ namespace SharkTools
                     DocumentPath = documentPath,
                     DocumentName = Path.GetFileName(documentPath)
                 };
-                fallbackHistory.EnsureMainBranch();
                 return fallbackHistory;
             }
         }
@@ -489,75 +313,7 @@ namespace SharkTools
             }
         }
 
-        /// <summary>
-        /// 创建新分支
-        /// </summary>
-        public static bool CreateBranch(string documentPath, string branchName, string description, string fromRecordId = null)
-        {
-            var history = LoadHistory(documentPath);
-            bool success = history.CreateBranch(branchName, description, fromRecordId);
-            if (success)
-            {
-                SaveHistory(history);
-            }
-            return success;
-        }
 
-        /// <summary>
-        /// 切换分支
-        /// </summary>
-        public static bool SwitchBranch(string documentPath, string branchName)
-        {
-            var history = LoadHistory(documentPath);
-            bool success = history.SwitchBranch(branchName);
-            if (success)
-            {
-                SaveHistory(history);
-            }
-            return success;
-        }
-
-        /// <summary>
-        /// 合并分支
-        /// </summary>
-        public static bool MergeBranch(string documentPath, string sourceBranch)
-        {
-            var history = LoadHistory(documentPath);
-            bool success = history.MergeBranch(sourceBranch);
-            if (success)
-            {
-                SaveHistory(history);
-            }
-            return success;
-        }
-
-        /// <summary>
-        /// 获取所有分支
-        /// </summary>
-        public static List<HistoryBranch> GetBranches(string documentPath)
-        {
-            var history = LoadHistory(documentPath);
-            return history.Branches;
-        }
-
-        /// <summary>
-        /// 删除分支（不能删除主分支）
-        /// </summary>
-        public static bool DeleteBranch(string documentPath, string branchName)
-        {
-            if (branchName == "main") return false;
-            
-            var history = LoadHistory(documentPath);
-            var branch = history.Branches.Find(b => b.Name == branchName);
-            if (branch == null) return false;
-            
-            // 删除分支及其所有记录
-            history.Branches.Remove(branch);
-            history.Records.RemoveAll(r => r.Branch == branchName);
-            
-            SaveHistory(history);
-            return true;
-        }
 
         /// <summary>
         /// 导出历史记录为文本

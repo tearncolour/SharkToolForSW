@@ -376,41 +376,12 @@ namespace SharkTools
                     }
                     break;
 
-                case "createBranch":
-                    if (args.Length > 0)
-                    {
-                        string branchName = args[0]?.ToString();
-                        string branchDesc = args.Length > 1 ? args[1]?.ToString() : "";
-                        CreateBranch(branchName, branchDesc);
-                    }
-                    break;
-
-                case "switchBranch":
-                    if (args.Length > 0)
-                    {
-                        string branchName = args[0]?.ToString();
-                        SwitchBranch(branchName);
-                    }
-                    break;
-
-                case "deleteBranch":
-                    if (args.Length > 0)
-                    {
-                        string branchName = args[0]?.ToString();
-                        DeleteBranch(branchName);
-                    }
-                    break;
-
-                case "loadBranches":
-                    LoadBranches();
-                    break;
-
                 case "goBack":
                     GoBackToMain();
                     break;
 
-                case "getBranches":
-                    LoadBranches();
+                case "LaunchClient":
+                    LaunchElectronClient();
                     break;
 
                 // 新增：更新标签
@@ -593,13 +564,7 @@ namespace SharkTools
                 // 从数据库加载记录
                 var records = HistoryDatabase.GetRecords(docPath);
                 var docMeta = HistoryDatabase.GetDocumentMeta(docPath);
-                var currentBranch = docMeta?.CurrentBranch ?? "main";
-                var branches = HistoryDatabase.GetBranches(docPath);
                 
-                // 检查是否处于回滚状态
-                var currentBranchInfo = branches.FirstOrDefault(b => b.Name == currentBranch);
-                bool isRolledBack = currentBranchInfo != null && !string.IsNullOrEmpty(currentBranchInfo.FromRecordId);
-
                 // 转换为前端格式，同时检查每个特征的压制状态
                 var frontendRecords = records.Select((r, idx) => new
                 {
@@ -620,13 +585,11 @@ namespace SharkTools
 
                 var historyData = new 
                 {
-                    records = frontendRecords,
-                    branch = currentBranch,
-                    isRolledBack = isRolledBack
+                    records = frontendRecords
                 };
 
                 CallJavaScript("onHistoryLoaded", historyData);
-                Log($"加载了 {frontendRecords.Count} 条历史记录，当前分支: {currentBranch}");
+                Log($"加载了 {frontendRecords.Count} 条历史记录");
             }
             catch (Exception ex)
             {
@@ -697,7 +660,7 @@ namespace SharkTools
                 }
 
                 // 保存回滚状态
-                HistoryDatabase.SetBranchRollbackState(docPath, "main", recordId);
+                // HistoryDatabase.SetBranchRollbackState(docPath, "main", recordId);
 
                 doc.ForceRebuild3(false);
                 
@@ -831,7 +794,7 @@ namespace SharkTools
                 }
 
                 // 清除回滚状态
-                HistoryDatabase.SetBranchRollbackState(docPath, "main", null);
+                // HistoryDatabase.SetBranchRollbackState(docPath, "main", null);
 
                 doc.ForceRebuild3(false);
                 
@@ -961,7 +924,6 @@ namespace SharkTools
                             IsImportant = isImportant,
                             RecordType = record["RecordType"]?.ToString() ?? record["recordType"]?.ToString() ?? "auto",
                             UserNote = record["UserNote"]?.ToString() ?? record["userNote"]?.ToString() ?? "",
-                            Branch = "main", // 导入到主分支
                             Timestamp = DateTime.Now // 使用当前时间
                         };
                         
@@ -1105,10 +1067,9 @@ namespace SharkTools
 
                 string docPath = doc.GetPathName();
                 var docMeta = HistoryDatabase.GetDocumentMeta(docPath);
-                var currentBranch = docMeta?.CurrentBranch ?? "main";
 
                 // 获取当前特征数量作为索引
-                var records = HistoryDatabase.GetRecords(docPath, currentBranch);
+                var records = HistoryDatabase.GetRecords(docPath);
                 int featureIndex = records.Count > 0 ? records.Max(r => r.FeatureIndex) + 1 : 0;
 
                 // 创建手动保存点记录
@@ -1120,7 +1081,6 @@ namespace SharkTools
                     FeatureType = "SavePoint",
                     Description = $"手动保存点: {name}",
                     FeatureIndex = featureIndex,
-                    Branch = currentBranch,
                     RecordType = "manual",  // 标记为手动保存点
                     IsImportant = true
                 };
@@ -1161,102 +1121,6 @@ namespace SharkTools
         /// <summary>
         /// 创建新分支
         /// </summary>
-        private void CreateBranch(string branchName, string description)
-        {
-            try
-            {
-                var doc = _swProvider?.GetActiveDocument();
-                if (doc == null)
-                {
-                    CallJavaScript("showMessage", "请先打开文档");
-                    return;
-                }
-
-                string docPath = doc.GetPathName();
-                // 从当前位置创建分支（如果处于回溯状态，使用当前回溯点）
-                var docMeta = HistoryDatabase.GetDocumentMeta(docPath);
-                var currentBranch = docMeta?.CurrentBranch ?? "main";
-                var branches = HistoryDatabase.GetBranches(docPath);
-                var branch = branches.FirstOrDefault(b => b.Name == currentBranch);
-                string fromRecordId = branch?.FromRecordId ?? "";  // 如果在回溯状态，从回溯点创建
-                
-                // CreateBranch(documentPath, branchName, description, fromRecordId)
-                HistoryDatabase.CreateBranch(docPath, branchName, description, fromRecordId);
-                
-                // 自动切换到新创建的分支
-                HistoryDatabase.SwitchBranch(docPath, branchName);
-                
-                LoadBranches();
-                LoadHistoryRecords();
-                CallJavaScript("showMessage", $"已创建并切换到分支: {branchName}");
-                Log($"创建分支: {branchName}, 描述: {description}, 已自动切换");
-            }
-            catch (Exception ex)
-            {
-                Log($"创建分支失败: {ex.Message}");
-                CallJavaScript("showMessage", $"创建分支失败: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 切换分支
-        /// </summary>
-        private void SwitchBranch(string branchName)
-        {
-            try
-            {
-                var doc = _swProvider?.GetActiveDocument();
-                if (doc == null)
-                {
-                    CallJavaScript("showMessage", "请先打开文档");
-                    return;
-                }
-
-                string docPath = doc.GetPathName();
-                HistoryDatabase.SwitchBranch(docPath, branchName);
-                LoadHistoryRecords();
-                CallJavaScript("showMessage", $"已切换到分支: {branchName}");
-                Log($"切换到分支: {branchName}");
-            }
-            catch (Exception ex)
-            {
-                Log($"切换分支失败: {ex.Message}");
-                CallJavaScript("showMessage", $"切换分支失败: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 删除分支
-        /// </summary>
-        private void DeleteBranch(string branchName)
-        {
-            try
-            {
-                if (branchName == "main")
-                {
-                    CallJavaScript("showMessage", "无法删除主分支");
-                    return;
-                }
-
-                var doc = _swProvider?.GetActiveDocument();
-                if (doc == null) return;
-
-                string docPath = doc.GetPathName();
-                HistoryDatabase.DeleteBranch(docPath, branchName);
-                LoadBranches();
-                CallJavaScript("showMessage", $"已删除分支: {branchName}");
-                Log($"删除分支: {branchName}");
-            }
-            catch (Exception ex)
-            {
-                Log($"删除分支失败: {ex.Message}");
-                CallJavaScript("showMessage", $"删除分支失败: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 返回主界面
-        /// </summary>
         private void GoBackToMain()
         {
             try
@@ -1286,39 +1150,27 @@ namespace SharkTools
             }
         }
 
-        /// <summary>
-        /// 加载分支列表
-        /// </summary>
-        private void LoadBranches()
+        private void LaunchElectronClient()
         {
             try
             {
-                var doc = _swProvider?.GetActiveDocument();
-                if (doc == null)
+                string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
+                string clientPath = Path.Combine(desktopPath, "SharkToolForSW", "electron-app", "release", "win-unpacked", "SharkTools.exe");
+
+                if (File.Exists(clientPath))
                 {
-                    CallJavaScript("onBranchesLoaded", new object[0], "main");
-                    return;
+                    System.Diagnostics.Process.Start(clientPath);
+                    Log("已启动客户端");
                 }
-
-                string docPath = doc.GetPathName();
-                var branches = HistoryDatabase.GetBranches(docPath);
-                var docMeta = HistoryDatabase.GetDocumentMeta(docPath);
-                var currentBranch = docMeta?.CurrentBranch ?? "main";
-
-                var branchList = branches.Select(b => new
+                else
                 {
-                    name = b.Name,
-                    createdAt = b.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
-                    fromRecordId = b.FromRecordId
-                }).ToList();
-
-                CallJavaScript("onBranchesLoaded", branchList, currentBranch);
-                Log($"加载了 {branchList.Count} 个分支");
+                    CallJavaScript("showMessage", $"未找到客户端程序: {clientPath}");
+                }
             }
             catch (Exception ex)
             {
-                Log($"加载分支失败: {ex.Message}");
-                CallJavaScript("onBranchesLoaded", new object[0], "main");
+                Log($"启动客户端失败: {ex.Message}");
+                CallJavaScript("showMessage", $"启动客户端失败: {ex.Message}");
             }
         }
 
