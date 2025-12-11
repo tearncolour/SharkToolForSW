@@ -130,11 +130,13 @@
             :text-content="textContent"
             :image-url="imageUrl"
             :pdf-url="pdfUrl"
+            :is-three-d="is3DModel"
             :spreadsheet-data="spreadsheetData"
             @open-recent="openRecent"
             @property-change="onPropertyChange"
             @add-property="addCustomProperty"
             @switch-sheet="switchSheet"
+            @convert-model="convertModel"
           />
         </div>
       </div>
@@ -197,6 +199,7 @@ const previewImage = ref('')
 const textContent = ref('')
 const imageUrl = ref('')
 const pdfUrl = ref('')
+const is3DModel = ref(false)
 const spreadsheetData = ref(null)
 const recentFiles = ref([])
 const fileProperties = ref(null)
@@ -286,6 +289,7 @@ const onFileSelect = async (node) => {
   textContent.value = ''
   imageUrl.value = ''
   pdfUrl.value = ''
+  is3DModel.value = false
   spreadsheetData.value = null
   fileProperties.value = null
   customProperties.value = []
@@ -316,6 +320,15 @@ const onFileSelect = async (node) => {
 
       // 获取文件属性
       await loadFileProperties(node.key)
+    }
+    // 3D 模型文件 (STEP, IGES, STL)
+    else if (['step', 'stp', 'iges', 'igs', 'stl'].includes(ext)) {
+      is3DModel.value = true
+      fileProperties.value = {
+        '文件名': node.title,
+        '文件类型': ext.toUpperCase() + ' 模型',
+        '路径': node.key
+      }
     }
     // 电子表格文件 (Excel/CSV)
     else if (isSpreadsheetFile(ext)) {
@@ -591,7 +604,7 @@ const onPropertyChange = async (prop) => {
       await window.electronAPI.sendToSW({
         type: 'set-property',
         path: selectedFile.value.key,
-        property: prop
+        property: JSON.parse(JSON.stringify(prop)) // Sanitize reactive object
       })
       message.success('属性已保存')
     } catch (e) {
@@ -600,6 +613,61 @@ const onPropertyChange = async (prop) => {
     }
   }
 }
+
+// 转换模型
+const convertModel = async (options) => {
+  if (!selectedFile.value) return;
+  
+  message.loading({ content: '正在转换并识别特征...', key: 'convert-model', duration: 0 });
+  
+  try {
+    // 检查连接状态
+    if (connectionStatus.value !== 'success') {
+      message.loading({ content: '正在启动 SolidWorks (静默模式)...', key: 'convert-model', duration: 0 });
+      
+      // 尝试静默启动
+      const launchRes = await window.electronAPI.launchSolidWorks(true);
+      if (!launchRes.success) {
+        throw new Error(launchRes.message || '启动 SolidWorks 失败');
+      }
+      
+      // 等待连接 (轮询)
+      let attempts = 0;
+      while (connectionStatus.value !== 'success' && attempts < 30) {
+        await new Promise(r => setTimeout(r, 1000));
+        attempts++;
+      }
+      
+      if (connectionStatus.value !== 'success') {
+        throw new Error('连接 SolidWorks 超时');
+      }
+    }
+
+    message.loading({ content: '正在后台转换...', key: 'convert-model', duration: 0 });
+
+    // Ensure options is a plain object to avoid "An object could not be cloned" error with Vue Proxies
+    const plainOptions = JSON.parse(JSON.stringify(options));
+
+    const res = await window.electronAPI.sendToSW({
+      type: 'convert-and-recognize',
+      path: selectedFile.value.key,
+      options: plainOptions
+    });
+    
+    if (res && res.success) {
+      message.success({ content: '转换成功: ' + (res.data?.message || '完成'), key: 'convert-model' });
+      // 刷新文件列表或选中新文件
+      if (res.data?.newPath) {
+        // TODO: 刷新文件浏览器并选中新文件
+      }
+    } else {
+      message.error({ content: '转换失败: ' + (res?.message || '未知错误'), key: 'convert-model' });
+    }
+  } catch (e) {
+    console.error('Convert error:', e);
+    message.error({ content: '转换请求失败: ' + e.message, key: 'convert-model' });
+  }
+};
 
 // 添加自定义属性
 const addCustomProperty = () => {
@@ -648,7 +716,7 @@ const saveSettings = (newSettings) => {
   settings.value = { ...settings.value, ...newSettings }
   window.electronAPI?.sendToSW({
     type: 'save-settings',
-    settings: settings.value
+    settings: JSON.parse(JSON.stringify(settings.value)) // Sanitize reactive object
   })
   message.success('设置已保存')
 }

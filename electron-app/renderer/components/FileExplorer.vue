@@ -22,6 +22,16 @@
     </div>
     
     <div class="explorer-content">
+      <div class="search-box" v-if="rootPaths.length > 0">
+        <a-input-search
+          v-model:value="searchText"
+          placeholder="搜索文件..."
+          size="small"
+          @search="onSearch"
+          allowClear
+        />
+      </div>
+
       <div v-if="treeData.length === 0" class="empty-state">
         <div class="empty-content">
             <p>尚未打开任何文件夹</p>
@@ -32,13 +42,18 @@
       <a-directory-tree
         v-else
         v-model:expandedKeys="expandedKeys"
-        :tree-data="treeData"
+        v-model:selectedKeys="selectedKeys"
+        :tree-data="filteredTreeData"
         :load-data="onLoadData"
         @select="onSelect"
         @rightClick="onRightClick"
         block-node
         :show-icon="false"
         multiple
+        draggable
+        @dragstart="onDragStart"
+        @dragenter="onDragEnter"
+        @drop="onTreeDrop"
       >
         <template #title="{ title, isLeaf, dataRef, key, parentKey }">
             <a-dropdown :trigger="['contextmenu']">
@@ -46,21 +61,33 @@
                   <span class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
                     <span v-if="isLeaf" :class="[getGitStatusClass(key), getFileTypeClass(title)]">
                         <FileOutlined :style="{ color: getFileTypeColor(title) }" /> 
-                        <span class="file-name" :style="{ color: getFileTypeColor(title) }">{{ title }}</span>
+                        <span class="file-name" :style="{ color: getFileTypeColor(title) }">
+                            <span v-html="highlightTitle(title)"></span>
+                        </span>
                         <span v-if="hasNote(key)" class="note-indicator" title="有注释">📝</span>
                         <span v-if="getGitStatus(key)" class="git-badge" :class="'git-' + getGitStatus(key)">
                           {{ getGitStatusLabel(key) }}
                         </span>
                     </span>
                     <span v-else :class="getGitStatusClass(key)">
-                        <FolderOutlined /> <span class="folder-name">{{ title }}</span>
+                        <FolderOutlined /> 
+                        <span class="folder-name">
+                            <span v-html="highlightTitle(title)"></span>
+                        </span>
                     </span>
                   </span>
                 </a-tooltip>
                 <template #overlay>
                     <a-menu>
+                        <a-menu-item v-if="isStepFile(title)" key="convert-step" @click="convertStepFile(key)">转换为 SLDPRT</a-menu-item>
                         <a-menu-item key="open-explorer" @click="openInExplorer(key)">在资源管理器中打开</a-menu-item>
                         <a-menu-item key="copy-path" @click="copyPath(key)">复制路径</a-menu-item>
+                        <a-menu-divider />
+                        <a-menu-item key="rename" @click="startRename(key, title)">重命名</a-menu-item>
+                        <a-menu-item key="copy" @click="copyFile(key)">复制</a-menu-item>
+                        <a-menu-item key="cut" @click="cutFile(key)">剪切</a-menu-item>
+                        <a-menu-item key="paste" @click="pasteFile(key)" :disabled="!canPaste">粘贴</a-menu-item>
+                        <a-menu-item key="delete" danger @click="deleteFile(key)">删除</a-menu-item>
                         <a-menu-divider />
                         <a-menu-item key="add-note" @click="openNoteModal(key, title)">
                           {{ hasNote(key) ? '编辑注释' : '添加注释' }}
@@ -101,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { ReloadOutlined, FileOutlined, FolderOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons-vue';
 import { message, Modal, Input } from 'ant-design-vue';
 import { h } from 'vue';
@@ -110,8 +137,19 @@ const emit = defineEmits(['select-file']);
 
 const treeData = ref([]);
 const expandedKeys = ref([]);
+const selectedKeys = ref([]);
 const rootPaths = ref([]); // 存储实际的根路径
 const STORE_KEY = 'workspace.folders';
+
+// 搜索和过滤
+const searchText = ref('');
+const autoExpandParent = ref(true);
+
+// 剪贴板状态
+const clipboard = ref({
+    files: [], // Array of file paths
+    action: null // 'copy' or 'cut'
+});
 
 // Git 状态
 const gitStatusMap = ref(new Map()); // 文件路径 -> 状态
@@ -133,6 +171,252 @@ const explorerTitle = computed(() => {
     }
     return '工作区';
 });
+
+// 搜索过滤逻辑
+const filterTree = (data, query) => {
+    return data.map(item => {
+        const title = item.title;
+        const matchIndex = title.toLowerCase().indexOf(query.toLowerCase());
+        
+        if (item.children) {
+            const filteredChildren = filterTree(item.children, query);
+            if (filteredChildren.length > 0 || matchIndex > -1) {
+                return {
+                    ...item,
+                    children: filteredChildren,
+                    expanded: true // 搜索时自动展开
+                };
+            }
+        } else if (matchIndex > -1) {
+            return { ...item };
+        }
+        return null;
+    }).filter(item => item !== null);
+};
+
+const filteredTreeData = computed(() => {
+    if (!searchText.value) return treeData.value;
+    return filterTree(treeData.value, searchText.value);
+});
+
+const onSearch = (value) => {
+    searchText.value = value;
+    if (value) {
+        autoExpandParent.value = true;
+    }
+};
+
+// 高亮显示搜索文本
+const highlightTitle = (title) => {
+    if (!searchText.value) return title;
+    const index = title.toLowerCase().indexOf(searchText.value.toLowerCase());
+    if (index > -1) {
+        const beforeStr = title.substr(0, index);
+        const matchStr = title.substr(index, searchText.value.length);
+        const afterStr = title.substr(index + searchText.value.length);
+        return `${beforeStr}<span style="color: #f50; font-weight: bold;">${matchStr}</span>${afterStr}`;
+    }
+    return title;
+};
+
+// 文件操作逻辑
+const canPaste = computed(() => {
+    return clipboard.value.files.length > 0 && clipboard.value.action;
+});
+
+const startRename = (node) => {
+    const oldPath = node.key;
+    const oldName = node.title;
+    
+    // 创建一个简单的输入框 Modal
+    let newName = oldName;
+    Modal.confirm({
+        title: '重命名',
+        content: h('div', [
+            h(Input, {
+                defaultValue: oldName,
+                onChange: (e) => { newName = e.target.value; },
+                onPressEnter: () => { Modal.destroyAll(); doRename(oldPath, newName); }
+            })
+        ]),
+        onOk() {
+            doRename(oldPath, newName);
+        }
+    });
+};
+
+const doRename = async (oldPath, newName) => {
+    if (!newName || newName === oldPath.split('\\').pop()) return;
+    
+    const parentPath = oldPath.substring(0, oldPath.lastIndexOf('\\'));
+    const newPath = `${parentPath}\\${newName}`;
+    
+    try {
+        const success = await window.electronAPI.renamePath(oldPath, newPath);
+        if (success) {
+            message.success('重命名成功');
+            await refresh();
+        } else {
+            message.error('重命名失败');
+        }
+    } catch (error) {
+        message.error(`重命名出错: ${error.message}`);
+    }
+};
+
+const copyFile = (node) => {
+    clipboard.value = {
+        files: [node.key],
+        action: 'copy'
+    };
+    message.info('已复制');
+};
+
+const cutFile = (node) => {
+    clipboard.value = {
+        files: [node.key],
+        action: 'cut'
+    };
+    message.info('已剪切');
+};
+
+const pasteFile = async (targetNode) => {
+    if (!canPaste.value) return;
+    
+    const targetDir = targetNode.isLeaf ? targetNode.key.substring(0, targetNode.key.lastIndexOf('\\')) : targetNode.key;
+    const action = clipboard.value.action;
+    
+    for (const srcPath of clipboard.value.files) {
+        const fileName = srcPath.split('\\').pop();
+        const destPath = `${targetDir}\\${fileName}`;
+        
+        try {
+            let success = false;
+            if (action === 'copy') {
+                success = await window.electronAPI.copyFile(srcPath, destPath);
+            } else if (action === 'cut') {
+                success = await window.electronAPI.movePath(srcPath, destPath);
+            }
+            
+            if (!success) {
+                message.error(`无法${action === 'copy' ? '复制' : '移动'}文件: ${fileName}`);
+            }
+        } catch (error) {
+            message.error(`操作失败: ${error.message}`);
+        }
+    }
+    
+    if (action === 'cut') {
+        clipboard.value = { files: [], action: null };
+    }
+    
+    await refresh();
+    message.success('粘贴完成');
+};
+
+const deleteFile = (node) => {
+    Modal.confirm({
+        title: '确认删除',
+        content: `确定要删除 "${node.title}" 吗？`,
+        okText: '删除',
+        okType: 'danger',
+        cancelText: '取消',
+        async onOk() {
+            try {
+                const success = await window.electronAPI.deletePath(node.key);
+                if (success) {
+                    message.success('已删除');
+                    await refresh();
+                } else {
+                    message.error('删除失败');
+                }
+            } catch (error) {
+                message.error(`删除出错: ${error.message}`);
+            }
+        }
+    });
+};
+
+// 拖拽逻辑
+const onDragStart = (info) => {
+    // info.node 是被拖拽的节点
+    // info.event 是原生拖拽事件
+    // 可以在这里设置拖拽数据
+    console.log('drag start', info);
+};
+
+const onDragEnter = (info) => {
+    console.log('drag enter', info);
+    // expandedKeys.value = info.expandedKeys;
+};
+
+const onTreeDrop = async (info) => {
+    const dropKey = info.node.key; // 目标路径
+    const dragKey = info.dragNode.key; // 源路径
+    const dropPos = info.node.pos.split('-');
+    const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1]);
+    
+    // 确定目标目录
+    let targetDir = dropKey;
+    // 如果目标是文件，或者 dropPosition 不为 0 (表示插入到节点前后而不是内部)，则目标目录是父目录
+    if (info.node.isLeaf || !info.dropToGap) {
+         // 如果 dropToGap 为 false，表示拖到了节点上（作为子节点）
+         // 如果是文件，不能作为容器，所以还是父目录
+         if (info.node.isLeaf) {
+             targetDir = dropKey.substring(0, dropKey.lastIndexOf('\\'));
+         } else {
+             targetDir = dropKey;
+         }
+    } else {
+        // 拖到了节点之间的缝隙，目标是父目录
+        targetDir = dropKey.substring(0, dropKey.lastIndexOf('\\'));
+    }
+
+    // 确定源文件列表
+    let sourcePaths = [dragKey];
+    // 如果拖拽的节点在选中列表中，则移动所有选中的节点
+    if (selectedKeys.value.includes(dragKey)) {
+        sourcePaths = [...selectedKeys.value];
+    }
+
+    // 过滤掉目标目录本身（防止移动到自己内部，虽然逻辑上 targetDir 是父级，但需防止死循环）
+    // 这里的简单逻辑是：源路径不能等于目标路径
+    sourcePaths = sourcePaths.filter(p => p !== targetDir && p.substring(0, p.lastIndexOf('\\')) !== targetDir);
+
+    if (sourcePaths.length === 0) return;
+
+    const confirmContent = sourcePaths.length === 1 
+        ? `确定要将 "${sourcePaths[0].split('\\').pop()}" 移动到 "${targetDir}" 吗？`
+        : `确定要将选中的 ${sourcePaths.length} 个项目移动到 "${targetDir}" 吗？`;
+
+    Modal.confirm({
+        title: '移动文件',
+        content: confirmContent,
+        onOk: async () => {
+            let successCount = 0;
+            for (const srcPath of sourcePaths) {
+                const fileName = srcPath.split('\\').pop();
+                const destPath = `${targetDir}\\${fileName}`;
+                if (srcPath === destPath) continue;
+
+                try {
+                    const success = await window.electronAPI.movePath(srcPath, destPath);
+                    if (success) successCount++;
+                } catch (error) {
+                    console.error(`Failed to move ${srcPath}:`, error);
+                }
+            }
+            
+            if (successCount > 0) {
+                message.success(`成功移动 ${successCount} 个项目`);
+                await refresh();
+            } else {
+                message.error('移动失败');
+            }
+        }
+    });
+};
+
 
 // 获取 Git 状态
 const fetchGitStatus = async () => {
@@ -358,7 +642,7 @@ const getFileTypeClass = (filename) => {
 };
 
 // 构建树数据
-const rebuildTree = async () => {
+async function rebuildTree() {
     if (rootPaths.value.length === 1) {
         // 单根模式：直接显示子内容
         const rootPath = rootPaths.value[0];
@@ -385,7 +669,9 @@ const rebuildTree = async () => {
             parentKey: null // 根节点没有父节点
         }));
     }
-};
+}
+
+
 
 // 加载保存的文件夹
 const loadSavedFolders = async () => {
@@ -556,6 +842,61 @@ const onDoubleClick = async (node) => {
     }
 };
 
+// 拖放文件处理
+const onDrop = async (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    if (rootPaths.value.length === 0) {
+        message.warning('请先打开一个文件夹');
+        return;
+    }
+
+    // 默认复制到第一个根目录
+    // 如果是单根模式，就是当前打开的文件夹
+    let destDir = rootPaths.value[0];
+    
+    // 尝试检测是否拖放到了某个文件夹节点上
+    // 注意：这依赖于 DOM 结构，可能不稳定
+    // 简单实现：如果只打开了一个文件夹，就用那个。
+    
+    let successCount = 0;
+    let failCount = 0;
+
+    message.loading({ content: '正在复制文件...', key: 'copy-files' });
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // 简单的路径拼接，假设是 Windows 环境
+        const destPath = `${destDir}\\${file.name}`;
+        
+        try {
+            // file.path 在 Electron 环境下是真实物理路径
+            const res = await window.electronAPI.copyFile(file.path, destPath);
+            if (res.success) {
+                successCount++;
+            } else {
+                console.error(`Failed to copy ${file.name}:`, res.message);
+                failCount++;
+            }
+        } catch (err) {
+            console.error(`Error copying ${file.name}:`, err);
+            failCount++;
+        }
+    }
+
+    if (failCount > 0) {
+        message.warning({ content: `复制完成: ${successCount} 成功, ${failCount} 失败`, key: 'copy-files' });
+    } else {
+        message.success({ content: `成功复制 ${successCount} 个文件`, key: 'copy-files' });
+    }
+
+    // 刷新文件列表
+    // 如果是单根模式，重新构建树
+    // 如果是多根模式，可能需要刷新特定的子树，这里简单起见直接重建
+    await rebuildTree();
+};
+
 // 右键菜单
 const onRightClick = ({ event, node }) => {
     // Ant Design Vue Dropdown handles this via template
@@ -700,22 +1041,7 @@ const findNode = (list, key) => {
     return null;
 };
 
-// 拖拽处理
-const onDrop = async (e) => {
-    const files = e.dataTransfer.files;
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        // 简单的判断是否为文件夹（通过 fs stat，但在前端只能通过 path 推断或尝试读取）
-        // 这里假设用户拖入的是文件夹，或者我们需要在 main process 检查
-        // 由于安全限制，浏览器环境的 File 对象有限。
-        // Electron 中 drop 的 file.path 是真实路径。
-        if (file.path) {
-             // 这里简单地尝试将其作为文件夹添加。如果不是文件夹，readDir 会失败或返回空，或者我们需要更严谨的检查
-             // 更好的做法是调用 main process 检查是否为文件夹
-             addPathToTree(file.path);
-        }
-    }
-};
+
 
 const refresh = async () => {
     // 重新加载所有根节点的子节点（如果已展开）
@@ -727,35 +1053,111 @@ const refresh = async () => {
     await fetchGitStatus();
 };
 
-// 监听文件系统变更
+// 监听文件系统变更 - 优化版本
 const setupWatcher = () => {
     if (window.electronAPI.onFileSystemChange) {
+        // 防抖动的刷新函数
+        let refreshTimer = null;
+        const pendingRefreshPaths = new Set();
+        
+        const scheduleRefresh = () => {
+            if (refreshTimer) return;
+            refreshTimer = setTimeout(async () => {
+                refreshTimer = null;
+                
+                // 批量刷新所有待刷新路径
+                const pathsToRefresh = Array.from(pendingRefreshPaths);
+                pendingRefreshPaths.clear();
+                
+                // 对路径进行去重和优化 - 如果父路径要刷新，就不刷新子路径
+                const optimizedPaths = [];
+                const sortedPaths = pathsToRefresh.sort((a, b) => a.length - b.length);
+                
+                for (const p of sortedPaths) {
+                    // 检查是否已有祖先路径要刷新
+                    const hasAncestor = optimizedPaths.some(ancestor => 
+                        p.startsWith(ancestor + '\\') || p.startsWith(ancestor + '/')
+                    );
+                    if (!hasAncestor) {
+                        optimizedPaths.push(p);
+                    }
+                }
+                
+                // 执行刷新
+                for (const refreshPath of optimizedPaths) {
+                    // 先检查是否是根路径
+                    const isRoot = rootPaths.value.includes(refreshPath);
+                    if (isRoot) {
+                        await refreshNode(refreshPath);
+                        continue;
+                    }
+                    
+                    const node = findNode(treeData.value, refreshPath);
+                    if (node) {
+                        // 如果节点存在且已展开，刷新它
+                        if (expandedKeys.value.includes(refreshPath)) {
+                            await refreshNode(refreshPath);
+                        }
+                    } else {
+                        // 如果节点不存在，尝试刷新其父路径（可能是新建的文件）
+                        const parentPath = refreshPath.substring(0, refreshPath.lastIndexOf('\\'));
+                        if (parentPath && expandedKeys.value.includes(parentPath)) {
+                            await refreshNode(parentPath);
+                        }
+                    }
+                }
+            }, 200); // 200ms 防抖
+        };
+        
+        // Git 状态防抖
+        let gitTimer = null;
+        const scheduleGitRefresh = () => {
+            if (gitTimer) clearTimeout(gitTimer);
+            gitTimer = setTimeout(() => {
+                gitTimer = null;
+                fetchGitStatus();
+            }, 1000); // 1秒防抖，减少 Git 调用频率
+        };
+
         window.electronAPI.onFileSystemChange((data) => {
-            // console.log('FS Change:', data);
-            if (!data.filename) return;
+            // 新格式: { changes, groupedChanges, affectedRoots, stats }
+            const changes = data.changes || data;
+            if (!Array.isArray(changes)) return;
 
-            // 构造完整路径
-            // 注意：Windows 上 fs.watch 返回的 filename 可能是 'SubFolder\\File.txt'
-            const fullPath = data.rootPath + '\\' + data.filename;
-            const parentPath = fullPath.substring(0, fullPath.lastIndexOf('\\'));
+            let shouldRefreshGit = false;
+
+            changes.forEach(change => {
+                const filename = change.filename;
+                if (!filename) return;
+
+                // 获取父路径用于刷新 - 使用 parentPath 如果存在
+                let parentPath = change.parentPath;
+                if (!parentPath) {
+                    const fullPath = change.rootPath + '\\' + filename;
+                    parentPath = fullPath.substring(0, fullPath.lastIndexOf('\\'));
+                }
+                
+                // 添加到待刷新队列
+                pendingRefreshPaths.add(parentPath);
+                
+                // 同时也添加 rootPath（确保根目录也刷新）
+                pendingRefreshPaths.add(change.rootPath);
+
+                // 检查是否需要刷新 Git 状态
+                if (!filename.includes('.git\\objects') && 
+                    !filename.includes('.git/objects') &&
+                    !filename.endsWith('.git\\index.lock') &&
+                    !filename.endsWith('.git/index.lock')) {
+                    shouldRefreshGit = true;
+                }
+            });
+
+            // 安排批量刷新
+            scheduleRefresh();
             
-            // 文件变更时刷新 Git 状态
-            fetchGitStatus();
-
-            // 尝试找到父节点并刷新
-            // 如果父节点就是根目录
-            if (parentPath === data.rootPath) {
-                const rootNode = findNode(treeData.value, data.rootPath);
-                if (rootNode) {
-                    // 仅当根节点已展开时刷新，或者它就是根
-                    refreshNode(data.rootPath);
-                }
-            } else {
-                // 如果是子目录
-                const parentNode = findNode(treeData.value, parentPath);
-                if (parentNode) {
-                    refreshNode(parentPath);
-                }
+            // 安排 Git 状态刷新
+            if (shouldRefreshGit) {
+                scheduleGitRefresh();
             }
         });
     }
@@ -779,7 +1181,159 @@ watch(treeData, (newVal, oldVal) => {
     }
 }, { deep: true });
 
+// 检查是否为 STEP 文件
+const isStepFile = (filename) => {
+    if (!filename) return false;
+    const ext = filename.split('.').pop().toLowerCase();
+    return ext === 'step' || ext === 'stp';
+};
+
+// 转换 STEP 文件
+const convertStepFile = async (key) => {
+    let filesToConvert = [key];
+    
+    // 如果当前右键的文件在选中列表中，则转换所有选中的 STEP 文件
+    if (selectedKeys.value.includes(key)) {
+        filesToConvert = selectedKeys.value.filter(path => {
+            const name = path.split('\\').pop();
+            return isStepFile(name);
+        });
+    }
+    
+    if (filesToConvert.length === 0) return;
+
+    message.loading({ content: `正在请求转换 ${filesToConvert.length} 个文件...`, key: 'convert-step', duration: 0 });
+    
+    try {
+        const res = await window.electronAPI.convertStep(filesToConvert);
+        if (res.success) {
+            message.success({ content: res.message || '转换完成', key: 'convert-step' });
+            
+            // 转换成功后，询问是否删除原文件
+            // 先验证转换后的文件确实存在（通过读取目录并检查文件）
+            const successFiles = res.results?.filter(r => r.success).map(r => r.filePath) || filesToConvert;
+            const verifiedFiles = [];
+            
+            // 按目录分组检查文件
+            const filesByDir = {};
+            for (const filePath of successFiles) {
+                const lastSep = Math.max(filePath.lastIndexOf('\\'), filePath.lastIndexOf('/'));
+                const dir = lastSep > 0 ? filePath.substring(0, lastSep) : filePath;
+                const fileName = filePath.substring(lastSep + 1);
+                if (!filesByDir[dir]) filesByDir[dir] = [];
+                filesByDir[dir].push({ original: filePath, expectedNew: fileName.replace(/\.(step|stp)$/i, '.sldprt') });
+            }
+            
+            // 检查每个目录
+            for (const [dir, files] of Object.entries(filesByDir)) {
+                try {
+                    const dirContents = await window.electronAPI.readDir(dir);
+                    const existingFiles = new Set(dirContents.map(f => f.name.toLowerCase()));
+                    for (const { original, expectedNew } of files) {
+                        if (existingFiles.has(expectedNew.toLowerCase())) {
+                            verifiedFiles.push(original);
+                        }
+                    }
+                } catch (e) {
+                    // 目录读取失败，假设文件存在
+                    files.forEach(f => verifiedFiles.push(f.original));
+                }
+            }
+            
+            if (verifiedFiles.length > 0) {
+                Modal.confirm({
+                    title: '删除原始文件？',
+                    content: `转换完成！是否删除 ${verifiedFiles.length} 个原始 STEP 文件？`,
+                    okText: '删除',
+                    okType: 'danger',
+                    cancelText: '保留',
+                    onOk: async () => {
+                        try {
+                            let deleteCount = 0;
+                            for (const filePath of verifiedFiles) {
+                                const delRes = await window.electronAPI.deletePath(filePath);
+                                if (delRes) deleteCount++;
+                            }
+                            message.success(`已删除 ${deleteCount} 个原始文件`);
+                            
+                            // 刷新文件列表
+                            const affectedDirs = [...new Set(verifiedFiles.map(p => {
+                                const lastSep = Math.max(p.lastIndexOf('\\'), p.lastIndexOf('/'));
+                                return lastSep > 0 ? p.substring(0, lastSep) : p;
+                            }))];
+                            for (const dir of affectedDirs) {
+                                const node = findNode(treeData.value, dir);
+                                if (node && expandedKeys.value.includes(dir)) {
+                                    await refreshNode(dir);
+                                }
+                            }
+                        } catch (err) {
+                            message.error('删除文件失败: ' + err.message);
+                        }
+                    }
+                });
+            }
+        } else {
+            if (res.message === 'SolidWorks 未连接') {
+                // 清除加载消息
+                message.destroy('convert-step');
+                
+                Modal.confirm({
+                    title: 'SolidWorks 未连接',
+                    content: '转换功能需要 SolidWorks 正在运行。是否立即启动 SolidWorks？',
+                    okText: '启动',
+                    cancelText: '取消',
+                    onOk: async () => {
+                        message.loading({ content: '正在启动 SolidWorks...', key: 'launch-sw' });
+                        try {
+                            const launchRes = await window.electronAPI.launchSolidWorks();
+                            if (launchRes.success) {
+                                message.success({ content: '已发送启动命令，请等待 SolidWorks 启动...', key: 'launch-sw' });
+                            } else {
+                                message.error({ content: '启动失败: ' + launchRes.message, key: 'launch-sw' });
+                            }
+                        } catch (err) {
+                            message.error({ content: '启动出错: ' + err.message, key: 'launch-sw' });
+                        }
+                    }
+                });
+            } else {
+                message.error({ content: '转换请求失败: ' + res.message, key: 'convert-step' });
+            }
+        }
+    } catch (e) {
+        message.error({ content: '转换错误: ' + e.message, key: 'convert-step' });
+    }
+};
+
+const handleKeydown = (e) => {
+    // 如果正在输入（如搜索框或重命名），不处理快捷键
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    if (e.key === 'Delete') {
+        if (selectedKeys.value.length > 0) {
+            const key = selectedKeys.value[0];
+            const node = findNode(treeData.value, key);
+            if (node) deleteFile(node);
+        }
+    } else if (e.ctrlKey || e.metaKey) {
+        if (selectedKeys.value.length > 0) {
+            const key = selectedKeys.value[0];
+            const node = findNode(treeData.value, key);
+            
+            if (e.key === 'c') {
+                if (node) copyFile(node);
+            } else if (e.key === 'x') {
+                if (node) cutFile(node);
+            } else if (e.key === 'v') {
+                if (node) pasteFile(node);
+            }
+        }
+    }
+};
+
 onMounted(async () => {
+    window.addEventListener('keydown', handleKeydown);
     await loadSavedFolders();
     await loadFileTypeColors();
     setupWatcher();
@@ -789,6 +1343,10 @@ onMounted(async () => {
     await fetchGitStatus();
     // 加载文件注释
     await loadFileNotes();
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 

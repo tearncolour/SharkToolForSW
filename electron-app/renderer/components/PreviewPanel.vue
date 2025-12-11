@@ -2,7 +2,7 @@
   <div class="preview-panel">
     <!-- 预览区域 -->
     <div class="preview-area" :style="{ height: previewHeight }">
-      <div v-if="!previewImage && !textContent && !imageUrl && !pdfUrl && !spreadsheetData" class="empty-preview">
+      <div v-if="showEmptyState" class="empty-preview">
         <div class="shark-logo">🦈</div>
         <h3>SharkTools</h3>
         <p>选择文件以预览</p>
@@ -57,6 +57,20 @@
           class="pdf-viewer"
           frameborder="0"
         ></iframe>
+      </div>
+
+      <!-- 3D 模型预览 -->
+      <div v-else-if="isThreeD" class="model-preview">
+        <div ref="modelContainer" class="model-container"></div>
+        
+        <div v-if="modelLoading" class="model-loading">
+            <a-spin tip="正在生成预览..." />
+        </div>
+        
+        <div v-if="modelError" class="model-error">
+            <div class="icon-error">⚠️</div>
+            <p>{{ modelError }}</p>
+        </div>
       </div>
 
       <!-- 电子表格预览 -->
@@ -173,11 +187,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { FileOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/vs2015.css';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const props = defineProps({
   previewImage: { type: String, default: '' },
@@ -188,10 +204,229 @@ const props = defineProps({
   textContent: { type: String, default: '' },
   imageUrl: { type: String, default: '' },
   pdfUrl: { type: String, default: '' },
-  spreadsheetData: { type: Object, default: null }
+  spreadsheetData: { type: Object, default: null },
+  isThreeD: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['open-recent', 'property-change', 'add-property', 'switch-sheet']);
+const emit = defineEmits(['open-recent', 'property-change', 'add-property', 'switch-sheet', 'convert-model']);
+
+const showEmptyState = computed(() => {
+  return !props.previewImage && 
+         !props.textContent && 
+         !props.imageUrl && 
+         !props.pdfUrl && 
+         !props.spreadsheetData && 
+         !props.isThreeD;
+});
+
+const modelContainer = ref(null);
+const modelLoading = ref(false);
+const modelError = ref('');
+let renderer, scene, camera, controls, animationId;
+
+// 3D 预览逻辑
+const initThreeJS = () => {
+    if (!modelContainer.value) return;
+    
+    // 清理旧场景
+    disposeThreeJS();
+
+    const width = modelContainer.value.clientWidth;
+    const height = modelContainer.value.clientHeight;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x333333);
+
+    camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.set(100, 100, 100);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    modelContainer.value.appendChild(renderer.domElement);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Resize Observer
+    const resizeObserver = new ResizeObserver(() => {
+        if (!modelContainer.value || !renderer || !camera) return;
+        const newWidth = modelContainer.value.clientWidth;
+        const newHeight = modelContainer.value.clientHeight;
+        if (newWidth === 0 || newHeight === 0) return;
+        
+        camera.aspect = newWidth / newHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(newWidth, newHeight);
+    });
+    resizeObserver.observe(modelContainer.value);
+    modelContainer.value.resizeObserver = resizeObserver;
+
+    // 灯光
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+    
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(50, 50, 50);
+    scene.add(dirLight);
+    
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight2.position.set(-50, -50, -50);
+    scene.add(dirLight2);
+
+    // 坐标轴
+    const axesHelper = new THREE.AxesHelper(50);
+    scene.add(axesHelper);
+
+    animate();
+};
+
+const animate = () => {
+    animationId = requestAnimationFrame(animate);
+    if (controls) controls.update();
+    if (renderer && scene && camera) renderer.render(scene, camera);
+};
+
+const disposeThreeJS = () => {
+    if (modelContainer.value && modelContainer.value.resizeObserver) {
+        modelContainer.value.resizeObserver.disconnect();
+        delete modelContainer.value.resizeObserver;
+    }
+    if (animationId) cancelAnimationFrame(animationId);
+    if (renderer) {
+        renderer.dispose();
+        if (modelContainer.value && renderer.domElement) {
+            modelContainer.value.removeChild(renderer.domElement);
+        }
+    }
+    renderer = null;
+    scene = null;
+    camera = null;
+    controls = null;
+};
+
+const loadModel = async (filePath) => {
+    if (!props.isThreeD || !filePath) return;
+    
+    modelLoading.value = true;
+    modelError.value = '';
+    
+    try {
+        // 1. 调用后端 OCCT 转换
+        console.log('Requesting model conversion for:', filePath);
+        const res = await window.electronAPI.convertModelToMesh(filePath);
+        console.log('Model conversion result:', res);
+        
+        if (!res.success) {
+            throw new Error(res.message || '模型转换失败');
+        }
+        
+        const meshes = res.meshes;
+        if (!meshes || meshes.length === 0) {
+            throw new Error('未找到模型数据');
+        }
+
+        console.log('Meshes found:', meshes.length);
+
+        // 2. 构建 Three.js 几何体
+        const group = new THREE.Group();
+        
+        meshes.forEach((meshData, index) => {
+            console.log(`Processing mesh ${index}:`, meshData);
+            const geometry = new THREE.BufferGeometry();
+            
+            // 设置顶点
+            if (meshData.attributes.position) {
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(meshData.attributes.position.array, 3));
+            } else {
+                console.warn(`Mesh ${index} has no position attribute`);
+            }
+            
+            // 设置法线
+            if (meshData.attributes.normal) {
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(meshData.attributes.normal.array, 3));
+            } else {
+                geometry.computeVertexNormals();
+            }
+            
+            // 设置索引
+            if (meshData.index) {
+                // 确保索引是 Uint16 或 Uint32
+                const indices = meshData.index.array;
+                if (indices.length > 65535) {
+                    geometry.setIndex(new THREE.Uint32BufferAttribute(indices, 1));
+                } else {
+                    geometry.setIndex(new THREE.Uint16BufferAttribute(indices, 1));
+                }
+            }
+
+            // 颜色
+            let color = 0x00bcd4;
+            if (meshData.color) {
+                color = new THREE.Color(meshData.color[0], meshData.color[1], meshData.color[2]);
+            }
+
+            const material = new THREE.MeshPhongMaterial({ 
+                color: color, 
+                specular: 0x111111, 
+                shininess: 200,
+                side: THREE.DoubleSide
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            group.add(mesh);
+        });
+
+        // 居中并缩放
+        const box = new THREE.Box3().setFromObject(group);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        group.position.sub(center); // Center the group
+        
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        if (maxDim > 0) {
+            const scale = 100 / maxDim; // Scale to 100 units
+            group.scale.set(scale, scale, scale);
+        }
+
+        if (scene) {
+            // 移除旧模型
+            scene.children = scene.children.filter(c => c.type !== 'Mesh' && c.type !== 'Group');
+            scene.add(group);
+        }
+        modelLoading.value = false;
+
+    } catch (e) {
+        console.error('Preview error:', e);
+        modelError.value = e.message;
+        modelLoading.value = false;
+    }
+};
+
+watch(() => props.isThreeD, (val) => {
+    console.log('PreviewPanel isThreeD changed:', val);
+    if (val) {
+        setTimeout(() => {
+            initThreeJS();
+            if (props.selectedFile) {
+                loadModel(props.selectedFile.key);
+            }
+        }, 100);
+    } else {
+        disposeThreeJS();
+    }
+});
+
+watch(() => props.selectedFile, (newFile) => {
+    if (props.isThreeD && newFile) {
+        loadModel(newFile.key);
+    }
+});
+
+onBeforeUnmount(() => {
+    disposeThreeJS();
+});
 
 // 面板分割比例
 const splitRatio = ref(0.6); // 预览区域占 60%
@@ -671,6 +906,68 @@ const addCustomProperty = () => {
   text-align: center;
   flex-shrink: 0;
 }
+
+/* 3D 模型预览 */
+.model-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #333;
+  position: relative;
+}
+
+.model-container {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.model-loading, .model-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 30, 0.8);
+  z-index: 10;
+}
+
+.model-error {
+  color: #ff4d4f;
+  text-align: center;
+  padding: 20px;
+}
+
+.icon-error {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.model-actions {
+  padding: 16px;
+  background: #252526;
+  border-top: 1px solid #3e3e42;
+  flex-shrink: 0;
+}
+
+.model-actions h4 {
+  margin: 0 0 12px 0;
+  color: #ccc;
+  font-size: 12px;
+}
+
+.feature-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 
 /* 图片预览 */
 .image-preview {
