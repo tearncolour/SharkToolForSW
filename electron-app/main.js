@@ -3,7 +3,7 @@
  * 独立桌面应用程序，与 SolidWorks 插件通信
  */
 
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, shell, protocol } = require('electron');
 const path = require('path');
 const net = require('net');
 const http = require('http');
@@ -85,7 +85,8 @@ function createWindow() {
             nodeIntegration: false,
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js'),
-            devTools: true
+            devTools: true,
+            plugins: true // 启用插件支持（如 PDF 查看器）
         },
         icon: path.join(__dirname, 'assets', 'icon.png'),
         show: true  // 立即显示，不等待 ready-to-show
@@ -1185,7 +1186,28 @@ if (!gotTheLock) {
     });
 
     // 应用程序事件
+    // 注册特权协议
+    protocol.registerSchemesAsPrivileged([
+        { scheme: 'local-resource', privileges: { secure: true, standard: true, supportFetchAPI: true, corsEnabled: true, stream: true } }
+    ]);
+
     app.whenReady().then(() => {
+        // 注册本地资源协议
+        protocol.handle('local-resource', async (request) => {
+            const url = request.url.replace('local-resource://', '');
+            const decodedUrl = decodeURIComponent(url);
+            try {
+                // 移除可能的 query parameters
+                const filePath = decodedUrl.split('?')[0];
+                // 规范化路径
+                const normalizedPath = path.normalize(filePath);
+                return net.fetch('file:///' + normalizedPath);
+            } catch (error) {
+                console.error('Failed to load local resource:', error);
+                return new Response('Not Found', { status: 404 });
+            }
+        });
+
         createWindow();
         createTray();
         startWebSocketServer();
