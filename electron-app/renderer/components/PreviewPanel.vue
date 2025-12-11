@@ -52,11 +52,7 @@
 
       <!-- PDF 预览 -->
       <div v-else-if="pdfUrl" class="pdf-preview">
-        <iframe 
-          :src="pdfUrl" 
-          class="pdf-viewer"
-          frameborder="0"
-        ></iframe>
+        <PdfViewer :pdf-url="pdfUrl" />
       </div>
 
       <!-- 3D 模型预览 -->
@@ -194,6 +190,7 @@ import hljs from 'highlight.js';
 import 'highlight.js/styles/vs2015.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import PdfViewer from './PdfViewer.vue';
 
 const props = defineProps({
   previewImage: { type: String, default: '' },

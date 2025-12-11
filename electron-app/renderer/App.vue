@@ -28,6 +28,17 @@
         <!-- 活动栏 (最左侧图标栏) -->
         <div class="activity-bar">
           <div class="activity-icons">
+            <!-- 折叠/展开按钮 -->
+            <a-tooltip placement="right" :title="sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'">
+              <div 
+                class="activity-icon toggle-sidebar" 
+                @click="toggleSidebar"
+              >
+                <MenuFoldOutlined v-if="!sidebarCollapsed" />
+                <MenuUnfoldOutlined v-else />
+              </div>
+            </a-tooltip>
+            <div class="activity-divider"></div>
             <a-tooltip placement="right" title="资源管理器">
               <div 
                 class="activity-icon" 
@@ -70,7 +81,11 @@
         </div>
 
         <!-- 侧边栏 (左侧面板) -->
-        <div class="side-panel" :style="{ width: sidePanelWidth + 'px' }">
+        <div 
+          class="side-panel" 
+          :class="{ collapsed: sidebarCollapsed }"
+          :style="{ width: sidebarCollapsed ? '0px' : sidePanelWidth + 'px' }"
+        >
           <!-- 资源管理器视图 -->
           <div v-show="currentView === 'explorer'" class="panel-content">
             <FileExplorer @select-file="onFileSelect" />
@@ -103,6 +118,7 @@
 
         <!-- 侧边栏调整条 -->
         <div 
+          v-show="!sidebarCollapsed"
           class="sash-vertical" 
           @mousedown="startResizeSidePanel"
         ></div>
@@ -151,7 +167,9 @@ import {
   HistoryOutlined,
   BranchesOutlined,
   SettingOutlined,
-  FolderOpenOutlined
+  FolderOpenOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined
 } from '@ant-design/icons-vue'
 
 // 组件导入
@@ -190,6 +208,7 @@ const themeConfig = {
 
 // 状态
 const currentView = ref('explorer')
+const sidebarCollapsed = ref(false)  // 侧边栏折叠状态
 const sidePanelWidth = ref(300)
 const connectionStatus = ref('default')
 const currentDocument = ref({ name: '', path: '' })
@@ -241,7 +260,20 @@ const connectionText = computed(() => {
 
 // 视图切换
 const setView = (view) => {
+  // 如果侧边栏已折叠，点击图标时自动展开
+  if (sidebarCollapsed.value) {
+    sidebarCollapsed.value = false
+  }
   currentView.value = view
+}
+
+// 切换侧边栏显示/隐藏
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  // 保存状态到本地存储
+  if (window.electronAPI) {
+    window.electronAPI.storeSet('ui.sidebarCollapsed', sidebarCollapsed.value)
+  }
 }
 
 // 窗口控制
@@ -779,6 +811,13 @@ onMounted(() => {
     window.electronAPI.storeGet('workspace.recentFiles').then(files => {
       if (files) recentFiles.value = files;
     })
+
+    // 恢复侧边栏折叠状态
+    window.electronAPI.storeGet('ui.sidebarCollapsed').then(collapsed => {
+      if (collapsed !== null && collapsed !== undefined) {
+        sidebarCollapsed.value = collapsed
+      }
+    })
   } else {
     console.error('electronAPI 不可用！')
     message.error('Electron API 未加载')
@@ -934,6 +973,23 @@ onMounted(() => {
   background: #007acc;
 }
 
+/* 折叠按钮特殊样式 */
+.activity-icon.toggle-sidebar {
+  color: #cccccc;
+}
+
+.activity-icon.toggle-sidebar:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 活动栏分隔线 */
+.activity-divider {
+  width: 32px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 8px auto;
+}
+
 /* 侧边栏 */
 .side-panel {
   background: #252526;
@@ -941,6 +997,13 @@ onMounted(() => {
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  /* 平滑过渡动画 */
+  transition: width 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.side-panel.collapsed {
+  min-width: 0 !important;
+  border-right: none;
 }
 
 .panel-content {
