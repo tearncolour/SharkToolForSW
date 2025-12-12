@@ -117,6 +117,52 @@
         </div>
       </div>
 
+    <!-- 空白区域右键菜单 -->
+    <a-dropdown 
+      v-model:open="blankAreaMenuVisible" 
+      :trigger="['contextmenu']"
+      :getPopupContainer="triggerNode => triggerNode.parentNode"
+    >
+      <div 
+        ref="blankAreaMenuTrigger"
+        style="position: fixed; pointer-events: none;"
+        :style="{ left: blankAreaMenuPosition.x + 'px', top: blankAreaMenuPosition.y + 'px' }"
+      ></div>
+      <template #overlay>
+        <a-menu @click="blankAreaMenuVisible = false">
+          <a-menu-item key="paste-blank" @click="pasteToRoot" :disabled="!canPaste">
+            <template #icon><span>📋</span></template>
+            粘贴
+          </a-menu-item>
+          <a-menu-divider />
+          <a-sub-menu key="new-blank" title="新建">
+            <template #icon><span>➕</span></template>
+            <a-menu-item key="new-folder-blank" @click="createNewFolderInRoot">
+              <template #icon><FolderOutlined /></template>
+              文件夹
+            </a-menu-item>
+            <a-menu-item key="new-part-blank" @click="createNewFileInRoot('sldprt')">
+              <template #icon><FileOutlined /></template>
+              零件 (.sldprt)
+            </a-menu-item>
+            <a-menu-item key="new-asm-blank" @click="createNewFileInRoot('sldasm')">
+              <template #icon><FileOutlined /></template>
+              装配体 (.sldasm)
+            </a-menu-item>
+            <a-menu-item key="new-drw-blank" @click="createNewFileInRoot('slddrw')">
+              <template #icon><FileOutlined /></template>
+              工程图 (.slddrw)
+            </a-menu-item>
+          </a-sub-menu>
+          <a-menu-divider />
+          <a-menu-item key="refresh-blank" @click="refresh">
+            <template #icon><ReloadOutlined /></template>
+            刷新
+          </a-menu-item>
+        </a-menu>
+      </template>
+    </a-dropdown>
+
     <!-- 注释编辑对话框 -->
     <a-modal
       v-model:open="noteModalVisible"
@@ -166,6 +212,7 @@ const clipboard = ref({
 // 空白区域右键菜单控制
 const blankAreaMenuVisible = ref(false);
 const blankAreaMenuPosition = ref({ x: 0, y: 0 });
+const blankAreaMenuTrigger = ref(null);
 
 // Git 状态
 const gitStatusMap = ref(new Map()); // 文件路径 -> 状态
@@ -971,9 +1018,13 @@ const onBlankAreaRightClick = (event) => {
         return;
     }
     
-    // 空白区域：阻止默认菜单，不显示任何菜单
-    // （因为空白区域操作不常用，简化 UX）
+    // 空白区域：显示空白区域菜单
     event.preventDefault();
+    event.stopPropagation();
+    
+    // 设置菜单位置并显示
+    blankAreaMenuPosition.value = { x: event.clientX, y: event.clientY };
+    blankAreaMenuVisible.value = true;
 };
 
 // 在资源管理器中打开
