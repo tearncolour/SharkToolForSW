@@ -944,21 +944,195 @@ namespace SharkTools
                 }
 
                 var fileInfo = new FileInfo(filePath);
-                var properties = new
+                string ext = Path.GetExtension(filePath).ToLower();
+                
+                // 检查是否是 SolidWorks 文件
+                bool isSWFile = ext == ".sldprt" || ext == ".sldasm" || ext == ".slddrw";
+                
+                if (!isSWFile)
                 {
-                    fileName = fileInfo.Name,
-                    fileSize = fileInfo.Length,
-                    createdDate = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                    modifiedDate = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                    filePath = filePath
-                };
+                    // 非 SW 文件，返回基本属性
+                    var basicProps = new
+                    {
+                        fileName = fileInfo.Name,
+                        fileSize = fileInfo.Length,
+                        createdDate = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                        modifiedDate = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                        filePath = filePath
+                    };
+                    return new { success = true, properties = basicProps };
+                }
 
-                return new { success = true, properties = properties };
+                // SolidWorks 文件 - 获取详细属性和自定义属性
+                IModelDoc2 doc = null;
+                bool needClose = false;
+                int errors = 0, warnings = 0;
+                
+                try
+                {
+                    // 尝试获取已打开的文档
+                    doc = FindOpenDocument(filePath);
+                    
+                    if (doc == null)
+                    {
+                        // 打开文档
+                        doc = _swApp.OpenDoc6(filePath,
+                            GetDocumentType(filePath),
+                            (int)swOpenDocOptions_e.swOpenDocOptions_Silent,
+                            "", ref errors, ref warnings) as IModelDoc2;
+                        needClose = true;
+                    }
+
+                    if (doc == null)
+                    {
+                        // 无法打开文档，返回基本信息
+                        var basicProps = new
+                        {
+                            fileName = fileInfo.Name,
+                            fileSize = fileInfo.Length,
+                            createdDate = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                            modifiedDate = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                            filePath = filePath,
+                            docType = GetFileTypeLabel(filePath)
+                        };
+                        return new { success = true, properties = basicProps };
+                    }
+
+                    // 获取文档属性
+                    var docType = GetFileTypeLabel(filePath);
+                    var author = doc.Extension.CustomPropertyManager[""].Get("Author") ?? "-";
+                    
+                    // 获取材料和质量信息（仅零件）
+                    string material = "-";
+                    string mass = "-";
+                    string volume = "-";
+                    string surfaceArea = "-";
+                    
+                    if (doc.GetType() == (int)swDocumentTypes_e.swDocPART)
+                    {
+                        IPartDoc part = doc as IPartDoc;
+                        if (part != null)
+                        {
+                            material = part.GetMaterialPropertyName2("", out _) ?? "-";
+                            
+                            // 获取质量属性
+                            var massProps = doc.Extension.CreateMassProperty();
+                            if (massProps != null)
+                            {
+                                mass = (massProps.Mass * 1000).ToString("F2") + " g";
+                                volume = (massProps.Volume * 1000000).ToString("F2") + " cm³";
+                                surfaceArea = (massProps.SurfaceArea * 10000).ToString("F2") + " cm²";
+                            }
+                        }
+                    }
+
+                    var properties = new
+                    {
+                        fileName = fileInfo.Name,
+                        fileSize = fileInfo.Length,
+                        createdDate = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                        modifiedDate = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                        filePath = filePath,
+                        docType = docType,
+                        material = material,
+                        mass = mass,
+                        volume = volume,
+                        surfaceArea = surfaceArea,
+                        author = author
+                    };
+
+                    // 获取自定义属性
+                    var customProps = new List<object>();
+                    var propMgr = doc.Extension.get_CustomPropertyManager("");
+                    if (propMgr != null)
+                    {
+                        object propNames = null;
+                        object propTypes = null;
+                        object propValues = null;
+                        object propResolved = null;
+                        object propLinked = null;
+
+                        int count = propMgr.GetAll3(ref propNames, ref propTypes, ref propValues, ref propResolved, ref propLinked);
+                        
+                        if (count > 0 && propNames is string[] names && propValues is string[] values)
+                        {
+                            for (int i = 0; i < names.Length; i++)
+                            {
+                                customProps.Add(new { name = names[i], value = values[i] });
+                            }
+                        }
+                    }
+
+                    return new { success = true, properties = properties, customProperties = customProps };
+                }
+                finally
+                {
+                    if (needClose && doc != null)
+                    {
+                        _swApp.CloseDoc(doc.GetTitle());
+                    }
+                }
             }
             catch (Exception ex)
             {
+                Log($"GetDocumentProperties error: {ex.Message}");
                 return new { success = false, message = ex.Message };
             }
+        }
+
+        private string GetFileTypeLabel(string filePath)
+        {
+            string ext = Path.GetExtension(filePath).ToLower();
+            switch (ext)
+            {
+                case ".sldprt": return "SolidWorks 零件";
+                case ".sldasm": return "SolidWorks 装配体";
+                case ".slddrw": return "SolidWorks 工程图";
+                case ".step":
+                case ".stp": return "STEP 文件";
+                case ".iges":
+                case ".igs": return "IGES 文件";
+                case ".stl": return "STL 文件";
+                default: return "未知类型";
+            }
+        }
+
+        private int GetDocumentType(string filePath)
+        {
+            string ext = Path.GetExtension(filePath).ToLower();
+            switch (ext)
+            {
+                case ".sldprt":
+                    return (int)swDocumentTypes_e.swDocPART;
+                case ".sldasm":
+                    return (int)swDocumentTypes_e.swDocASSEMBLY;
+                case ".slddrw":
+                    return (int)swDocumentTypes_e.swDocDRAWING;
+                default:
+                    return (int)swDocumentTypes_e.swDocPART;
+            }
+        }
+
+        private IModelDoc2 FindOpenDocument(string filePath)
+        {
+            object[] docs = _swApp.GetDocuments() as object[];
+            if (docs != null)
+            {
+                foreach (object docObj in docs)
+                {
+                    IModelDoc2 doc = docObj as IModelDoc2;
+                    if (doc != null)
+                    {
+                        string docPath = doc.GetPathName();
+                        if (!string.IsNullOrEmpty(docPath) && 
+                            docPath.Equals(filePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return doc;
+                        }
+                    }
+                }
+            }
+            return null;
         }
 
         private void WriteLog(string message)
