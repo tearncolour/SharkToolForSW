@@ -39,43 +39,52 @@
         </div>
       </div>
       
-      <a-directory-tree
-        v-else
-        v-model:expandedKeys="expandedKeys"
-        v-model:selectedKeys="selectedKeys"
-        :tree-data="filteredTreeData"
-        :load-data="onLoadData"
-        @select="onSelect"
-        @rightClick="onRightClick"
-        block-node
-        :show-icon="false"
-        multiple
-        draggable
-        @dragstart="onDragStart"
-        @dragenter="onDragEnter"
-        @drop="onTreeDrop"
-      >
-        <template #title="{ title, isLeaf, dataRef, key, parentKey }">
-            <a-dropdown :trigger="['contextmenu']">
+      <!-- 空白区域右键菜单 -->
+      <a-dropdown :trigger="['contextmenu']" v-if="treeData.length > 0">
+        <div class="tree-container" @dragover.prevent @drop.prevent="onExternalDrop">
+          <a-directory-tree
+            v-model:expandedKeys="expandedKeys"
+            v-model:selectedKeys="selectedKeys"
+            :tree-data="searchText ? filteredTreeData : treeData"
+            :load-data="onLoadData"
+            @expand="onExpand"
+            @select="onSelect"
+            @rightClick="onRightClick"
+            block-node
+            :show-icon="false"
+            multiple
+            draggable
+            @dragstart="onDragStart"
+            @dragenter="onDragEnter"
+            @drop="onTreeDrop"
+          >
+            <template #title="{ title, isLeaf, dataRef, key, parentKey }">
+              <a-dropdown :trigger="['contextmenu']">
                 <a-tooltip :title="getFileNote(key)" placement="right" :open="hasNote(key) ? undefined : false">
-                  <span class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
-                    <span v-if="isLeaf" :class="[getGitStatusClass(key), getFileTypeClass(title)]">
+                  <div class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
+                    <div v-if="isLeaf" class="tree-node-row" :class="[getGitStatusClass(key), getFileTypeClass(title)]">
+                      <div class="node-name-container">
                         <FileOutlined :style="{ color: getFileTypeColor(title) }" /> 
-                        <span class="file-name" :style="{ color: getFileTypeColor(title) }">
+                        <span class="file-name" :style="{ color: getFileTypeColor(title) }" :title="title">
                             <span v-html="highlightTitle(title)"></span>
                         </span>
                         <span v-if="hasNote(key)" class="note-indicator" title="有注释">📝</span>
-                        <span v-if="getGitStatus(key)" class="git-badge" :class="'git-' + getGitStatus(key)">
+                      </div>
+                      <div class="node-status-container" v-if="getGitStatus(key)">
+                        <span class="git-badge" :class="'git-' + getGitStatus(key)">
                           {{ getGitStatusLabel(key) }}
                         </span>
-                    </span>
-                    <span v-else :class="getGitStatusClass(key)">
+                      </div>
+                    </div>
+                    <div v-else class="tree-node-row" :class="getGitStatusClass(key)">
+                      <div class="node-name-container">
                         <FolderOutlined /> 
-                        <span class="folder-name">
+                        <span class="folder-name" :title="title">
                             <span v-html="highlightTitle(title)"></span>
                         </span>
-                    </span>
-                  </span>
+                      </div>
+                    </div>
+                  </div>
                 </a-tooltip>
                 <template #overlay>
                     <a-menu>
@@ -103,9 +112,25 @@
                         <a-menu-item v-if="!parentKey" key="remove" danger @click="removeRootFolder(key)">从工作区移除</a-menu-item>
                     </a-menu>
                 </template>
-            </a-dropdown>
+              </a-dropdown>
+            </template>
+          </a-directory-tree>
+        </div>
+        <template #overlay>
+          <a-menu>
+            <a-menu-item key="paste-blank" @click="pasteToRoot" :disabled="!canPaste">粘贴</a-menu-item>
+            <a-menu-divider />
+            <a-sub-menu key="new-blank" title="新建">
+              <a-menu-item key="new-folder-blank" @click="createNewFolderInRoot">文件夹</a-menu-item>
+              <a-menu-item key="new-part-blank" @click="createNewFileInRoot('sldprt')">零件 (.sldprt)</a-menu-item>
+              <a-menu-item key="new-asm-blank" @click="createNewFileInRoot('sldasm')">装配体 (.sldasm)</a-menu-item>
+              <a-menu-item key="new-drw-blank" @click="createNewFileInRoot('slddrw')">工程图 (.slddrw)</a-menu-item>
+            </a-sub-menu>
+            <a-menu-divider />
+            <a-menu-item key="refresh-blank" @click="refresh">刷新</a-menu-item>
+          </a-menu>
         </template>
-      </a-directory-tree>
+      </a-dropdown>
     </div>
 
     <!-- 注释编辑对话框 -->
@@ -140,6 +165,9 @@ const expandedKeys = ref([]);
 const selectedKeys = ref([]);
 const rootPaths = ref([]); // 存储实际的根路径
 const STORE_KEY = 'workspace.folders';
+
+// 防止加载时触发刷新的标志
+let isLoadingChildren = false;
 
 // 搜索和过滤
 const searchText = ref('');
@@ -341,12 +369,9 @@ const deleteFile = (node) => {
 const onDragStart = (info) => {
     // info.node 是被拖拽的节点
     // info.event 是原生拖拽事件
-    // 可以在这里设置拖拽数据
-    console.log('drag start', info);
 };
 
 const onDragEnter = (info) => {
-    console.log('drag enter', info);
     // expandedKeys.value = info.expandedKeys;
 };
 
@@ -653,7 +678,8 @@ async function rebuildTree() {
                 key: item.path,
                 isLeaf: !item.isDirectory,
                 isDirectory: item.isDirectory,
-                parentKey: rootPath // 标记父节点，方便上下文菜单判断
+                parentKey: rootPath,
+                children: !item.isDirectory ? undefined : [] // 文件夹初始化空数组
             }));
         } catch (e) {
             console.error('Failed to load root children:', e);
@@ -666,7 +692,8 @@ async function rebuildTree() {
             key: path,
             isLeaf: false,
             isDirectory: true,
-            parentKey: null // 根节点没有父节点
+            parentKey: null,
+            children: [] // 根节点初始化空数组
         }));
     }
 }
@@ -742,6 +769,21 @@ const closeWorkspace = async () => {
 };
 
 // 辅助函数：递归更新树数据
+// 辅助函数：在树中查找节点
+const findNodeByKey = (list, key) => {
+    for (const node of list) {
+        if (node.key === key) {
+            return node;
+        }
+        if (node.children) {
+            const found = findNodeByKey(node.children, key);
+            if (found) return found;
+        }
+    }
+    return null;
+};
+
+// 辅助函数：递归更新树数据（仅用于需要完全替换时）
 const updateTreeData = (list, key, children) => {
     return list.map(node => {
         if (node.key === key) {
@@ -763,14 +805,19 @@ const onLoadData = (treeNode) => {
             return;
         }
         
-        // 如果已经有子节点，直接返回
-        if (treeNode.children && treeNode.children.length > 0) {
+        // 检查节点是否已有子节点（通过 treeData 检查）
+        const existingNode = findNodeByKey(treeData.value, treeNode.key);
+        if (existingNode && existingNode.children && existingNode.children.length > 0) {
             resolve();
             return;
         }
         
         const path = treeNode.key;
+        
         try {
+            // 设置加载标志 - 防止文件系统事件干扰
+            isLoadingChildren = true;
+            
             const items = await window.electronAPI.readDir(path);
             
             const children = items.map(item => ({
@@ -778,24 +825,44 @@ const onLoadData = (treeNode) => {
                 key: item.path,
                 isLeaf: !item.isDirectory,
                 isDirectory: item.isDirectory,
-                parentKey: path
+                parentKey: path,
+                // 为文件夹初始化空的 children 数组，确保可以继续展开
+                children: item.isDirectory ? [] : undefined
             }));
 
-            // 使用递归更新确保响应式触发
-            treeData.value = updateTreeData(treeData.value, path, children);
+            // 在 treeData 中更新节点
+            const node = findNodeByKey(treeData.value, path);
+            if (node) {
+                node.children = children;
+            }
+            
+            // 同时在 treeNode.dataRef 上设置 children
+            if (treeNode.dataRef) {
+                treeNode.dataRef.children = children;
+            }
+            
+            // 延长加载标志时间，防止文件系统事件触发刷新
+            setTimeout(() => {
+                isLoadingChildren = false;
+            }, 1000);
+            
             resolve();
         } catch (e) {
             console.error('Load data error:', e);
-            // 不再显示错误消息，因为可能是尝试加载文件
+            isLoadingChildren = false;
             resolve();
         }
     });
 };
 
+// 展开/收起事件处理 - 懒加载已由 load-data 处理
+const onExpand = async (keys, { expanded, node }) => {
+    // 懒加载由 onLoadData 处理
+};
+
 // 选择文件
 const onSelect = (keys, { node }) => {
     // 仅处理选中状态，不执行打开操作
-    console.log('Selected:', node.key);
     if (node.isLeaf) {
         // 确保传递正确的数据，AntDV 的 node 可能包含复杂结构
         // 优先使用 dataRef (原始数据)，其次是 node 本身
@@ -981,9 +1048,127 @@ const createNewFile = async (parentPath, ext) => {
     });
 };
 
+// 根目录操作函数
+const getFirstRootPath = () => {
+    if (rootPaths.value.length === 1) {
+        return rootPaths.value[0];
+    } else if (rootPaths.value.length > 1 && treeData.value.length > 0) {
+        return treeData.value[0].key;
+    }
+    return null;
+};
+
+const pasteToRoot = async () => {
+    const rootPath = getFirstRootPath();
+    if (rootPath) {
+        await pasteFile(rootPath);
+    }
+};
+
+const createNewFolderInRoot = async () => {
+    const rootPath = getFirstRootPath();
+    if (rootPath) {
+        await createNewFolder(rootPath);
+    }
+};
+
+const createNewFileInRoot = async (ext) => {
+    const rootPath = getFirstRootPath();
+    if (rootPath) {
+        await createNewFile(rootPath, ext);
+    }
+};
+
+// 外部文件拖放处理
+const onExternalDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    
+    const rootPath = getFirstRootPath();
+    if (!rootPath) {
+        message.warning('请先打开一个文件夹');
+        return;
+    }
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    message.loading({ content: '正在复制文件...', key: 'copy-external' });
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.path) continue;
+        
+        const destPath = `${rootPath}\\${file.name}`;
+        
+        try {
+            const res = await window.electronAPI.copyFile(file.path, destPath);
+            if (res.success) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (err) {
+            console.error(`Error copying ${file.name}:`, err);
+            failCount++;
+        }
+    }
+    
+    if (failCount > 0) {
+        message.warning({ content: `复制完成: ${successCount} 成功, ${failCount} 失败`, key: 'copy-external' });
+    } else {
+        message.success({ content: `成功复制 ${successCount} 个文件`, key: 'copy-external' });
+    }
+    
+    // 刷新根节点
+    await refreshNode(rootPath);
+};
+
 const refreshNode = async (key) => {
+    
     // 检查是否为单根模式下的根路径刷新
     if (rootPaths.value.length === 1 && key === rootPaths.value[0]) {
+        // 如果有展开的节点，不要调用 rebuildTree()，而是刷新第一层
+        if (expandedKeys.value.length > 0 && treeData.value.length > 0) {
+            try {
+                const items = await window.electronAPI.readDir(key);
+                const newChildren = items.map(item => ({
+                    title: item.name,
+                    key: item.path,
+                    isLeaf: !item.isDirectory,
+                    isDirectory: item.isDirectory,
+                    parentKey: key,
+                    children: !item.isDirectory ? undefined : []
+                }));
+                
+                // 合并现有数据
+                const currentChildrenMap = new Map();
+                treeData.value.forEach(c => currentChildrenMap.set(c.key, c));
+                
+                const mergedChildren = newChildren.map(newItem => {
+                    const existing = currentChildrenMap.get(newItem.key);
+                    if (existing) {
+                        // 保留现有节点的所有数据（包括已加载的子节点）
+                        existing.title = newItem.title;
+                        existing.isLeaf = newItem.isLeaf;
+                        existing.isDirectory = newItem.isDirectory;
+                        return existing;
+                    }
+                    return newItem;
+                });
+                
+                treeData.value.length = 0;
+                treeData.value.push(...mergedChildren);
+            } catch (e) {
+                console.error('Refresh first level error:', e);
+            }
+            return;
+        }
+        
+        // 没有展开节点时才重建整棵树
         await rebuildTree();
         return;
     }
@@ -998,7 +1183,8 @@ const refreshNode = async (key) => {
                 key: item.path,
                 isLeaf: !item.isDirectory,
                 isDirectory: item.isDirectory,
-                parentKey: node.key
+                parentKey: node.key,
+                children: !item.isDirectory ? undefined : [] // 文件夹初始化空数组
             }));
 
             // 合并逻辑：保留现有的子节点对象（以保持展开状态和子节点的子节点）
@@ -1011,19 +1197,22 @@ const refreshNode = async (key) => {
                 const mergedChildren = newChildren.map(newItem => {
                     const existing = currentChildrenMap.get(newItem.key);
                     if (existing) {
-                        // 更新属性但保留对象引用
+                        // 更新属性但保留对象引用和子节点
                         existing.title = newItem.title;
                         existing.isLeaf = newItem.isLeaf;
                         existing.isDirectory = newItem.isDirectory;
+                        // 保留 existing.children 不变
                         return existing;
                     }
                     return newItem;
                 });
-                node.children = mergedChildren;
+                // 直接修改数组内容而不是替换
+                node.children.length = 0;
+                node.children.push(...mergedChildren);
             }
             
-            // 触发响应式更新
-            treeData.value = [...treeData.value];
+            // 不再触发整个树的响应式更新
+            // treeData.value = [...treeData.value];
         } catch (e) {
             console.error('Refresh node error:', e);
         }
@@ -1083,8 +1272,17 @@ const setupWatcher = () => {
                     }
                 }
                 
-                // 执行刷新
+                // 执行刷新 - 再次检查是否正在加载
+                if (isLoadingChildren) {
+                    return;
+                }
+                
                 for (const refreshPath of optimizedPaths) {
+                    // 每次刷新前再检查一次
+                    if (isLoadingChildren) {
+                        break;
+                    }
+                    
                     // 先检查是否是根路径
                     const isRoot = rootPaths.value.includes(refreshPath);
                     if (isRoot) {
@@ -1106,7 +1304,7 @@ const setupWatcher = () => {
                         }
                     }
                 }
-            }, 200); // 200ms 防抖
+            }, 500); // 500ms 防抖
         };
         
         // Git 状态防抖
@@ -1120,6 +1318,11 @@ const setupWatcher = () => {
         };
 
         window.electronAPI.onFileSystemChange((data) => {
+            // 如果正在加载子节点，忽略文件系统事件
+            if (isLoadingChildren) {
+                return;
+            }
+            
             // 新格式: { changes, groupedChanges, affectedRoots, stats }
             const changes = data.changes || data;
             if (!Array.isArray(changes)) return;
@@ -1140,8 +1343,8 @@ const setupWatcher = () => {
                 // 添加到待刷新队列
                 pendingRefreshPaths.add(parentPath);
                 
-                // 同时也添加 rootPath（确保根目录也刷新）
-                pendingRefreshPaths.add(change.rootPath);
+                // 不再自动添加 rootPath，避免不必要的刷新
+                // pendingRefreshPaths.add(change.rootPath);
 
                 // 检查是否需要刷新 Git 状态
                 if (!filename.includes('.git\\objects') && 
@@ -1163,23 +1366,24 @@ const setupWatcher = () => {
     }
 };
 
-// 监听树数据变化，更新监视器
-watch(treeData, (newVal, oldVal) => {
+// 监听树数据变化，更新监视器（只监听根节点变化）
+watch(() => treeData.value.map(n => n.key), (newKeys, oldKeys) => {
+    const oldSet = new Set(oldKeys || []);
+    const newSet = new Set(newKeys);
+    
     // 找出新增的根节点
-    newVal.forEach(node => {
-        if (!oldVal || !oldVal.find(n => n.key === node.key)) {
-            window.electronAPI.watchPath(node.key);
+    newKeys.forEach(key => {
+        if (!oldSet.has(key)) {
+            window.electronAPI.watchPath(key);
         }
     });
     // 找出移除的根节点
-    if (oldVal) {
-        oldVal.forEach(node => {
-            if (!newVal.find(n => n.key === node.key)) {
-                window.electronAPI.unwatchPath(node.key);
-            }
-        });
-    }
-}, { deep: true });
+    (oldKeys || []).forEach(key => {
+        if (!newSet.has(key)) {
+            window.electronAPI.unwatchPath(key);
+        }
+    });
+});
 
 // 检查是否为 STEP 文件
 const isStepFile = (filename) => {
@@ -1381,7 +1585,47 @@ onUnmounted(() => {
 }
 .file-name, .folder-name {
     margin-left: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
 }
+
+/* 树节点行布局 */
+.tree-node-content {
+    display: flex;
+    width: 100%;
+    overflow: hidden;
+}
+
+.tree-node-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    overflow: hidden;
+}
+
+.node-name-container {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.node-status-container {
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+/* 树容器 */
+.tree-container {
+    flex: 1;
+    overflow: auto;
+    min-height: 100px;
+}
+
 .empty-state {
     display: flex;
     justify-content: center;

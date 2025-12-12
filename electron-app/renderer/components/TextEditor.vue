@@ -209,6 +209,9 @@ const init = () => {
   historyIndex.value = 0
 }
 
+// 防抖计时器
+const inputTimeout = ref(null)
+
 // 输入处理
 const onInput = () => {
   isDirty.value = editorContent.value !== originalContent.value
@@ -224,8 +227,6 @@ const onInput = () => {
   
   emit('contentChange', editorContent.value)
 }
-
-const inputTimeout = ref(null)
 
 // 历史记录管理
 const addToHistory = (content) => {
@@ -448,7 +449,7 @@ onMounted(() => {
   text-align: right;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 22px; /* 与代码区一致 */
   color: #858585;
   user-select: none;
   overflow-y: hidden;
@@ -456,13 +457,14 @@ onMounted(() => {
 }
 
 .line-number {
-  height: 22.4px; /* 与代码行高度一致 */
+  height: 22px; /* 与代码行高度一致 */
 }
 
 .editor-content {
   flex: 1;
   position: relative;
   overflow: hidden;
+  min-width: 0; /* 防止flex子元素溢出 */
 }
 
 .code-textarea {
@@ -478,16 +480,18 @@ onMounted(() => {
   border: none;
   outline: none;
   background: transparent;
-  color: #d4d4d4;
+  color: transparent; /* 文字透明，只显示光标 */
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 22px; /* 使用固定像素值 */
   resize: none;
   overflow: auto;
   white-space: pre;
   word-wrap: normal;
-  z-index: 1;
+  z-index: 2;
   caret-color: #aeafad;
+  tab-size: 4;
+  -moz-tab-size: 4;
 }
 
 .code-highlight {
@@ -501,15 +505,17 @@ onMounted(() => {
   padding: 16px;
   margin: 0;
   border: none;
-  background: transparent;
+  background: #1e1e1e;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
-  line-height: 1.6;
-  overflow: auto;
+  line-height: 22px; /* 与 textarea 保持一致 */
+  overflow: hidden; /* 不显示滚动条，跟随 textarea 滚动 */
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
   white-space: pre;
   word-wrap: normal;
+  tab-size: 4;
+  -moz-tab-size: 4;
 }
 
 .code-highlight code {

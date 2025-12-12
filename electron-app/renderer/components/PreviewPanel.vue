@@ -50,7 +50,7 @@
 
       <!-- PDF 预览 -->
       <div v-else-if="pdfUrl" class="pdf-preview">
-        <PdfViewer :pdf-url="pdfUrl" />
+        <PdfViewer :pdf-url="pdfUrl" @metadata-loaded="onPdfMetadataLoaded" />
       </div>
 
       <!-- 3D 模型预览 -->
@@ -122,9 +122,13 @@
 
     <!-- 参数配置区域 -->
     <div class="properties-area" :style="{ height: propertiesHeight }">
-      <div class="properties-header">
+      <div 
+        class="properties-header"
+        @dblclick="togglePropertiesCollapse"
+        title="双击快速展开/收起"
+      >
         <span class="properties-title">属性</span>
-        <div class="properties-tabs">
+        <div class="properties-tabs" v-show="!isPropertiesMinimized">
           <span 
             class="tab" 
             :class="{ active: activeTab === 'info' }"
@@ -138,17 +142,25 @@
         </div>
       </div>
       
-      <div class="properties-content">
+      <div class="properties-content" v-show="!isPropertiesMinimized">
         <!-- 基本信息 -->
         <div v-show="activeTab === 'info'" class="preview-tab-content">
-          <div v-if="fileProperties" class="property-list">
+          <!-- SolidWorks 文件属性 -->
+          <div v-if="hasFileProperties" class="property-list">
             <div class="property-item" v-for="(value, key) in fileProperties" :key="key">
               <span class="property-key">{{ key }}</span>
               <span class="property-value">{{ value }}</span>
             </div>
           </div>
+          <!-- PDF 元数据 -->
+          <div v-else-if="pdfMetadata" class="property-list">
+            <div class="property-item" v-for="(value, key) in pdfMetadata" :key="key">
+              <span class="property-key">{{ key }}</span>
+              <span class="property-value">{{ value }}</span>
+            </div>
+          </div>
           <div v-else class="empty-properties">
-            <p>选择 SolidWorks 文件查看属性</p>
+            <p>选择文件查看属性</p>
           </div>
         </div>
 
@@ -215,9 +227,20 @@ const showEmptyState = computed(() => {
          !props.isThreeD;
 });
 
+// 检查 fileProperties 是否有实际内容
+const hasFileProperties = computed(() => {
+  return props.fileProperties && Object.keys(props.fileProperties).length > 0;
+});
+
+// 属性窗口最小高度（40px 只显示标题栏）
+const PROPERTIES_MIN_HEIGHT = 40
+const PROPERTIES_DEFAULT_HEIGHT = 0.4 // 40% 高度
+const isPropertiesMinimized = computed(() => splitRatio.value > 0.95)
+
 const modelContainer = ref(null);
 const modelLoading = ref(false);
 const modelError = ref('');
+const pdfMetadata = ref(null); // PDF 元数据
 let renderer, scene, camera, controls, animationId;
 
 // 3D 预览逻辑
@@ -424,8 +447,8 @@ onBeforeUnmount(() => {
     disposeThreeJS();
 });
 
-// 面板分割比例
-const splitRatio = ref(0.6); // 预览区域占 60%
+// 面板分割比例（初始属性窗口占 40%）
+const splitRatio = ref(0.6); // 预览区域占 60%，属性窗口占 40%
 const activeTab = ref('info');
 const maxDisplayLines = 1000; // 最大显示行数（减少以提升性能）
 const imageSize = ref(null);
@@ -657,8 +680,23 @@ const doResize = (e) => {
   const deltaRatio = deltaY / containerHeight;
   
   let newRatio = startRatio + deltaRatio;
-  // 限制范围 20% - 80%
-  newRatio = Math.max(0.2, Math.min(0.8, newRatio));
+  
+  // 计算属性窗口的实际高度
+  const propertiesHeight = containerHeight * (1 - newRatio);
+  
+  // 如果拖动到小于最小高度，设置为最小状态
+  if (propertiesHeight < PROPERTIES_MIN_HEIGHT + 10) {
+    newRatio = 1 - (PROPERTIES_MIN_HEIGHT / containerHeight);
+  }
+  // 如果从最小状态向上拖动，恢复到默认高度
+  else if (splitRatio.value > 0.95 && deltaY < -20) {
+    newRatio = 1 - PROPERTIES_DEFAULT_HEIGHT;
+  }
+  // 正常拖动范围
+  else {
+    newRatio = Math.max(0.1, Math.min(0.98, newRatio));
+  }
+  
   splitRatio.value = newRatio;
 };
 
@@ -679,6 +717,32 @@ const onPropertyChange = (prop) => {
 const addCustomProperty = () => {
   emit('add-property');
 };
+
+// PDF 元数据加载完成
+const onPdfMetadataLoaded = (metadata) => {
+  pdfMetadata.value = metadata;
+};
+
+// 当选择的文件变化时，清除 PDF 元数据
+watch(() => props.selectedFile, () => {
+  if (!props.pdfUrl) {
+    pdfMetadata.value = null;
+  }
+});
+
+// 属性窗口快速折叠/展开
+const togglePropertiesCollapse = () => {
+  if (isPropertiesMinimized.value) {
+    // 当前是最小化状态，展开到默认高度
+    splitRatio.value = 1 - PROPERTIES_DEFAULT_HEIGHT;
+  } else {
+    // 当前是展开状态，收起到最小高度
+    const container = document.querySelector('.preview-panel');
+    if (container) {
+      splitRatio.value = 1 - (PROPERTIES_MIN_HEIGHT / container.clientHeight);
+    }
+  }
+};
 </script>
 
 <style scoped>
@@ -694,14 +758,25 @@ const addCustomProperty = () => {
 /* 预览区域 */
 .preview-area {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   background: #1e1e1e;
   contain: layout;
 }
 
+/* 确保子元素占满 */
+.preview-area > div {
+  flex: 1;
+  min-height: 0;
+}
+
 .empty-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: #555;
 }
@@ -717,6 +792,7 @@ const addCustomProperty = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 100%;
   height: 100%;
   width: 100%;
   padding: 0;
@@ -767,24 +843,41 @@ const addCustomProperty = () => {
 
 /* 分割条 */
 .resize-handle {
-  height: 6px;
+  height: 8px;
   background: #252526;
   cursor: ns-resize;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
+  transition: background 0.2s;
 }
 
 .resize-handle:hover {
-  background: #3e3e42;
+  background: #007acc;
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 3px;
+  background: #555;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.resize-handle:hover::before {
+  background: #fff;
 }
 
 .handle-bar {
-  width: 40px;
-  height: 2px;
-  background: #555;
-  border-radius: 1px;
+  /* 已由 ::before 替代 */
+  display: none;
 }
 
 /* 属性区域 */
@@ -804,6 +897,12 @@ const addCustomProperty = () => {
   background: #2d2d2d;
   border-bottom: 1px solid #3e3e42;
   flex-shrink: 0;
+  cursor: ns-resize;
+  user-select: none;
+}
+
+.properties-header:hover {
+  background: #323232;
 }
 
 .properties-title {
@@ -1045,6 +1144,13 @@ const addCustomProperty = () => {
   margin-top: 12px;
   color: #888888;
   font-size: 12px;
+}
+
+/* 文本编辑器 */
+.text-editor {
+  width: 100%;
+  height: 100%;
+  background: #1e1e1e;
 }
 
 /* PDF 预览 */
