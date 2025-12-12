@@ -7,6 +7,8 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SolidWorks.Interop.sldworks;
@@ -302,6 +304,34 @@ namespace SharkTools
                     });
                 }
 
+                // 文件对比命令 - 单独处理，因为内部使用 async
+                if (command == "compare-files")
+                {
+                    string filePath1 = payload?["filePath1"]?.ToString();
+                    string filePath2 = payload?["filePath2"]?.ToString();
+                    
+                    if (!string.IsNullOrEmpty(filePath1) && !string.IsNullOrEmpty(filePath2))
+                    {
+                        var compareMgr = new FileCompareManager(_swApp, RunOnUIThread);
+                        var compareResult = await compareMgr.CompareFiles(filePath1, filePath2);
+                        return JsonConvert.SerializeObject(new 
+                        { 
+                            id = messageId,
+                            success = true, 
+                            data = compareResult 
+                        });
+                    }
+                    else
+                    {
+                        return JsonConvert.SerializeObject(new 
+                        { 
+                            id = messageId,
+                            success = false, 
+                            message = "请提供两个文件路径" 
+                        });
+                    }
+                }
+
                 object result = null;
 
                 // 在 UI 线程执行 SolidWorks 操作
@@ -374,6 +404,285 @@ namespace SharkTools
                                     _cmdMgr.HistoryTracker.SetInterval(interval * 1000);
                                 }
                                 result = new { success = true };
+                            }
+                            break;
+
+                        // ============ 自定义属性管理命令 ============
+                        case "get-custom-properties":
+                            {
+                                string customPropPath = payload?["path"]?.ToString();
+                                string configName = payload?["configName"]?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(customPropPath))
+                                {
+                                    var customPropMgr = new SwCustomPropertyManager(_swApp, RunOnUIThread);
+                                    result = customPropMgr.GetCustomProperties(customPropPath, configName).Result;
+                                }
+                                else
+                                {
+                                    result = new CustomPropertyResult { Success = false, Message = "路径不能为空" };
+                                }
+                            }
+                            break;
+
+                        case "set-custom-property":
+                            {
+                                string customPropPath = payload?["path"]?.ToString();
+                                string propName = payload?["propertyName"]?.ToString();
+                                string propValue = payload?["propertyValue"]?.ToString() ?? "";
+                                string configName = payload?["configName"]?.ToString() ?? "";
+                                
+                                if (!string.IsNullOrEmpty(customPropPath) && !string.IsNullOrEmpty(propName))
+                                {
+                                    var customPropMgr = new SwCustomPropertyManager(_swApp, RunOnUIThread);
+                                    result = customPropMgr.SetCustomProperty(customPropPath, propName, propValue, configName).Result;
+                                }
+                                else
+                                {
+                                    result = new OperationResult { Success = false, Message = "路径和属性名不能为空" };
+                                }
+                            }
+                            break;
+
+                        case "set-custom-properties-batch":
+                            {
+                                string batchPropPath = payload?["path"]?.ToString();
+                                var properties = payload?["properties"]?.ToObject<Dictionary<string, string>>();
+                                string configName = payload?["configName"]?.ToString() ?? "";
+                                
+                                if (!string.IsNullOrEmpty(batchPropPath) && properties != null)
+                                {
+                                    var customPropMgr = new SwCustomPropertyManager(_swApp, RunOnUIThread);
+                                    result = customPropMgr.SetCustomPropertiesBatch(batchPropPath, properties, configName).Result;
+                                }
+                                else
+                                {
+                                    result = new BatchOperationResult { Success = false, Message = "参数错误" };
+                                }
+                            }
+                            break;
+
+                        case "set-custom-properties-multiple-files":
+                            {
+                                var filePaths = payload?["paths"]?.ToObject<List<string>>();
+                                var properties = payload?["properties"]?.ToObject<Dictionary<string, string>>();
+                                string configName = payload?["configName"]?.ToString() ?? "";
+                                
+                                if (filePaths != null && filePaths.Count > 0 && properties != null)
+                                {
+                                    var customPropMgr = new SwCustomPropertyManager(_swApp, RunOnUIThread);
+                                    result = customPropMgr.SetCustomPropertiesMultipleFiles(filePaths, properties, configName).Result;
+                                }
+                                else
+                                {
+                                    result = new { success = false, message = "参数错误" };
+                                }
+                            }
+                            break;
+
+                        case "delete-custom-property":
+                            {
+                                string deletePropPath = payload?["path"]?.ToString();
+                                string deletePropName = payload?["propertyName"]?.ToString();
+                                string configName = payload?["configName"]?.ToString() ?? "";
+                                
+                                if (!string.IsNullOrEmpty(deletePropPath) && !string.IsNullOrEmpty(deletePropName))
+                                {
+                                    var customPropMgr = new SwCustomPropertyManager(_swApp, RunOnUIThread);
+                                    result = customPropMgr.DeleteCustomProperty(deletePropPath, deletePropName, configName).Result;
+                                }
+                                else
+                                {
+                                    result = new OperationResult { Success = false, Message = "路径和属性名不能为空" };
+                                }
+                            }
+                            break;
+
+                        case "get-property-templates":
+                            {
+                                var customPropMgr = new SwCustomPropertyManager(_swApp, RunOnUIThread);
+                                result = new { success = true, templates = customPropMgr.GetPropertyTemplates() };
+                            }
+                            break;
+
+                        // ============ 批量重命名命令 ============
+                        case "preview-rename":
+                            {
+                                var renamePaths = payload?["paths"]?.ToObject<List<string>>();
+                                var renameOptions = payload?["options"]?.ToObject<RenameOptions>();
+                                
+                                if (renamePaths != null && renamePaths.Count > 0 && renameOptions != null)
+                                {
+                                    var renameMgr = new BatchRenameManager(_swApp, RunOnUIThread);
+                                    result = renameMgr.PreviewRename(renamePaths, renameOptions);
+                                }
+                                else
+                                {
+                                    result = new RenamePreviewResult { Success = false, Message = "参数错误" };
+                                }
+                            }
+                            break;
+
+                        case "execute-rename":
+                            {
+                                var renamePaths = payload?["paths"]?.ToObject<List<string>>();
+                                var renameOptions = payload?["options"]?.ToObject<RenameOptions>();
+                                
+                                if (renamePaths != null && renamePaths.Count > 0 && renameOptions != null)
+                                {
+                                    var renameMgr = new BatchRenameManager(_swApp, RunOnUIThread);
+                                    result = renameMgr.ExecuteRename(renamePaths, renameOptions).Result;
+                                }
+                                else
+                                {
+                                    result = new BatchRenameResult { Success = false, Message = "参数错误" };
+                                }
+                            }
+                            break;
+
+                        case "get-rename-templates":
+                            {
+                                var renameMgr = new BatchRenameManager(_swApp, RunOnUIThread);
+                                result = new { success = true, templates = renameMgr.GetRenameTemplates() };
+                            }
+                            break;
+
+                        // ============ 项目管理命令 ============
+                        case "create-project":
+                            {
+                                string projectPath = payload?["path"]?.ToString();
+                                string projectName = payload?["name"]?.ToString();
+                                var template = payload?["template"]?.ToObject<ProjectTemplate>();
+                                
+                                if (!string.IsNullOrEmpty(projectPath) && !string.IsNullOrEmpty(projectName))
+                                {
+                                    var projectMgr = new ProjectManager();
+                                    result = projectMgr.CreateProject(projectPath, projectName, template);
+                                }
+                                else
+                                {
+                                    result = new ProjectResult { Success = false, Message = "路径和项目名不能为空" };
+                                }
+                            }
+                            break;
+
+                        case "delete-project":
+                            {
+                                string projectPath = payload?["path"]?.ToString();
+                                bool deleteFiles = payload?["deleteFiles"]?.ToObject<bool>() ?? false;
+                                
+                                if (!string.IsNullOrEmpty(projectPath))
+                                {
+                                    var projectMgr = new ProjectManager();
+                                    result = projectMgr.DeleteProject(projectPath, deleteFiles);
+                                }
+                                else
+                                {
+                                    result = new OperationResult { Success = false, Message = "项目路径不能为空" };
+                                }
+                            }
+                            break;
+
+                        case "rename-project":
+                            {
+                                string projectPath = payload?["path"]?.ToString();
+                                string newProjectName = payload?["newName"]?.ToString();
+                                
+                                if (!string.IsNullOrEmpty(projectPath) && !string.IsNullOrEmpty(newProjectName))
+                                {
+                                    var projectMgr = new ProjectManager();
+                                    result = projectMgr.RenameProject(projectPath, newProjectName);
+                                }
+                                else
+                                {
+                                    result = new ProjectResult { Success = false, Message = "项目路径和新名称不能为空" };
+                                }
+                            }
+                            break;
+
+                        case "get-all-projects":
+                            {
+                                var projectMgr = new ProjectManager();
+                                result = projectMgr.GetAllProjects();
+                            }
+                            break;
+
+                        case "get-project-info":
+                            {
+                                string projectPath = payload?["path"]?.ToString();
+                                if (!string.IsNullOrEmpty(projectPath))
+                                {
+                                    var projectMgr = new ProjectManager();
+                                    result = projectMgr.GetProjectInfo(projectPath);
+                                }
+                            }
+                            break;
+
+                        case "get-project-statistics":
+                            {
+                                string projectPath = payload?["path"]?.ToString();
+                                if (!string.IsNullOrEmpty(projectPath))
+                                {
+                                    var projectMgr = new ProjectManager();
+                                    result = projectMgr.GetProjectStatistics(projectPath);
+                                }
+                            }
+                            break;
+
+                        case "move-files-to-project":
+                            {
+                                var moveFilePaths = payload?["filePaths"]?.ToObject<List<string>>();
+                                string targetFolder = payload?["targetFolder"]?.ToString();
+                                
+                                if (moveFilePaths != null && moveFilePaths.Count > 0 && !string.IsNullOrEmpty(targetFolder))
+                                {
+                                    var projectMgr = new ProjectManager();
+                                    result = projectMgr.MoveFilesToProject(moveFilePaths, targetFolder);
+                                }
+                                else
+                                {
+                                    result = new OperationResult { Success = false, Message = "参数错误" };
+                                }
+                            }
+                            break;
+
+                        case "copy-files-to-project":
+                            {
+                                var copyFilePaths = payload?["filePaths"]?.ToObject<List<string>>();
+                                string targetFolder = payload?["targetFolder"]?.ToString();
+                                
+                                if (copyFilePaths != null && copyFilePaths.Count > 0 && !string.IsNullOrEmpty(targetFolder))
+                                {
+                                    var projectMgr = new ProjectManager();
+                                    result = projectMgr.CopyFilesToProject(copyFilePaths, targetFolder);
+                                }
+                                else
+                                {
+                                    result = new OperationResult { Success = false, Message = "参数错误" };
+                                }
+                            }
+                            break;
+
+                        case "import-as-project":
+                            {
+                                string folderPath = payload?["folderPath"]?.ToString();
+                                string projectName = payload?["projectName"]?.ToString();
+                                
+                                if (!string.IsNullOrEmpty(folderPath))
+                                {
+                                    var projectMgr = new ProjectManager();
+                                    result = projectMgr.ImportAsProject(folderPath, projectName);
+                                }
+                                else
+                                {
+                                    result = new ProjectResult { Success = false, Message = "文件夹路径不能为空" };
+                                }
+                            }
+                            break;
+
+                        case "get-project-templates":
+                            {
+                                var projectMgr = new ProjectManager();
+                                result = new { success = true, templates = projectMgr.GetProjectTemplates() };
                             }
                             break;
 

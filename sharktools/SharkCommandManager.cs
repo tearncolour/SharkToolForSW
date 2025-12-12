@@ -15,6 +15,7 @@ namespace SharkTools
         private TaskpaneView _taskPaneView;
         private SharkTaskPaneControl _taskPaneControl;
         private HistoryTracker _historyTracker;
+        private EnhancedHistoryTracker _enhancedHistoryTracker;
         private string _currentDocPath; // 当前追踪的文档路径
         
         private const int MainCommandGroupId = 2001;
@@ -30,6 +31,11 @@ namespace SharkTools
         /// 公开历史追踪器以便其他类访问
         /// </summary>
         public HistoryTracker HistoryTracker => _historyTracker;
+
+        /// <summary>
+        /// 公开增强历史追踪器
+        /// </summary>
+        public EnhancedHistoryTracker EnhancedHistoryTracker => _enhancedHistoryTracker;
 
         /// <summary>
         /// 公开 TaskPane 控件以便进行 UI 线程调用
@@ -578,8 +584,11 @@ namespace SharkTools
             {
                 Log("初始化历史追踪器");
                 
-                // 创建追踪器实例
+                // 创建基础追踪器实例
                 _historyTracker = new HistoryTracker(_swApp);
+                
+                // 创建增强追踪器实例
+                _enhancedHistoryTracker = new EnhancedHistoryTracker(_swApp);
                 
                 // 创建定时器监控文档切换
                 var docSwitchTimer = new System.Windows.Forms.Timer();
@@ -588,6 +597,7 @@ namespace SharkTools
                 docSwitchTimer.Start();
                 
                 Log("文档切换监控已启动");
+                Log("增强历史追踪器已初始化");
                 
                 // 如果当前已有活动文档，立即开始追踪
                 CheckAndSwitchDocument();
@@ -617,6 +627,10 @@ namespace SharkTools
                         {
                             _historyTracker.StopTracking();
                         }
+                        if (_enhancedHistoryTracker != null)
+                        {
+                            _enhancedHistoryTracker.StopTracking();
+                        }
                         _currentDocPath = null;
                     }
                     return;
@@ -634,6 +648,10 @@ namespace SharkTools
                         {
                             _historyTracker.StopTracking();
                         }
+                        if (_enhancedHistoryTracker != null)
+                        {
+                            _enhancedHistoryTracker.StopTracking();
+                        }
                         _currentDocPath = null;
                     }
                     return;
@@ -645,18 +663,29 @@ namespace SharkTools
                     Log($"检测到文档切换: {_currentDocPath} -> {docPath}");
                     
                     // 停止旧文档的追踪
-                    if (_historyTracker != null && !string.IsNullOrEmpty(_currentDocPath))
+                    if (!string.IsNullOrEmpty(_currentDocPath))
                     {
-                        _historyTracker.StopTracking();
+                        if (_historyTracker != null)
+                        {
+                            _historyTracker.StopTracking();
+                        }
+                        if (_enhancedHistoryTracker != null)
+                        {
+                            _enhancedHistoryTracker.StopTracking();
+                        }
                     }
                     
                     // 开始新文档的追踪
                     if (_historyTracker != null)
                     {
                         _historyTracker.StartTracking(activeDoc);
-                        _currentDocPath = docPath;
-                        Log($"已切换到新文档追踪: {docPath}");
                     }
+                    if (_enhancedHistoryTracker != null)
+                    {
+                        _enhancedHistoryTracker.StartTracking(activeDoc);
+                    }
+                    _currentDocPath = docPath;
+                    Log($"已切换到新文档追踪: {docPath}");
                 }
             }
             catch (Exception ex)
