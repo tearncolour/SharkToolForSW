@@ -419,8 +419,8 @@ namespace SharkTools
             }
             catch (Exception ex)
             {
-                // 某些特征可能不支持获取定义数据，忽略错误
-                // LogInfo($"获取特征特定数据失败 [{snapshot.Name}]: {ex.Message}");
+                // 某些特征可能不支持获取定义数据，记录错误信息
+                LogInfo($"获取特征特定数据失败 [{snapshot.Name}]: {ex.Message}");
             }
         }
 

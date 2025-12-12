@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
 import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    vueJsx()
+  ],
   base: './',
   root: resolve(__dirname, 'renderer'),
   build: {
@@ -16,6 +20,7 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173
+    port: 5173,
+    force: true
   }
 })

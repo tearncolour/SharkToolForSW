@@ -143,6 +143,22 @@
       </div>
       
       <div class="properties-content" v-show="!isPropertiesMinimized">
+        <!-- 配置选择 -->
+        <div class="config-selector" v-if="configurations.length > 0 && props.selectedFile">
+          <a-select 
+            v-model:value="selectedConfig" 
+            @change="loadCustomProperties(props.selectedFile?.key)"
+            style="width: 100%"
+            placeholder="选择配置"
+            size="small"
+          >
+            <a-select-option value="">默认配置</a-select-option>
+            <a-select-option v-for="config in configurations" :key="config" :value="config">
+              {{ config }}
+            </a-select-option>
+          </a-select>
+        </div>
+        
         <!-- 基本信息 -->
         <div v-show="activeTab === 'info'" class="preview-tab-content">
           <!-- SolidWorks 文件属性 -->
@@ -166,27 +182,119 @@
 
         <!-- 自定义属性 -->
         <div v-show="activeTab === 'custom'" class="preview-tab-content">
-          <div v-if="customProperties && customProperties.length > 0" class="property-list">
-            <div class="property-item" v-for="prop in customProperties" :key="prop.name">
-              <span class="property-key">{{ prop.name }}</span>
-              <a-input 
-                v-model:value="prop.value" 
-                size="small"
-                class="property-input"
-                @change="onPropertyChange(prop)"
-              />
+          <div v-if="customPropertiesLoading" class="loading-state">
+            <a-spin /> 加载中...
+          </div>
+          
+          <div v-else-if="customProperties && customProperties.length > 0" class="property-list">
+            <div 
+              v-for="prop in customProperties" 
+              :key="prop.name" 
+              class="property-item"
+              @click="editProperty(prop)"
+            >
+              <div class="property-header">
+                <span class="property-name">{{ prop.name }}</span>
+                <a-button 
+                  type="text" 
+                  size="small" 
+                  danger 
+                  @click.stop="deleteProperty(prop.name)"
+                >
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+              <div class="property-value">{{ prop.value || '(空)' }}</div>
+              <div class="property-type">{{ getTypeName(prop.type) }}</div>
             </div>
           </div>
           <div v-else class="empty-properties">
             <p>暂无自定义属性</p>
-          </div>
-          <div class="add-property">
-            <a-button size="small" type="dashed" block @click="addCustomProperty">
-              <template #icon><PlusOutlined /></template>
-              添加属性
-            </a-button>
+            <a-button type="primary" size="small" @click="showAddDialog">添加属性</a-button>
           </div>
         </div>
+        
+        <!-- 添加/编辑属性对话框 -->
+        <a-modal
+          v-model:open="addDialogVisible"
+          :title="editingProperty ? '编辑属性' : '添加属性'"
+          @ok="saveProperty"
+          @cancel="cancelEdit"
+          :confirmLoading="propertySaving"
+        >
+          <a-form layout="vertical">
+            <a-form-item label="属性名称">
+              <a-select
+                v-if="!editingProperty"
+                v-model:value="newProperty.name"
+                style="width: 100%"
+                placeholder="选择或输入属性名称"
+                mode="combobox"
+                :options="templateOptions"
+                @change="onTemplateSelect"
+              />
+              <a-input v-else :value="newProperty.name" disabled />
+            </a-form-item>
+
+            <a-form-item label="属性值">
+              <!-- 普通输入 -->
+              <a-input
+                v-model:value="newProperty.value"
+                placeholder="输入属性值"
+              />
+            </a-form-item>
+          </a-form>
+        </a-modal>
+        
+        <!-- 批量操作对话框 -->
+        <a-modal
+          v-model:open="batchDialogVisible"
+          title="批量设置属性"
+          width="600px"
+          @ok="executeBatchOperation"
+          @cancel="batchDialogVisible = false"
+          :confirmLoading="batchProcessing"
+        >
+          <a-alert 
+            v-if="selectedFiles.length === 0" 
+            type="warning" 
+            message="请先在文件浏览器中选择要处理的文件"
+            show-icon
+            style="margin-bottom: 16px"
+          />
+          
+          <div v-else class="batch-info">
+            <a-tag color="blue">已选择 {{ selectedFiles.length }} 个文件</a-tag>
+          </div>
+
+          <a-form layout="vertical">
+            <a-form-item label="选择要设置的属性">
+              <a-checkbox-group v-model:value="batchProperties" class="batch-checkbox-group">
+                <a-row :gutter="[8, 8]">
+                  <a-col :span="12" v-for="(template, key) in propertyTemplates" :key="key">
+                    <a-checkbox :value="key">{{ template.name }}</a-checkbox>
+                  </a-col>
+                </a-row>
+              </a-checkbox-group>
+            </a-form-item>
+
+            <template v-for="propKey in batchProperties" :key="propKey">
+              <a-form-item :label="propertyTemplates[propKey]?.name">
+                <!-- 普通输入 -->
+                <a-input
+                  v-model:value="batchValues[propKey]"
+                  :placeholder="'输入' + propertyTemplates[propKey]?.name"
+                />
+              </a-form-item>
+            </template>
+          </a-form>
+
+          <!-- 进度显示 -->
+          <div v-if="batchProcessing" class="batch-progress">
+            <a-progress :percent="batchProgress" />
+            <div class="progress-text">{{ batchProgressText }}</div>
+          </div>
+        </a-modal>
       </div>
     </div>
   </div>
@@ -194,7 +302,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { FileOutlined, PlusOutlined } from '@ant-design/icons-vue';
+import { FileOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/vs2015.css';
@@ -206,6 +314,7 @@ import TextEditor from './TextEditor.vue';
 const props = defineProps({
   previewImage: { type: String, default: '' },
   selectedFile: { type: Object, default: null },
+  selectedFiles: { type: Array, default: () => [] },
   recentFiles: { type: Array, default: () => [] },
   fileProperties: { type: Object, default: null },
   customProperties: { type: Array, default: () => [] },
@@ -242,6 +351,285 @@ const modelLoading = ref(false);
 const modelError = ref('');
 const pdfMetadata = ref(null); // PDF 元数据
 let renderer, scene, camera, controls, animationId;
+
+// PropertyPanel 相关状态
+// 状态
+const customPropertiesLoading = ref(false);
+const propertySaving = ref(false);
+const selectedConfig = ref('');
+const configurations = ref([]);
+
+// 模板数据
+const propertyTemplates = ref({});
+const partTypeOptions = ref([]);
+const processOptions = ref([]);
+
+// 添加/编辑对话框
+const addDialogVisible = ref(false);
+const editingProperty = ref(null);
+const newProperty = ref({
+  name: '',
+  value: '',
+  type: 'Text',
+  dateValue: null
+});
+
+// 批量操作
+const batchDialogVisible = ref(false);
+const batchProcessing = ref(false);
+const batchProperties = ref([]);
+const batchValues = ref({});
+const batchProgress = ref(0);
+const batchProgressText = ref('');
+
+// 计算属性
+const templateOptions = computed(() => {
+  return Object.entries(propertyTemplates.value).map(([key, template]) => ({
+    value: template.name,
+    label: template.name
+  }));
+});
+
+// 属性类型转换
+const getTypeName = (type) => {
+  const types = {
+    'swCustomInfoText': '文本',
+    'swCustomInfoNumber': '数字',
+    'swCustomInfoDate': '日期',
+    'swCustomInfoYesOrNo': '是/否',
+    'Text': '文本',
+    'Number': '数字',
+    'Date': '日期'
+  };
+  return types[type] || type;
+};
+
+// 显示添加对话框
+const showAddDialog = () => {
+  editingProperty.value = null;
+  newProperty.value = {
+    name: '',
+    value: '',
+    type: 'Text',
+    dateValue: null
+  };
+  addDialogVisible.value = true;
+};
+
+// 编辑属性
+const editProperty = (prop) => {
+  editingProperty.value = prop;
+  newProperty.value = {
+    name: prop.name,
+    value: prop.value,
+    type: prop.type,
+    dateValue: null
+  };
+  addDialogVisible.value = true;
+};
+
+// 选择模板时
+const onTemplateSelect = (value) => {
+  const template = Object.values(propertyTemplates.value).find(t => t.name === value);
+  if (template) {
+    newProperty.value.type = template.type;
+    if (template.defaultValue) {
+      newProperty.value.value = template.defaultValue;
+    }
+  }
+};
+
+// 保存属性
+const saveProperty = async () => {
+  if (!newProperty.value.name) {
+    message.warning('请输入属性名称');
+    return;
+  }
+
+  propertySaving.value = true;
+  try {
+    let value = newProperty.value.value;
+    
+    // 处理日期类型
+    if (newProperty.value.type === 'Date' && newProperty.value.dateValue) {
+      value = newProperty.value.dateValue.format('YYYY-MM-DD');
+    }
+    
+    // 处理多选（制作工艺）
+    if (Array.isArray(value)) {
+      value = value.join(', ');
+    }
+
+    // 保存属性到 SolidWorks
+    const res = await window.electronAPI.sendToSW({
+      type: 'set-custom-property',
+      path: props.selectedFile?.key,
+      propertyName: newProperty.value.name,
+      propertyValue: value,
+      configName: selectedConfig.value
+    });
+
+    if (res && res.success) {
+      message.success('属性已保存');
+      addDialogVisible.value = false;
+      // 刷新属性
+      loadCustomProperties(props.selectedFile?.key);
+    } else {
+      message.error(res?.data?.message || '保存失败');
+    }
+  } catch (error) {
+    console.error('保存属性失败:', error);
+    message.error('保存属性失败');
+  } finally {
+    propertySaving.value = false;
+  }
+};
+
+// 取消编辑
+const cancelEdit = () => {
+  addDialogVisible.value = false;
+  editingProperty.value = null;
+};
+
+// 删除属性
+const deleteProperty = async (propertyName) => {
+  if (!confirm(`确定要删除属性 "${propertyName}" 吗？`)) {
+    return;
+  }
+
+  try {
+    const res = await window.electronAPI.sendToSW({
+      type: 'delete-custom-property',
+      path: props.selectedFile?.key,
+      propertyName: propertyName,
+      configName: selectedConfig.value
+    });
+
+    if (res && res.success) {
+      message.success('属性已删除');
+      // 刷新属性
+      loadCustomProperties(props.selectedFile?.key);
+    } else {
+      message.error(res?.data?.message || '删除失败');
+    }
+  } catch (error) {
+    console.error('删除属性失败:', error);
+    message.error('删除属性失败');
+  }
+};
+
+// 加载自定义属性
+const loadCustomProperties = async (filePath) => {
+  if (!filePath) return;
+  
+  customPropertiesLoading.value = true;
+  try {
+    const res = await window.electronAPI.sendToSW({
+      type: 'get-custom-properties',
+      path: filePath,
+      configName: selectedConfig.value
+    });
+    
+    if (res && res.success && res.data) {
+      if (res.data.customProperties && Array.isArray(res.data.customProperties)) {
+        props.customProperties = res.data.customProperties.map(p => ({
+          name: p.name,
+          value: p.value,
+          type: p.type
+        }));
+      }
+      if (res.data.configurations && Array.isArray(res.data.configurations)) {
+        configurations.value = res.data.configurations;
+      }
+    }
+  } catch (error) {
+    console.error('加载自定义属性失败:', error);
+  } finally {
+    customPropertiesLoading.value = false;
+  }
+};
+
+// 显示批量操作对话框
+const showBatchDialog = () => {
+  batchProperties.value = [];
+  batchValues.value = {};
+  batchDialogVisible.value = true;
+};
+
+// 执行批量操作
+const executeBatchOperation = async () => {
+  const files = props.selectedFiles.filter(f => isSolidWorksFile(f));
+  
+  if (files.length === 0) {
+    message.warning('请选择要处理的 SolidWorks 文件');
+    return;
+  }
+
+  if (batchProperties.value.length === 0) {
+    message.warning('请选择要设置的属性');
+    return;
+  }
+
+  // 构建属性映射
+  const propertiesToSet = {};
+  batchProperties.value.forEach(key => {
+    const template = propertyTemplates.value[key];
+    if (template) {
+      let value = batchValues.value[key] || '';
+      if (Array.isArray(value)) {
+        value = value.join(', ');
+      }
+      propertiesToSet[template.name] = value;
+    }
+  });
+
+  batchProcessing.value = true;
+  batchProgress.value = 0;
+  
+  try {
+    const response = await window.electronAPI.sendToSW({
+      type: 'set-custom-properties-multiple-files',
+      paths: files,
+      properties: propertiesToSet,
+      configName: selectedConfig.value
+    });
+
+    const data = response?.data || response;
+    
+    // 统计结果
+    let successCount = 0;
+    let failCount = 0;
+    
+    if (Array.isArray(data)) {
+      data.forEach(r => {
+        if (r.success) successCount++;
+        else failCount++;
+      });
+    }
+
+    batchProgress.value = 100;
+    batchProgressText.value = `完成！成功: ${successCount}, 失败: ${failCount}`;
+    
+    message.success(`批量操作完成，成功: ${successCount}, 失败: ${failCount}`);
+    
+    setTimeout(() => {
+      batchDialogVisible.value = false;
+      batchProcessing.value = false;
+      // 刷新当前文件属性
+      loadCustomProperties(props.selectedFile?.key);
+    }, 1500);
+  } catch (error) {
+    console.error('批量操作失败:', error);
+    message.error('批量操作失败');
+    batchProcessing.value = false;
+  }
+};
+
+// 检查是否为 SolidWorks 文件
+const isSolidWorksFile = (path) => {
+  const ext = path.toLowerCase();
+  return ext.endsWith('.sldprt') || ext.endsWith('.sldasm') || ext.endsWith('.slddrw');
+};
 
 // 3D 预览逻辑
 const initThreeJS = () => {
@@ -644,6 +1032,41 @@ const formatCell = (value) => {
   return str.length > 100 ? str.substring(0, 100) + '...' : str;
 };
 
+// 加载属性模板
+const loadTemplates = async () => {
+  try {
+    const response = await window.electronAPI.sendToSW({
+      type: 'get-property-templates'
+    });
+    
+    const data = response?.data || response;
+    if (data?.templates) {
+      propertyTemplates.value = {};
+      data.templates.forEach(t => {
+        propertyTemplates.value[t.key] = t;
+      });
+      partTypeOptions.value = data.partTypeOptions || [];
+      processOptions.value = data.manufacturingProcessOptions || [];
+    }
+  } catch (error) {
+    console.error('加载模板失败:', error);
+  }
+};
+
+// 监听选中文件变化
+watch(() => props.selectedFile, (newFile) => {
+  if (newFile && isSolidWorksFile(newFile.key)) {
+    // 加载属性模板
+    loadTemplates();
+    // 加载自定义属性
+    loadCustomProperties(newFile.key);
+  } else {
+    // 清空配置
+    configurations.value = [];
+    selectedConfig.value = '';
+  }
+});
+
 // 重置图片尺寸
 watch(() => props.imageUrl, () => {
   imageSize.value = null;
@@ -972,6 +1395,58 @@ const togglePropertiesCollapse = () => {
   color: #ccc;
   font-size: 12px;
   word-break: break-all;
+}
+
+.property-type {
+  font-size: 11px;
+  color: #858585;
+  margin-top: 4px;
+}
+
+.property-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.property-name {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--accent-color, #0e639c);
+}
+
+.config-selector {
+  padding: 8px 0;
+  margin-bottom: 8px;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 8px;
+  color: #858585;
+}
+
+.batch-info {
+  margin-bottom: 16px;
+}
+
+.batch-checkbox-group {
+  width: 100%;
+}
+
+.batch-progress {
+  margin-top: 16px;
+}
+
+.progress-text {
+  text-align: center;
+  margin-top: 8px;
+  color: var(--text-secondary, #858585);
+  font-size: 12px;
 }
 
 .property-input {

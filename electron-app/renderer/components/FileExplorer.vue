@@ -40,7 +40,7 @@
       </div>
       
       <!-- 空白区域右键菜单 -->
-      <div class="tree-container" @dragover.prevent @drop.prevent="onExternalDrop" @contextmenu="onBlankAreaRightClick" v-if="treeData.length > 0">
+      <div class="tree-container" @dragover.prevent @drop.prevent="onExternalDrop" @contextmenu="onBlankAreaRightClick" v-if="treeData.length > 0" ref="treeContainerRef">
         <a-directory-tree
           v-model:expandedKeys="expandedKeys"
           v-model:selectedKeys="selectedKeys"
@@ -56,15 +56,17 @@
           @dragstart="onDragStart"
           @dragenter="onDragEnter"
           @drop="onTreeDrop"
+          :virtual="true"
+          :height="treeHeight"
         >
           <template #title="{ title, isLeaf, dataRef, key, parentKey }">
             <a-dropdown :trigger="['contextmenu']">
-              <a-tooltip :title="getFileNote(key)" placement="right" :open="hasNote(key) ? undefined : false">
+              <a-tooltip :title="getFileNote(key)" placement="right" v-if="hasNote(key)">
                 <div class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
                     <div v-if="isLeaf" class="tree-node-row" :class="[getGitStatusClass(key), getFileTypeClass(title)]">
                       <div class="node-name-container">
-                        <FileOutlined :style="{ color: getFileTypeColor(title) }" /> 
-                        <span class="file-name" :style="{ color: getFileTypeColor(title) }" :title="title">
+                        <FileIcon :filename="title" />
+                        <span class="file-name" :style="{ color: getFileColor(title) }" :title="title">
                             <span v-html="highlightTitle(title)"></span>
                         </span>
                         <span v-if="hasNote(key)" class="note-indicator" title="有注释">📝</span>
@@ -77,7 +79,7 @@
                     </div>
                     <div v-else class="tree-node-row" :class="getGitStatusClass(key)">
                       <div class="node-name-container">
-                        <FolderOutlined /> 
+                        <FolderOutlined :style="{ color: FOLDER_COLOR }" />
                         <span class="folder-name" :title="title">
                             <span v-html="highlightTitle(title)"></span>
                         </span>
@@ -85,6 +87,30 @@
                     </div>
                   </div>
                 </a-tooltip>
+                <div v-else class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
+                    <div v-if="isLeaf" class="tree-node-row" :class="[getGitStatusClass(key), getFileTypeClass(title)]">
+                      <div class="node-name-container">
+                        <FileIcon :filename="title" />
+                        <span class="file-name" :style="{ color: getFileColor(title) }" :title="title">
+                            <span v-html="highlightTitle(title)"></span>
+                        </span>
+                        <span v-if="hasNote(key)" class="note-indicator" title="有注释">📝</span>
+                      </div>
+                      <div class="node-status-container" v-if="getGitStatus(key)">
+                        <span class="git-badge" :class="'git-' + getGitStatus(key)">
+                          {{ getGitStatusLabel(key) }}
+                        </span>
+                      </div>
+                    </div>
+                    <div v-else class="tree-node-row" :class="getGitStatusClass(key)">
+                      <div class="node-name-container">
+                        <FolderOutlined :style="{ color: FOLDER_COLOR }" />
+                        <span class="folder-name" :title="title">
+                            <span v-html="highlightTitle(title)"></span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 <template #overlay>
                     <a-menu>
                         <a-menu-item v-if="isStepFile(title)" key="convert-step" @click="convertStepFile(key)">转换为 SLDPRT</a-menu-item>
@@ -117,51 +143,50 @@
         </div>
       </div>
 
-    <!-- 空白区域右键菜单 -->
-    <a-dropdown 
-      v-model:open="blankAreaMenuVisible" 
-      :trigger="['contextmenu']"
-      :getPopupContainer="triggerNode => triggerNode.parentNode"
+    <!-- 空白区域右键菜单 - 使用绝对定位的菜单 -->
+    <div 
+      v-show="blankAreaMenuVisible" 
+      class="blank-area-context-menu"
+      :style="{ left: blankAreaMenuPosition.x + 'px', top: blankAreaMenuPosition.y + 'px' }"
+      @mouseleave="hideBlankAreaMenu"
     >
-      <div 
-        ref="blankAreaMenuTrigger"
-        style="position: fixed; pointer-events: none;"
-        :style="{ left: blankAreaMenuPosition.x + 'px', top: blankAreaMenuPosition.y + 'px' }"
-      ></div>
-      <template #overlay>
-        <a-menu @click="blankAreaMenuVisible = false">
-          <a-menu-item key="paste-blank" @click="pasteToRoot" :disabled="!canPaste">
-            <template #icon><span>📋</span></template>
-            粘贴
-          </a-menu-item>
-          <a-menu-divider />
-          <a-sub-menu key="new-blank" title="新建">
-            <template #icon><span>➕</span></template>
-            <a-menu-item key="new-folder-blank" @click="createNewFolderInRoot">
-              <template #icon><FolderOutlined /></template>
-              文件夹
-            </a-menu-item>
-            <a-menu-item key="new-part-blank" @click="createNewFileInRoot('sldprt')">
-              <template #icon><FileOutlined /></template>
-              零件 (.sldprt)
-            </a-menu-item>
-            <a-menu-item key="new-asm-blank" @click="createNewFileInRoot('sldasm')">
-              <template #icon><FileOutlined /></template>
-              装配体 (.sldasm)
-            </a-menu-item>
-            <a-menu-item key="new-drw-blank" @click="createNewFileInRoot('slddrw')">
-              <template #icon><FileOutlined /></template>
-              工程图 (.slddrw)
-            </a-menu-item>
-          </a-sub-menu>
-          <a-menu-divider />
-          <a-menu-item key="refresh-blank" @click="refresh">
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-menu-item>
-        </a-menu>
-      </template>
-    </a-dropdown>
+      <div class="context-menu-content">
+        <div class="context-menu-item" :class="{ disabled: !canPaste }" @click="handleBlankMenuClick('paste')">
+          <span class="menu-icon">📋</span>
+          <span>粘贴</span>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item has-submenu" @mouseenter="showNewSubmenu = true" @mouseleave="showNewSubmenu = false">
+          <span class="menu-icon">➕</span>
+          <span>新建</span>
+          <span class="submenu-arrow">▶</span>
+          <!-- 子菜单 -->
+          <div v-show="showNewSubmenu" class="context-submenu">
+            <div class="context-menu-item" @click="handleBlankMenuClick('new-folder')">
+              <FolderOutlined />
+              <span>文件夹</span>
+            </div>
+            <div class="context-menu-item" @click="handleBlankMenuClick('new-part')">
+              <FileOutlined />
+              <span>零件 (.sldprt)</span>
+            </div>
+            <div class="context-menu-item" @click="handleBlankMenuClick('new-asm')">
+              <FileOutlined />
+              <span>装配体 (.sldasm)</span>
+            </div>
+            <div class="context-menu-item" @click="handleBlankMenuClick('new-drw')">
+              <FileOutlined />
+              <span>工程图 (.slddrw)</span>
+            </div>
+          </div>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" @click="handleBlankMenuClick('refresh')">
+          <ReloadOutlined />
+          <span>刷新</span>
+        </div>
+      </div>
+    </div>
 
     <!-- 注释编辑对话框 -->
     <a-modal
@@ -187,6 +212,8 @@ import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { ReloadOutlined, FileOutlined, FolderOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons-vue';
 import { message, Modal, Input } from 'ant-design-vue';
 import { h } from 'vue';
+import FileIcon from './FileIcon.vue';
+import { getFileColor, FOLDER_COLOR } from '../utils/fileIcons';
 
 const emit = defineEmits(['select-file']);
 
@@ -212,7 +239,7 @@ const clipboard = ref({
 // 空白区域右键菜单控制
 const blankAreaMenuVisible = ref(false);
 const blankAreaMenuPosition = ref({ x: 0, y: 0 });
-const blankAreaMenuTrigger = ref(null);
+const showNewSubmenu = ref(false);
 
 // Git 状态
 const gitStatusMap = ref(new Map()); // 文件路径 -> 状态
@@ -225,6 +252,10 @@ const noteModalVisible = ref(false);
 const noteModalTitle = ref('添加注释');
 const currentNoteFilePath = ref('');
 const currentNoteText = ref('');
+
+// 虚拟滚动相关
+const treeContainerRef = ref(null);
+const treeHeight = ref(400);
 
 const explorerTitle = computed(() => {
     if (rootPaths.value.length === 0) return '资源管理器';
@@ -485,18 +516,21 @@ const fetchGitStatus = async () => {
     // 使用第一个根路径检查 Git 状态
     const rootPath = rootPaths.value[0];
     try {
+        // 先获取结果，避免直接赋值 reactive 对象导致序列化问题
         const result = await window.electronAPI.gitStatus(rootPath);
         if (result && result.isRepo) {
             isGitRepo.value = true;
             gitRoot.value = rootPath;
             
-            // 构建状态映射
+            // 构建状态映射 - 使用普通对象而非 Map
             const newMap = new Map();
-            result.files.forEach(file => {
-                // file.file 是相对路径，需要转换为绝对路径
-                const fullPath = rootPath + '\\' + file.file.replace(/\//g, '\\');
-                newMap.set(fullPath, file.code.trim());
-            });
+            if (result.files && Array.isArray(result.files)) {
+                result.files.forEach(file => {
+                    // file.file 是相对路径，需要转换为绝对路径
+                    const fullPath = rootPath + '\\' + file.file.replace(/\//g, '\\');
+                    newMap.set(fullPath, file.code.trim());
+                });
+            }
             gitStatusMap.value = newMap;
         } else {
             isGitRepo.value = false;
@@ -504,6 +538,8 @@ const fetchGitStatus = async () => {
         }
     } catch (e) {
         console.error('Failed to fetch git status:', e);
+        isGitRepo.value = false;
+        gitStatusMap.value = new Map();
     }
 };
 
@@ -514,11 +550,15 @@ const loadFileNotes = async () => {
     const rootPath = rootPaths.value[0];
     try {
         const result = await window.electronAPI.notesGetAll(rootPath);
-        if (result.success) {
-            fileNotes.value = result.notes;
+        if (result && result.success) {
+            // 确保使用纯对象而非 reactive proxy
+            fileNotes.value = result.notes ? JSON.parse(JSON.stringify(result.notes)) : {};
+        } else {
+            fileNotes.value = {};
         }
     } catch (e) {
         console.error('Failed to load file notes:', e);
+        fileNotes.value = {};
     }
 };
 
@@ -722,14 +762,16 @@ async function rebuildTree() {
         }
     } else {
         // 多根模式：显示根节点
-        treeData.value = rootPaths.value.map(path => ({
-            title: path.split('\\').pop() || path,
-            key: path,
-            isLeaf: false,
-            isDirectory: true,
-            parentKey: null,
-            children: [] // 根节点初始化空数组
-        }));
+        treeData.value = rootPaths.value
+            .filter(path => typeof path === 'string') // 确保path是字符串
+            .map(path => ({
+                title: path.split('\\').pop() || path,
+                key: path,
+                isLeaf: false,
+                isDirectory: true,
+                parentKey: null,
+                children: [] // 根节点初始化空数组
+            }));
     }
 }
 
@@ -739,7 +781,14 @@ async function rebuildTree() {
 const loadSavedFolders = async () => {
     try {
         const savedPaths = await window.electronAPI.storeGet(STORE_KEY) || [];
-        rootPaths.value = savedPaths;
+        // 过滤掉非字符串的路径，防止数据损坏
+        rootPaths.value = savedPaths.filter(path => typeof path === 'string' && path.length > 0);
+        
+        // 如果过滤后数据有变化，重新保存
+        if (rootPaths.value.length !== savedPaths.length) {
+            await saveFolders();
+        }
+        
         await rebuildTree();
     } catch (e) {
         console.error('Failed to load saved folders:', e);
@@ -749,8 +798,9 @@ const loadSavedFolders = async () => {
 // 添加文件夹
 const addFolder = async () => {
     try {
-        const path = await window.electronAPI.openDirectory();
-        if (path) {
+        const result = await window.electronAPI.openDirectory();
+        if (result && !result.canceled && result.filePaths && result.filePaths.length > 0) {
+            const path = result.filePaths[0];
             await addPathToTree(path);
         }
     } catch (e) {
@@ -1025,6 +1075,50 @@ const onBlankAreaRightClick = (event) => {
     // 设置菜单位置并显示
     blankAreaMenuPosition.value = { x: event.clientX, y: event.clientY };
     blankAreaMenuVisible.value = true;
+    showNewSubmenu.value = false;
+};
+
+// 隐藏空白区域菜单
+const hideBlankAreaMenu = () => {
+    setTimeout(() => {
+        blankAreaMenuVisible.value = false;
+        showNewSubmenu.value = false;
+    }, 100);
+};
+
+// 处理空白区域菜单点击
+const handleBlankMenuClick = (action) => {
+    blankAreaMenuVisible.value = false;
+    showNewSubmenu.value = false;
+    
+    switch (action) {
+        case 'paste':
+            if (canPaste.value) pasteToRoot();
+            break;
+        case 'new-folder':
+            createNewFolderInRoot();
+            break;
+        case 'new-part':
+            createNewFileInRoot('sldprt');
+            break;
+        case 'new-asm':
+            createNewFileInRoot('sldasm');
+            break;
+        case 'new-drw':
+            createNewFileInRoot('slddrw');
+            break;
+        case 'refresh':
+            refresh();
+            break;
+    }
+};
+
+// 点击其他区域关闭菜单
+const onDocumentClick = (event) => {
+    if (!event.target.closest('.blank-area-context-menu')) {
+        blankAreaMenuVisible.value = false;
+        showNewSubmenu.value = false;
+    }
 };
 
 // 在资源管理器中打开
@@ -1594,8 +1688,20 @@ const handleKeydown = (e) => {
     }
 };
 
+// 计算树高度的函数
+const updateTreeHeight = () => {
+    if (treeContainerRef.value) {
+        const rect = treeContainerRef.value.getBoundingClientRect();
+        treeHeight.value = Math.max(200, rect.height - 10);
+    }
+};
+
+// ResizeObserver 用于监测容器大小变化
+let resizeObserver = null;
+
 onMounted(async () => {
     window.addEventListener('keydown', handleKeydown);
+    document.addEventListener('click', onDocumentClick);
     await loadSavedFolders();
     await loadFileTypeColors();
     setupWatcher();
@@ -1605,15 +1711,33 @@ onMounted(async () => {
     await fetchGitStatus();
     // 加载文件注释
     await loadFileNotes();
+    
+    // 设置 ResizeObserver 监测容器大小变化
+    resizeObserver = new ResizeObserver(() => {
+        updateTreeHeight();
+    });
+    
+    // 延迟获取容器，等待 DOM 渲染
+    setTimeout(() => {
+        if (treeContainerRef.value) {
+            resizeObserver.observe(treeContainerRef.value);
+            updateTreeHeight();
+        }
+    }, 100);
 });
 
 onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
+    document.removeEventListener('click', onDocumentClick);
+    if (resizeObserver) {
+        resizeObserver.disconnect();
+    }
 });
 </script>
 
 <style scoped>
 .file-explorer {
+    position: relative;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -1640,7 +1764,16 @@ onUnmounted(() => {
     flex: 1;
     overflow: auto;
     contain: strict;
+    display: flex;
+    flex-direction: column;
 }
+
+.search-box {
+    padding: 8px;
+    flex-shrink: 0;
+    background: #252526;
+}
+
 .file-name, .folder-name {
     margin-left: 6px;
     white-space: nowrap;
@@ -1805,5 +1938,81 @@ onUnmounted(() => {
 
 .note-indicator:hover {
     opacity: 1;
+}
+
+/* 空白区域右键菜单样式 */
+.blank-area-context-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 160px;
+    background: #2d2d2d;
+    border: 1px solid #454545;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+.context-menu-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #cccccc;
+    position: relative;
+    transition: background-color 0.15s;
+}
+
+.context-menu-item:hover {
+    background: #094771;
+}
+
+.context-menu-item.disabled {
+    color: #666666;
+    cursor: not-allowed;
+}
+
+.context-menu-item.disabled:hover {
+    background: transparent;
+}
+
+.context-menu-item .menu-icon {
+    width: 16px;
+    text-align: center;
+}
+
+.context-menu-item .submenu-arrow {
+    margin-left: auto;
+    font-size: 10px;
+    color: #888;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: #454545;
+    margin: 4px 0;
+}
+
+/* 子菜单 */
+.context-submenu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    min-width: 180px;
+    background: #2d2d2d;
+    border: 1px solid #454545;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    padding: 4px 0;
+}
+
+.context-submenu .context-menu-item {
+    padding: 6px 12px;
 }
 </style>

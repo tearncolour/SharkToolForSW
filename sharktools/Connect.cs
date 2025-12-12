@@ -752,6 +752,77 @@ namespace SharkTools
             return 1; // 始终启用
         }
 
+        /// <summary>
+        /// 快速设置材料和属性回调
+        /// </summary>
+        [ComVisible(true)]
+        public void QuickMaterialProperties()
+        {
+            try
+            {
+                IModelDoc2 doc = _swApp.ActiveDoc as IModelDoc2;
+                if (doc == null || doc.GetType() != (int)swDocumentTypes_e.swDocPART)
+                {
+                    _swApp.SendMsgToUser2("请先打开一个零件文档。", (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk);
+                    return;
+                }
+
+                PartDoc part = (PartDoc)doc;
+                string matDb = "";
+                string matName = part.GetMaterialPropertyName2("", out matDb);
+
+                // 获取自定义属性
+                CustomPropertyManager swPropMgr = doc.Extension.get_CustomPropertyManager("");
+                string[] propNames = (string[])swPropMgr.GetNames(); // 显式转换为 string[]
+                var props = new System.Collections.Generic.Dictionary<string, string>();
+                if (propNames != null)
+                {
+                    foreach (string name in propNames)
+                    {
+                        string val = "";
+                        string resolvedVal = "";
+                        swPropMgr.Get4(name, false, out val, out resolvedVal);
+                        props[name] = val;
+                    }
+                }
+
+                // 获取所有可用材料数据库（注：ISldWorks 接口中没有 GetMaterialDatabaseNames 方法，暂时使用空数组）
+                string[] dbNames = new string[0];
+                
+                var payload = new
+                {
+                    currentMaterial = new { name = matName, database = matDb },
+                    properties = props,
+                    databases = dbNames
+                };
+
+                // 启动 Electron 并发送数据
+                LaunchElectronApp(); 
+                
+                if (_electronServer != null)
+                {
+                    _electronServer.ShowWindow();
+                    _electronServer.Send("quick-material-open", payload);
+                }
+            }
+            catch (Exception ex)
+            {
+                _swApp.SendMsgToUser2($"Error: {ex.Message}", (int)swMessageBoxIcon_e.swMbWarning, (int)swMessageBoxBtn_e.swMbOk);
+            }
+        }
+
+        [ComVisible(true)]
+        public int QuickMaterialPropertiesEnable()
+        {
+            // Only enable for Parts
+            IModelDoc2 doc = _swApp.ActiveDoc as IModelDoc2;
+            if (doc != null && doc.GetType() == (int)swDocumentTypes_e.swDocPART)
+            {
+                return 1;
+            }
+            return 0;
+        }
+
         // 注册到 SolidWorks 的注册表键
         [ComRegisterFunction]
         public static void Register(Type t)

@@ -214,6 +214,21 @@ namespace SharkTools
                 _wsClient.Send(data);
             }
         }
+        
+        /// <summary>
+        /// 发送消息到 Electron 应用
+        /// </summary>
+        /// <param name="type">消息类型</param>
+        /// <param name="payload">消息内容</param>
+        public void Send(string type, object payload)
+        {
+            var message = new 
+            {
+                type = type,
+                payload = payload
+            };
+            Send(Newtonsoft.Json.JsonConvert.SerializeObject(message));
+        }
 
         public void ShowWindow()
         {

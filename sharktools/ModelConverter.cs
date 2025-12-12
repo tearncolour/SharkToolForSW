@@ -77,7 +77,6 @@ namespace SharkTools
                 {
                     Log("Inside UI Thread");
                     int errors = 0;
-                    int warnings = 0;
 
                     // 记录转换前已经打开的文档，避免关闭用户的文档
                     object docNames = _swApp.GetDocuments();

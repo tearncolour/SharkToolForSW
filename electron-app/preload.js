@@ -75,6 +75,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 对话框 API
     openDirectory: () => ipcRenderer.invoke('dialog-open-directory'),
     openFile: (filters) => ipcRenderer.invoke('dialog-open-file', filters),
+    selectFile: (options) => ipcRenderer.invoke('dialog-open-file', options),
     
     // 存储 API
     storeGet: (key) => ipcRenderer.invoke('store-get', key),
@@ -86,6 +87,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // 文件读取 API
     readFile: (filePath) => ipcRenderer.invoke('fs-read-file', filePath),
+
+    // 系统信息 API
+    getUserName: () => ipcRenderer.invoke('get-user-name'),
 
     // Git API
     gitGetToken: () => ipcRenderer.invoke('git-get-token'),
@@ -112,7 +116,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     showContextMenu: (item) => ipcRenderer.send('show-context-menu', item),
 
     // SolidWorks 命令 API (用于增强历史记录功能)
-    sendCommand: (command, data) => ipcRenderer.invoke('sw-command', command, data)
+    sendCommand: (command, data) => ipcRenderer.invoke('sw-command', command, data),
+
+    // 通用 invoke 方法（用于支持动态 IPC 调用）
+    invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+
+    // 文件选择对话框
+    selectFolder: () => ipcRenderer.invoke('dialog-open-directory'),
+    selectFile: (options) => ipcRenderer.invoke('dialog-open-file', options),
+
+    // 系统操作
+    openInExplorer: (path) => ipcRenderer.invoke('shell-show-item', path),
+
+    // SolidWorks 版本检测
+    getInstalledSWVersions: () => ipcRenderer.invoke('get-installed-sw-versions'),
+
+    // .shark 项目管理
+    createSharkProject: (config) => ipcRenderer.invoke('create-shark-project', config),
+    loadSharkProject: (filePath) => ipcRenderer.invoke('load-shark-project', filePath),
+    saveSharkProject: (filePath, data) => ipcRenderer.invoke('save-shark-project', filePath, data),
+    scanSolidWorksFiles: (rootPath) => ipcRenderer.invoke('scan-solidworks-files', rootPath)
 });
 
 // 通知主进程预加载完成

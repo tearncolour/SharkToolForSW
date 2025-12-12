@@ -172,13 +172,13 @@ namespace SharkTools
             /// <summary>
             /// JavaScript 调用：使用 Token 登录
             /// </summary>
-            public void LoginWithToken(string token)
+            public async void LoginWithToken(string token)
             {
                 try
                 {
                     Log($"收到登录请求，Token 长度: {token?.Length ?? 0}");
                     
-                    GitHubAuth.LoginWithToken(token, (success, msg) =>
+                    await GitHubAuth.LoginWithToken(token, (success, msg) =>
                     {
                         // 在 UI 线程更新界面
                         _parent.BeginInvoke(new Action(() =>

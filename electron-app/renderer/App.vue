@@ -48,6 +48,15 @@
                 <FolderOpenOutlined />
               </div>
             </a-tooltip>
+            <a-tooltip placement="right" title="项目管理">
+              <div 
+                class="activity-icon" 
+                :class="{ active: currentView === 'project' }"
+                @click="setView('project')"
+              >
+                <ProjectOutlined />
+              </div>
+            </a-tooltip>
             <a-tooltip placement="right" title="Git 版本控制">
               <div 
                 class="activity-icon" 
@@ -55,6 +64,15 @@
                 @click="setView('git')"
               >
                 <BranchesOutlined />
+              </div>
+            </a-tooltip>
+            <a-tooltip placement="right" title="文件对比">
+              <div 
+                class="activity-icon" 
+                :class="{ active: currentView === 'compare' }"
+                @click="setView('compare')"
+              >
+                <DiffOutlined />
               </div>
             </a-tooltip>
             <a-tooltip placement="right" title="历史记录">
@@ -91,6 +109,11 @@
             <FileExplorer @select-file="onFileSelect" />
           </div>
 
+          <!-- 项目管理视图 -->
+          <div v-show="currentView === 'project'" class="panel-content">
+            <ProjectManagerPanel />
+          </div>
+
           <!-- Git 视图 -->
           <div v-show="currentView === 'git'" class="panel-content">
             <GitPanel :current-path="currentDocumentDir" />
@@ -113,6 +136,11 @@
               :settings="settings"
               @save="saveSettings"
             />
+          </div>
+
+          <!-- 文件对比视图 -->
+          <div v-show="currentView === 'compare'" class="panel-content">
+            <ComparePanel />
           </div>
         </div>
 
@@ -140,6 +168,7 @@
           <PreviewPanel 
             :preview-image="previewImage"
             :selected-file="selectedFile"
+            :selected-files="selectedFiles"
             :recent-files="recentFiles"
             :file-properties="fileProperties"
             :custom-properties="customProperties"
@@ -169,8 +198,18 @@ import {
   SettingOutlined,
   FolderOpenOutlined,
   MenuFoldOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  ProjectOutlined,
+  DiffOutlined
 } from '@ant-design/icons-vue'
+
+// 配置 message 显示在右下角
+message.config({
+  top: 'auto',
+  duration: 3,
+  maxCount: 5,
+  rtl: false,
+})
 
 // 组件导入
 import FileExplorer from './components/FileExplorer.vue'
@@ -178,6 +217,8 @@ import GitPanel from './components/GitPanel.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
 import HistoryPanel from './components/HistoryPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
+import ProjectManagerPanel from './components/ProjectManagerPanel.vue'
+import ComparePanel from './components/ComparePanel.vue'
 
 // 启动 SolidWorks
 const launchSolidWorks = async () => {
@@ -214,6 +255,7 @@ const connectionStatus = ref('default')
 const currentDocument = ref({ name: '', path: '' })
 const workspaceFolders = ref([])
 const selectedFile = ref(null)
+const selectedFiles = ref([]) // 用于多选文件
 const previewImage = ref('')
 const textContent = ref('')
 const imageUrl = ref('')

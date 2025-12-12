@@ -937,25 +937,31 @@ ipcMain.handle('fs-get-drives', async () => {
 
 // 文件夹选择对话框
 ipcMain.handle('dialog-open-directory', async () => {
+    console.log('[dialog-open-directory] mainWindow:', mainWindow ? 'exists' : 'null');
     const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openDirectory']
     });
-    if (result.canceled) {
-        return null;
-    }
-    return result.filePaths[0];
+    console.log('[dialog-open-directory] result:', JSON.stringify(result, null, 2));
+    return result;
 });
 
 // 文件选择对话框
-ipcMain.handle('dialog-open-file', async (event, filters) => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        properties: ['openFile'],
-        filters: filters
-    });
-    if (result.canceled) {
-        return null;
+ipcMain.handle('dialog-open-file', async (event, options) => {
+    const dialogOptions = {
+        properties: options?.properties || ['openFile']
+    };
+    
+    if (options?.filters) {
+        dialogOptions.filters = options.filters;
     }
-    return result.filePaths[0];
+    
+    if (options?.title) {
+        dialogOptions.title = options.title;
+    }
+    
+    const result = await dialog.showOpenDialog(mainWindow, dialogOptions);
+    console.log('[dialog-open-file] result:', JSON.stringify(result, null, 2));
+    return result;
 });
 
 // 存储 API
@@ -1300,6 +1306,11 @@ ipcMain.on('show-context-menu', (event, item) => {
     
     const menu = Menu.buildFromTemplate(template);
     menu.popup(mainWindow);
+});
+
+// 系统信息 API
+ipcMain.handle('get-user-name', async () => {
+    return process.env.USERNAME || process.env.USER || 'User';
 });
 
 // Git 集成 API
@@ -1658,6 +1669,269 @@ ipcMain.handle('git-abort-merge', async (event, cwd) => {
         return { success: true };
     } catch (e) {
         return { success: false, message: e.message };
+    }
+});
+
+// ==================== .shark 项目文件处理 ====================
+
+// 创建 .shark 项目文件
+ipcMain.handle('create-shark-project', async (event, config) => {
+    try {
+        console.log('[create-shark-project] Received config:', JSON.stringify(config, null, 2));
+        
+        const { projectName, swVersion, rootDirectory } = config;
+        const sharkFilePath = path.join(rootDirectory, `${projectName}.shark`);
+        
+        // 检查文件是否已存在
+        if (fs.existsSync(sharkFilePath)) {
+            return { success: false, message: '项目文件已存在' };
+        }
+        
+        // 扫描目录中的 SW 文件
+        const swFiles = await scanSolidWorksFiles(rootDirectory);
+        
+        // 创建默认虚拟文件夹结构
+        const virtualTree = {
+            name: projectName,
+            type: 'root',
+            children: [
+                {
+                    id: 'assemblies',
+                    name: '装配体',
+                    type: 'virtual-folder',
+                    children: swFiles.filter(f => f.name.toLowerCase().endsWith('.sldasm')).map(f => ({
+                        id: f.path,
+                        name: f.name,
+                        type: 'file',
+                        realPath: f.path
+                    }))
+                },
+                {
+                    id: 'parts',
+                    name: '零件',
+                    type: 'virtual-folder',
+                    children: swFiles.filter(f => f.name.toLowerCase().endsWith('.sldprt')).map(f => ({
+                        id: f.path,
+                        name: f.name,
+                        type: 'file',
+                        realPath: f.path
+                    }))
+                },
+                {
+                    id: 'drawings',
+                    name: '工程图纸',
+                    type: 'virtual-folder',
+                    children: swFiles.filter(f => f.name.toLowerCase().endsWith('.slddrw')).map(f => ({
+                        id: f.path,
+                        name: f.name,
+                        type: 'file',
+                        realPath: f.path
+                    }))
+                }
+            ]
+        };
+        
+        // 项目配置
+        const projectConfig = {
+            version: '1.0',
+            projectName,
+            swVersion,
+            rootDirectory,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            virtualTree
+        };
+        
+        // 保存到文件
+        await fs.promises.writeFile(sharkFilePath, JSON.stringify(projectConfig, null, 2), 'utf-8');
+        
+        // 返回时进行 JSON 序列化/反序列化以确保可克隆
+        const safeConfig = JSON.parse(JSON.stringify(projectConfig));
+        
+        return { 
+            success: true, 
+            projectFile: sharkFilePath,
+            config: safeConfig
+        };
+    } catch (error) {
+        console.error('Create shark project error:', error);
+        return { success: false, message: String(error.message || error) };
+    }
+});
+
+// 加载 .shark 项目文件
+ipcMain.handle('load-shark-project', async (event, sharkFilePath) => {
+    try {
+        const content = await fs.promises.readFile(sharkFilePath, 'utf-8');
+        const config = JSON.parse(content);
+        // 确保返回的对象可以被序列化
+        return { success: true, config: JSON.parse(JSON.stringify(config)) };
+    } catch (error) {
+        console.error('Load shark project error:', error);
+        return { success: false, message: String(error.message || error) };
+    }
+});
+
+// 保存 .shark 项目文件
+ipcMain.handle('save-shark-project', async (event, sharkFilePath, config) => {
+    try {
+        config.updatedAt = new Date().toISOString();
+        await fs.promises.writeFile(sharkFilePath, JSON.stringify(config, null, 2), 'utf-8');
+        return { success: true };
+    } catch (error) {
+        console.error('Save shark project error:', error);
+        return { success: false, message: error.message };
+    }
+});
+
+// 扫描目录中的 SolidWorks 文件
+async function scanSolidWorksFiles(directory) {
+    const files = [];
+    const swExtensions = ['.sldprt', '.sldasm', '.slddrw'];
+    
+    async function scan(dir) {
+        try {
+            const items = await fs.promises.readdir(dir, { withFileTypes: true });
+            
+            for (const item of items) {
+                const fullPath = path.join(dir, item.name);
+                
+                if (item.isDirectory()) {
+                    // 跳过隐藏文件夹和系统文件夹
+                    if (!item.name.startsWith('.') && !item.name.startsWith('$')) {
+                        await scan(fullPath);
+                    }
+                } else if (item.isFile()) {
+                    const ext = path.extname(item.name).toLowerCase();
+                    if (swExtensions.includes(ext)) {
+                        files.push({
+                            name: item.name,
+                            path: fullPath,
+                            extension: ext
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Error scanning ${dir}:`, error);
+        }
+    }
+    
+    await scan(directory);
+    return files;
+}
+
+// 扫描 SolidWorks 文件 IPC handler
+ipcMain.handle('scan-solidworks-files', async (event, directory) => {
+    try {
+        const files = await scanSolidWorksFiles(directory);
+        return { success: true, files };
+    } catch (error) {
+        console.error('Scan solidworks files error:', error);
+        return { success: false, message: error.message, files: [] };
+    }
+});
+
+// 查找目录中的 .shark 文件
+ipcMain.handle('find-shark-files', async (event, directory) => {
+    try {
+        const items = await fs.promises.readdir(directory);
+        const sharkFiles = items.filter(item => item.endsWith('.shark')).map(item => path.join(directory, item));
+        return { success: true, files: sharkFiles };
+    } catch (error) {
+        console.error('Find shark files error:', error);
+        return { success: false, message: error.message, files: [] };
+    }
+});
+
+// 获取已安装的 SolidWorks 版本
+ipcMain.handle('get-installed-sw-versions', async () => {
+    try {
+        const versions = [];
+        
+        // 方法1: 通过注册表查找
+        try {
+            const { execSync } = require('child_process');
+            const regQuery = 'reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\SolidWorks\\Applications" /s /f "SOLIDWORKS" /k';
+            const result = execSync(regQuery, { encoding: 'utf8', windowsHide: true });
+            
+            // 解析注册表结果
+            const lines = result.split('\n');
+            for (const line of lines) {
+                if (line.includes('HKEY_LOCAL_MACHINE')) {
+                    // 尝试读取安装路径
+                    try {
+                        const keyPath = line.trim();
+                        const pathQuery = `reg query "${keyPath}" /v InstallDir`;
+                        const pathResult = execSync(pathQuery, { encoding: 'utf8', windowsHide: true });
+                        
+                        const match = pathResult.match(/InstallDir\s+REG_SZ\s+(.+)/);
+                        if (match && match[1]) {
+                            const installDir = match[1].trim();
+                            const exePath = path.join(installDir, 'SLDWORKS.exe');
+                            
+                            if (fs.existsSync(exePath)) {
+                                // 从路径中提取版本号
+                                const versionMatch = installDir.match(/SOLIDWORKS\s*(\d+)/i);
+                                const versionName = versionMatch 
+                                    ? `SOLIDWORKS ${versionMatch[1]}`
+                                    : path.basename(path.dirname(installDir));
+                                
+                                versions.push({
+                                    name: versionName,
+                                    path: exePath
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        // 继续下一个
+                    }
+                }
+            }
+        } catch (regError) {
+            console.log('Registry search failed, trying file system search:', regError.message);
+        }
+        
+        // 方法2: 如果注册表查找失败，尝试文件系统搜索
+        if (versions.length === 0) {
+            const basePaths = [
+                'C:\\Program Files\\SOLIDWORKS Corp',
+                'C:\\Program Files (x86)\\SOLIDWORKS Corp',
+                'D:\\Program Files\\SOLIDWORKS Corp',
+                'D:\\Program Files (x86)\\SOLIDWORKS Corp',
+                'E:\\Program Files\\SOLIDWORKS Corp',
+                'E:\\Program Files (x86)\\SOLIDWORKS Corp'
+            ];
+            
+            for (const basePath of basePaths) {
+                if (fs.existsSync(basePath)) {
+                    try {
+                        const dirs = await fs.promises.readdir(basePath);
+                        for (const dir of dirs) {
+                            const fullPath = path.join(basePath, dir);
+                            const exePath = path.join(fullPath, 'SLDWORKS.exe');
+                            
+                            if (fs.existsSync(exePath)) {
+                                versions.push({
+                                    name: dir,
+                                    path: exePath
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error(`Error reading ${basePath}:`, e.message);
+                    }
+                }
+            }
+        }
+        
+        // 去重
+        const uniqueVersions = Array.from(new Map(versions.map(v => [v.path, v])).values());
+        
+        return { success: true, versions: uniqueVersions };
+    } catch (error) {
+        console.error('Get SW versions error:', error);
+        return { success: false, versions: [] };
     }
 });
 

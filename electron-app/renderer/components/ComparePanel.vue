@@ -495,31 +495,56 @@ const formatDate = (dateStr) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: #252526; /* VSCode 侧边栏背景色 */
+  color: #cccccc; /* VSCode 主要文字色 */
 }
 
 .panel-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 8px 12px; /* 缩小内边距，更紧凑 */
+  background: #323233; /* VSCode 标题栏背景色 */
+  border-bottom: 1px solid #252526; /* VSCode 边框色 */
 }
 
 .panel-title {
-  font-size: 14px;
+  font-size: 13px; /* 缩小字体 */
   font-weight: 500;
 }
 
 .panel-content {
   flex: 1;
-  padding: 16px;
+  padding: 12px; /* 调整内边距 */
   overflow-y: auto;
+  background: #252526; /* 确保背景色统一 */
+}
+
+/* 优化滚动条样式，与全局一致 */
+.panel-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: rgba(100, 100, 100, 0.4);
+  border-radius: 4px;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.6);
+}
+
+.panel-content::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .file-selection {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 12px; /* 调整间距 */
 }
 
 .file-input-group {
@@ -527,8 +552,8 @@ const formatDate = (dateStr) => {
 }
 
 .file-label {
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 11px; /* 缩小字体 */
+  color: #858585; /* VSCode 次要文字色 */
   margin-bottom: 4px;
 }
 
@@ -537,13 +562,57 @@ const formatDate = (dateStr) => {
   gap: 8px;
 }
 
+/* 调整输入框样式 */
 .file-input :deep(.ant-input) {
   flex: 1;
   cursor: pointer;
+  background: #1e1e1e; /* VSCode 主背景色 */
+  border: 1px solid #3e3e42; /* VSCode 边框色 */
+  color: #cccccc; /* VSCode 文字色 */
+  font-size: 12px; /* 缩小字体 */
+}
+
+.file-input :deep(.ant-input:hover) {
+  border-color: #007acc; /* VSCode 高亮色 */
+}
+
+.file-input :deep(.ant-input:focus) {
+  border-color: #007acc;
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+/* 调整按钮样式 */
+.file-input :deep(.ant-btn),
+.actions :deep(.ant-btn) {
+  background: transparent;
+  border: 1px solid #3e3e42;
+  color: #cccccc;
+  font-size: 12px;
+  transition: all 0.1s ease;
+}
+
+.file-input :deep(.ant-btn:hover),
+.actions :deep(.ant-btn:hover) {
+  background: rgba(0, 122, 204, 0.1);
+  border-color: #007acc;
+  color: #cccccc;
+}
+
+.file-input :deep(.ant-btn-primary),
+.actions :deep(.ant-btn-primary) {
+  background: #007acc;
+  border-color: #007acc;
+  color: white;
+}
+
+.file-input :deep(.ant-btn-primary:hover),
+.actions :deep(.ant-btn-primary:hover) {
+  background: #106ebe;
+  border-color: #106ebe;
 }
 
 .compare-arrow {
-  color: var(--text-secondary);
+  color: #858585; /* VSCode 次要文字色 */
   font-size: 20px;
   padding-top: 20px;
 }
@@ -551,11 +620,11 @@ const formatDate = (dateStr) => {
 .actions {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px; /* 调整间距 */
 }
 
 .compare-results {
-  margin-top: 16px;
+  margin-top: 12px; /* 调整间距 */
 }
 
 .info-comparison {
@@ -565,63 +634,64 @@ const formatDate = (dateStr) => {
 .compare-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 12px; /* 缩小字体 */
 }
 
 .compare-table th,
 .compare-table td {
   padding: 8px;
   text-align: left;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #3e3e42; /* VSCode 边框色 */
 }
 
 .compare-table th {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
+  background: #1e1e1e; /* VSCode 主背景色 */
+  color: #858585; /* VSCode 次要文字色 */
 }
 
 .compare-table td:first-child {
   width: 100px;
-  color: var(--text-secondary);
+  color: #858585; /* VSCode 次要文字色 */
 }
 
 .value-increased {
-  color: #52c41a;
+  color: #52c41a; /* 保持成功色 */
 }
 
 .value-decreased {
-  color: #ff4d4f;
+  color: #ff4d4f; /* 保持错误色 */
 }
 
 .value-changed {
-  color: #faad14;
+  color: #faad14; /* 保持警告色 */
 }
 
 .geometry-diffs {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px; /* 调整间距 */
 }
 
 .geometry-item {
   padding: 8px 12px;
-  background: var(--bg-secondary);
+  background: #1e1e1e; /* VSCode 主背景色 */
+  border: 1px solid #3e3e42; /* VSCode 边框色 */
   border-radius: 4px;
 }
 
 .geometry-label {
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 11px; /* 缩小字体 */
+  color: #858585; /* VSCode 次要文字色 */
   margin-bottom: 4px;
 }
 
 .geometry-values {
-  font-size: 13px;
+  font-size: 12px; /* 缩小字体 */
 }
 
 .geometry-values .arrow {
   margin: 0 8px;
-  color: var(--text-secondary);
+  color: #858585; /* VSCode 次要文字色 */
 }
 
 .change-positive {
@@ -637,15 +707,16 @@ const formatDate = (dateStr) => {
 .config-diffs {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px; /* 调整间距 */
 }
 
 .diff-item {
   display: flex;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 6px 10px; /* 调整内边距 */
+  border: 1px solid #3e3e42; /* VSCode 边框色 */
   border-radius: 4px;
-  background: var(--bg-secondary);
+  background: #1e1e1e; /* VSCode 主背景色 */
 }
 
 .diff-added {
@@ -661,7 +732,7 @@ const formatDate = (dateStr) => {
 }
 
 .diff-icon {
-  width: 20px;
+  width: 16px; /* 调整宽度 */
   display: flex;
   align-items: flex-start;
   padding-top: 2px;
@@ -685,23 +756,23 @@ const formatDate = (dateStr) => {
 
 .diff-name {
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px; /* 缩小字体 */
 }
 
 .diff-type {
-  font-size: 11px;
-  color: var(--text-secondary);
+  font-size: 10px; /* 缩小字体 */
+  color: #858585; /* VSCode 次要文字色 */
 }
 
 .diff-details {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 4px;
+  font-size: 11px; /* 缩小字体 */
+  color: #858585; /* VSCode 次要文字色 */
+  margin-top: 2px; /* 调整间距 */
 }
 
 .diff-values {
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: 11px; /* 缩小字体 */
+  margin-top: 2px; /* 调整间距 */
 }
 
 .old-value {
@@ -715,42 +786,49 @@ const formatDate = (dateStr) => {
 
 .diff-values .arrow {
   margin: 0 8px;
-  color: var(--text-secondary);
+  color: #858585; /* VSCode 次要文字色 */
 }
 
 .no-changes {
-  padding: 16px;
+  padding: 12px;
   text-align: center;
   color: #52c41a;
+  background: rgba(82, 196, 26, 0.1);
+  border: 1px solid rgba(82, 196, 26, 0.3);
+  border-radius: 4px;
 }
 
 .no-changes :deep(.anticon) {
-  margin-right: 8px;
+  margin-right: 6px;
+  font-size: 14px;
 }
 
 .summary {
-  margin-top: 16px;
-  padding: 12px;
-  background: var(--bg-secondary);
-  border-radius: 6px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #1e1e1e; /* VSCode 主背景色 */
+  border: 1px solid #3e3e42; /* VSCode 边框色 */
+  border-radius: 4px;
 }
 
 .summary-title {
-  font-size: 13px;
+  font-size: 12px; /* 缩小字体 */
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  color: #858585; /* VSCode 次要文字色 */
 }
 
 .summary-stats {
   display: flex;
-  gap: 24px;
+  gap: 16px; /* 调整间距 */
+  flex-wrap: wrap;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 11px; /* 缩小字体 */
 }
 
 .stat-item.added {
@@ -770,40 +848,61 @@ const formatDate = (dateStr) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px;
-  color: var(--text-secondary);
+  padding: 40px 20px; /* 调整内边距 */
+  color: #858585; /* VSCode 次要文字色 */
 }
 
 .empty-state :deep(.anticon) {
   font-size: 48px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   opacity: 0.3;
 }
 
 .empty-state p {
   margin: 0;
+  font-size: 12px;
 }
 
 /* Collapse 样式覆盖 */
 :deep(.ant-collapse) {
   background: transparent;
   border: none;
+  color: #cccccc;
 }
 
 :deep(.ant-collapse-item) {
-  border: 1px solid var(--border-color);
-  border-radius: 6px !important;
-  margin-bottom: 8px;
+  border: 1px solid #3e3e42;
+  border-radius: 4px !important;
+  margin-bottom: 6px;
   overflow: hidden;
+  background: #1e1e1e;
 }
 
 :deep(.ant-collapse-header) {
   padding: 8px 12px !important;
-  background: var(--bg-secondary);
-  font-size: 13px;
+  background: #323233; /* VSCode 标题栏背景色 */
+  font-size: 12px;
+  color: #cccccc;
+  border-bottom: 1px solid #3e3e42;
 }
 
 :deep(.ant-collapse-content-box) {
-  padding: 12px !important;
+  padding: 10px !important;
+  background: #1e1e1e;
+  color: #cccccc;
+}
+
+/* 调整 Collapse 箭头颜色 */
+:deep(.ant-collapse-arrow) {
+  color: #858585;
+}
+
+:deep(.ant-collapse-item-active .ant-collapse-arrow) {
+  color: #007acc;
+}
+
+/* 调整 CheckCircleOutlined 图标大小 */
+:deep(.anticon-check-circle) {
+  font-size: 14px;
 }
 </style>
