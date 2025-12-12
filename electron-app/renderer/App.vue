@@ -579,12 +579,12 @@ const loadFileProperties = async (filePath) => {
       // 基本属性
       fileProperties.value = {
         '文件名': props.fileName || filePath.split('\\').pop(),
-        '路径': props.filePath || filePath,
-        '文件类型': props.fileType || getFileTypeLabel(filePath),
+        '路径': props.path || props.filePath || filePath,
+        '文件类型': props.docType || props.fileType || getFileTypeLabel(filePath),
         '材料': props.material || '-',
-        '质量': props.mass ? `${props.mass} kg` : '-',
-        '体积': props.volume ? `${props.volume} mm³` : '-',
-        '表面积': props.surfaceArea ? `${props.surfaceArea} mm²` : '-',
+        '质量': props.mass || '-',
+        '体积': props.volume || '-',
+        '表面积': props.surfaceArea || '-',
         '修改日期': props.modifiedDate || '-',
         '作者': props.author || '-'
       }

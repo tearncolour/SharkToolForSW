@@ -109,7 +109,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     gitAbortMerge: (cwd) => ipcRenderer.invoke('git-abort-merge', cwd),
 
     // 上下文菜单
-    showContextMenu: (item) => ipcRenderer.send('show-context-menu', item)
+    showContextMenu: (item) => ipcRenderer.send('show-context-menu', item),
+
+    // SolidWorks 命令 API (用于增强历史记录功能)
+    sendCommand: (command, data) => ipcRenderer.invoke('sw-command', command, data)
 });
 
 // 通知主进程预加载完成

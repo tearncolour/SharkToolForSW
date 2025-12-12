@@ -389,6 +389,55 @@ ipcMain.handle('send-to-sw', async (event, data) => {
     });
 });
 
+// SolidWorks 命令 API (用于增强历史记录等功能)
+ipcMain.handle('sw-command', async (event, command, data) => {
+    console.log('发送命令到 SolidWorks:', command, data);
+    
+    return new Promise((resolve) => {
+        if (!swWebSocket || swWebSocket.readyState !== WebSocket.OPEN) {
+            console.error('SolidWorks 未连接');
+            resolve({ success: false, message: 'SolidWorks 未连接' });
+            return;
+        }
+
+        const message = {
+            id: Date.now().toString(),
+            command: command,
+            payload: data || {}
+        };
+
+        // 创建一个超时处理
+        const timeout = setTimeout(() => {
+            resolve({ success: false, message: '请求超时' });
+        }, 30000); // 30秒超时（某些操作可能较慢）
+
+        // 临时消息处理器（用于响应匹配）
+        const messageHandler = (response) => {
+            try {
+                const responseData = JSON.parse(response.toString());
+                if (responseData.id === message.id) {
+                    clearTimeout(timeout);
+                    swWebSocket.off('message', messageHandler);
+                    resolve(responseData);
+                }
+            } catch (e) {
+                // 忽略解析错误
+            }
+        };
+
+        swWebSocket.on('message', messageHandler);
+
+        try {
+            swWebSocket.send(JSON.stringify(message));
+        } catch (error) {
+            clearTimeout(timeout);
+            swWebSocket.off('message', messageHandler);
+            console.error('发送命令失败:', error);
+            resolve({ success: false, message: error.message });
+        }
+    });
+});
+
 // 窗口控制 IPC
 ipcMain.on('window-minimize', () => {
     if (mainWindow) mainWindow.minimize();
