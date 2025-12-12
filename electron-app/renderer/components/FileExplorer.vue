@@ -40,28 +40,27 @@
       </div>
       
       <!-- 空白区域右键菜单 -->
-      <a-dropdown :trigger="['contextmenu']" v-if="treeData.length > 0">
-        <div class="tree-container" @dragover.prevent @drop.prevent="onExternalDrop">
-          <a-directory-tree
-            v-model:expandedKeys="expandedKeys"
-            v-model:selectedKeys="selectedKeys"
-            :tree-data="searchText ? filteredTreeData : treeData"
-            :load-data="onLoadData"
-            @expand="onExpand"
-            @select="onSelect"
-            @rightClick="onRightClick"
-            block-node
-            :show-icon="false"
-            multiple
-            draggable
-            @dragstart="onDragStart"
-            @dragenter="onDragEnter"
-            @drop="onTreeDrop"
-          >
-            <template #title="{ title, isLeaf, dataRef, key, parentKey }">
-              <a-dropdown :trigger="['contextmenu']">
-                <a-tooltip :title="getFileNote(key)" placement="right" :open="hasNote(key) ? undefined : false">
-                  <div class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
+      <div class="tree-container" @dragover.prevent @drop.prevent="onExternalDrop" @contextmenu="onBlankAreaRightClick" v-if="treeData.length > 0">
+        <a-directory-tree
+          v-model:expandedKeys="expandedKeys"
+          v-model:selectedKeys="selectedKeys"
+          :tree-data="searchText ? filteredTreeData : treeData"
+          :load-data="onLoadData"
+          @expand="onExpand"
+          @select="onSelect"
+          @rightClick="onRightClick"
+          block-node
+          :show-icon="false"
+          multiple
+          draggable
+          @dragstart="onDragStart"
+          @dragenter="onDragEnter"
+          @drop="onTreeDrop"
+        >
+          <template #title="{ title, isLeaf, dataRef, key, parentKey }">
+            <a-dropdown :trigger="['contextmenu']">
+              <a-tooltip :title="getFileNote(key)" placement="right" :open="hasNote(key) ? undefined : false">
+                <div class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
                     <div v-if="isLeaf" class="tree-node-row" :class="[getGitStatusClass(key), getFileTypeClass(title)]">
                       <div class="node-name-container">
                         <FileOutlined :style="{ color: getFileTypeColor(title) }" /> 
@@ -116,22 +115,7 @@
             </template>
           </a-directory-tree>
         </div>
-        <template #overlay>
-          <a-menu>
-            <a-menu-item key="paste-blank" @click="pasteToRoot" :disabled="!canPaste">粘贴</a-menu-item>
-            <a-menu-divider />
-            <a-sub-menu key="new-blank" title="新建">
-              <a-menu-item key="new-folder-blank" @click="createNewFolderInRoot">文件夹</a-menu-item>
-              <a-menu-item key="new-part-blank" @click="createNewFileInRoot('sldprt')">零件 (.sldprt)</a-menu-item>
-              <a-menu-item key="new-asm-blank" @click="createNewFileInRoot('sldasm')">装配体 (.sldasm)</a-menu-item>
-              <a-menu-item key="new-drw-blank" @click="createNewFileInRoot('slddrw')">工程图 (.slddrw)</a-menu-item>
-            </a-sub-menu>
-            <a-menu-divider />
-            <a-menu-item key="refresh-blank" @click="refresh">刷新</a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
-    </div>
+      </div>
 
     <!-- 注释编辑对话框 -->
     <a-modal
@@ -178,6 +162,10 @@ const clipboard = ref({
     files: [], // Array of file paths
     action: null // 'copy' or 'cut'
 });
+
+// 空白区域右键菜单控制
+const blankAreaMenuVisible = ref(false);
+const blankAreaMenuPosition = ref({ x: 0, y: 0 });
 
 // Git 状态
 const gitStatusMap = ref(new Map()); // 文件路径 -> 状态
@@ -967,6 +955,25 @@ const onDrop = async (e) => {
 // 右键菜单
 const onRightClick = ({ event, node }) => {
     // Ant Design Vue Dropdown handles this via template
+    event.stopPropagation();
+};
+
+// 空白区域右键菜单处理  
+const onBlankAreaRightClick = (event) => {
+    // 检查是否点击在树节点上
+    const target = event.target;
+    const isNodeElement = target.closest('.ant-tree-node-content-wrapper') || 
+                          target.closest('.tree-node-content') ||
+                          target.closest('.ant-tree-treenode');
+    
+    // 如果点击在节点上，不处理（让节点自己的右键菜单处理）
+    if (isNodeElement) {
+        return;
+    }
+    
+    // 空白区域：阻止默认菜单，不显示任何菜单
+    // （因为空白区域操作不常用，简化 UX）
+    event.preventDefault();
 };
 
 // 在资源管理器中打开
