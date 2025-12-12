@@ -62,55 +62,57 @@
           <template #title="{ title, isLeaf, dataRef, key, parentKey }">
             <a-dropdown :trigger="['contextmenu']">
               <a-tooltip :title="getFileNote(key)" placement="right" v-if="hasNote(key)">
-                <div class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
-                    <div v-if="isLeaf" class="tree-node-row" :class="[getGitStatusClass(key), getFileTypeClass(title)]">
-                      <div class="node-name-container">
-                        <FileIcon :filename="title" />
-                        <span class="file-name" :style="{ color: getFileColor(title) }" :title="title">
-                            <span v-html="highlightTitle(title)"></span>
-                        </span>
-                        <span v-if="hasNote(key)" class="note-indicator" title="有注释">📝</span>
-                      </div>
-                      <div class="node-status-container" v-if="getGitStatus(key)">
-                        <span class="git-badge" :class="'git-' + getGitStatus(key)">
-                          {{ getGitStatusLabel(key) }}
-                        </span>
-                      </div>
-                    </div>
-                    <div v-else class="tree-node-row" :class="getGitStatusClass(key)">
-                      <div class="node-name-container">
-                        <FolderOutlined :style="{ color: FOLDER_COLOR }" />
-                        <span class="folder-name" :title="title">
-                            <span v-html="highlightTitle(title)"></span>
-                        </span>
-                      </div>
-                    </div>
+                <div 
+                  class="custom-tree-node" 
+                  :class="[getGitStatusClass(key), isLeaf ? getFileTypeClass(title) : '']"
+                  @dblclick="onDoubleClick(dataRef)"
+                >
+                  <div class="node-icon">
+                    <FileIcon v-if="isLeaf" :filename="title" />
+                    <FolderOutlined v-else :style="{ color: FOLDER_COLOR }" />
                   </div>
-                </a-tooltip>
-                <div v-else class="tree-node-content" @dblclick="onDoubleClick(dataRef)">
-                    <div v-if="isLeaf" class="tree-node-row" :class="[getGitStatusClass(key), getFileTypeClass(title)]">
-                      <div class="node-name-container">
-                        <FileIcon :filename="title" />
-                        <span class="file-name" :style="{ color: getFileColor(title) }" :title="title">
-                            <span v-html="highlightTitle(title)"></span>
-                        </span>
-                        <span v-if="hasNote(key)" class="note-indicator" title="有注释">📝</span>
-                      </div>
-                      <div class="node-status-container" v-if="getGitStatus(key)">
-                        <span class="git-badge" :class="'git-' + getGitStatus(key)">
-                          {{ getGitStatusLabel(key) }}
-                        </span>
-                      </div>
-                    </div>
-                    <div v-else class="tree-node-row" :class="getGitStatusClass(key)">
-                      <div class="node-name-container">
-                        <FolderOutlined :style="{ color: FOLDER_COLOR }" />
-                        <span class="folder-name" :title="title">
-                            <span v-html="highlightTitle(title)"></span>
-                        </span>
-                      </div>
-                    </div>
+                  <div class="node-git-status">
+                    <GitStatusIcon :status="getGitStatusName(key)" />
                   </div>
+                  <div class="node-name-wrapper">
+                    <span 
+                      class="node-name-text"
+                      :style="isLeaf ? { color: getFileColor(title) } : {}"
+                      :title="title"
+                    >
+                      <span v-html="highlightTitle(title)"></span>
+                    </span>
+                  </div>
+                  <div class="node-note">
+                    <span class="note-indicator" title="有注释">📝</span>
+                  </div>
+                </div>
+              </a-tooltip>
+                <div v-else 
+                  class="custom-tree-node" 
+                  :class="[getGitStatusClass(key), isLeaf ? getFileTypeClass(title) : '']"
+                  @dblclick="onDoubleClick(dataRef)"
+                >
+                  <div class="node-icon">
+                    <FileIcon v-if="isLeaf" :filename="title" />
+                    <FolderOutlined v-else :style="{ color: FOLDER_COLOR }" />
+                  </div>
+                  <div class="node-git-status">
+                    <GitStatusIcon :status="getGitStatusName(key)" />
+                  </div>
+                  <div class="node-name-wrapper">
+                    <span 
+                      class="node-name-text"
+                      :style="isLeaf ? { color: getFileColor(title) } : {}"
+                      :title="title"
+                    >
+                      <span v-html="highlightTitle(title)"></span>
+                    </span>
+                  </div>
+                  <div class="node-note" v-if="hasNote(key)">
+                    <span class="note-indicator" title="有注释">📝</span>
+                  </div>
+                </div>
                 <template #overlay>
                     <a-menu>
                         <a-menu-item v-if="isStepFile(title)" key="convert-step" @click="convertStepFile(key)">转换为 SLDPRT</a-menu-item>
@@ -213,6 +215,7 @@ import { ReloadOutlined, FileOutlined, FolderOutlined, PlusOutlined, CloseOutlin
 import { message, Modal, Input } from 'ant-design-vue';
 import { h } from 'vue';
 import FileIcon from './FileIcon.vue';
+import GitStatusIcon from './GitStatusIcon.vue';
 import { getFileColor, FOLDER_COLOR } from '../utils/fileIcons';
 
 const emit = defineEmits(['select-file']);
@@ -638,6 +641,19 @@ const getGitStatusClass = (filePath) => {
     if (status.includes('D')) return 'git-deleted';
     if (status.includes('?')) return 'git-untracked';
     if (status.includes('U')) return 'git-conflicted';
+    return '';
+};
+
+// 获取 Git 状态的简化名称，用于图标显示
+const getGitStatusName = (filePath) => {
+    const status = getGitStatus(filePath);
+    if (!status) return '';
+    
+    if (status.includes('M')) return 'modified';
+    if (status.includes('A')) return 'added';
+    if (status.includes('D')) return 'deleted';
+    if (status.includes('?')) return 'untracked';
+    if (status.includes('U')) return 'conflicted';
     return '';
 };
 
@@ -1739,6 +1755,7 @@ onUnmounted(() => {
 .file-explorer {
     position: relative;
     height: 100%;
+    width: 100%;
     display: flex;
     flex-direction: column;
     background: #252526;
@@ -1783,31 +1800,20 @@ onUnmounted(() => {
     min-width: 0;
 }
 
-/* 树节点行布局 */
+/* 树节点内容样式 - 简化为flex容器 */
 .tree-node-content {
-    display: flex;
-    width: 100%;
-    overflow: hidden;
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    padding: 0 4px !important;
+    min-height: 22px !important;
 }
 
-.tree-node-row {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    overflow: hidden;
-}
-
+/* 移除多余的行容器和名称容器 */
+.tree-node-row,
 .node-name-container {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.node-status-container {
-    flex-shrink: 0;
-    margin-left: 8px;
+    display: contents !important;
 }
 
 /* 树容器 */
@@ -1815,6 +1821,56 @@ onUnmounted(() => {
     flex: 1;
     overflow: auto;
     min-height: 100px;
+    width: 100%;
+    padding-right: 8px; /* 增加右侧间距，拉开和边栏的距离 */
+}
+
+/* 强制Ant Design Vue树组件使用自定义宽度 */
+:deep(.ant-tree) {
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+/* 增加树节点和右侧面板的距离 */
+:deep(.ant-tree-node-content-wrapper) {
+    padding-right: 8px !important;
+}
+
+:deep(.ant-tree-treenode) {
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+/* 关键修复：确保树节点内容包装器能够正确计算宽度 */
+:deep(.ant-tree-node-content-wrapper) {
+    width: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+    padding: 0 4px !important;
+    min-height: 22px !important;
+}
+
+/* 确保树节点内容作为flex容器 */
+:deep(.ant-tree-node-content-wrapper > span) {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+/* 修复文件名显示问题 - 最关键的修复 */
+.file-name,
+.folder-name {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    margin-left: 6px !important;
+    box-sizing: border-box !important;
+    max-width: calc(100% - 80px) !important;
 }
 
 .empty-state {
@@ -1825,6 +1881,66 @@ onUnmounted(() => {
     padding: 20px;
     text-align: center;
     color: #888;
+}
+
+/* 自定义树节点样式 - 核心解决方案 */
+:deep(.ant-tree-node-content-wrapper) {
+    display: block !important;
+    overflow: visible !important;
+}
+
+.custom-tree-node {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 22px !important;
+    padding: 0 4px !important;
+    box-sizing: border-box !important;
+}
+
+.node-icon {
+    flex-shrink: 0 !important;
+    margin-right: 4px !important;
+}
+
+.node-git-status {
+    flex-shrink: 0 !important;
+    margin-right: 4px !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+.node-name-wrapper {
+    flex: 1 !important;
+    overflow: hidden !important;
+    min-width: 80px !important; /* 增加最小宽度，确保文件名有足够显示空间 */
+    margin-right: 8px !important; /* 增加右侧间距 */
+}
+
+.node-name-text {
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    max-width: 100% !important; /* 确保文本不会超出容器 */
+    padding-right: 0 !important;
+}
+
+.node-note {
+    flex-shrink: 0 !important;
+}
+
+/* 确保旧的文件名样式不会干扰 */
+.file-name,
+.folder-name {
+    display: contents !important;
+}
+
+/* 确保Ant Design Vue的默认样式不会干扰 */
+:deep(.ant-tree-node-content-wrapper > span) {
+    display: contents !important;
 }
 .empty-content p {
     margin-bottom: 16px;
@@ -1837,6 +1953,11 @@ onUnmounted(() => {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 13px;
     line-height: 22px;
+    width: 100%;
+}
+:deep(.ant-tree-treenode) {
+    width: 100%;
+    overflow: hidden;
 }
 :deep(.ant-tree-node-content-wrapper) {
     border-radius: 0;
@@ -1845,6 +1966,20 @@ onUnmounted(() => {
     min-height: 22px;
     display: flex;
     align-items: center;
+    width: calc(100% - 20px); /* 减去缩进的宽度 */
+    overflow: hidden;
+}
+/* 确保树节点内容能够正确响应宽度变化 */
+:deep(.ant-tree-node-content-wrapper) {
+    box-sizing: border-box;
+}
+
+/* 确保文件名在窄侧栏时显示为... */
+:deep(.ant-tree-node-content-wrapper .file-name),
+:deep(.ant-tree-node-content-wrapper .folder-name) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 :deep(.ant-tree-node-content-wrapper:hover) {
     background-color: #2a2d2e !important;
@@ -1889,44 +2024,7 @@ onUnmounted(() => {
     color: #ff6b6b;
 }
 
-/* Git 状态徽标 */
-.git-badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 0 4px;
-    margin-left: 6px;
-    border-radius: 2px;
-    line-height: 14px;
-    font-family: monospace;
-}
 
-.git-badge.git-M,
-.git-badge.git-MM {
-    color: #e2c08d;
-    background: rgba(226, 192, 141, 0.15);
-}
-
-.git-badge.git-A {
-    color: #89d185;
-    background: rgba(137, 209, 133, 0.15);
-}
-
-.git-badge.git-D {
-    color: #f14c4c;
-    background: rgba(241, 76, 76, 0.15);
-}
-
-.git-badge.git-U,
-.git-badge.git-\?\? {
-    color: #73c991;
-    background: rgba(115, 201, 145, 0.15);
-}
-
-.git-badge.git-\! {
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.15);
-}
 
 /* 文件注释指示器 */
 .note-indicator {

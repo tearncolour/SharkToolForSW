@@ -69,6 +69,7 @@
           >
             <a-select-option value="dark">深色</a-select-option>
             <a-select-option value="light" disabled>浅色（开发中）</a-select-option>
+            <a-select-option value="atom-gray">原子灰</a-select-option>
           </a-select>
         </div>
       </div>

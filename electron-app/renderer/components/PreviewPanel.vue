@@ -163,9 +163,40 @@
         <div v-show="activeTab === 'info'" class="preview-tab-content">
           <!-- SolidWorks 文件属性 -->
           <div v-if="hasFileProperties" class="property-list">
-            <div class="property-item" v-for="(value, key) in fileProperties" :key="key">
+            <!-- 基本属性 -->
+            <div 
+              class="property-item" 
+              v-for="(value, key) in basicFileProperties" 
+              :key="key"
+            >
               <span class="property-key">{{ key }}</span>
               <span class="property-value">{{ value }}</span>
+            </div>
+            
+            <!-- 详细属性区域 -->
+            <div v-if="isSolidWorksFile(selectedFile?.key)" class="detailed-properties">
+              <!-- 显示获取更多属性按钮或详细属性 -->
+              <div v-if="!detailedPropertiesLoaded" class="get-more-properties">
+                <a-button 
+                  type="primary" 
+                  size="small" 
+                  @click="$emit('get-more-properties')"
+                  :loading="loadingDetailedProperties"
+                >
+                  <template #icon><InfoCircleOutlined /></template> 获取更多属性
+                </a-button>
+                <p class="hint-text">点击获取质量、材料等详细信息</p>
+              </div>
+              <div v-else class="detailed-properties-list">
+                <div 
+                  class="property-item" 
+                  v-for="(value, key) in detailedFileProperties" 
+                  :key="key"
+                >
+                  <span class="property-key">{{ key }}</span>
+                  <span class="property-value">{{ value }}</span>
+                </div>
+              </div>
             </div>
           </div>
           <!-- PDF 元数据 -->
@@ -302,7 +333,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { FileOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue';
+import { FileOutlined, PlusOutlined, DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/vs2015.css';
@@ -325,7 +356,7 @@ const props = defineProps({
   isThreeD: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['open-recent', 'property-change', 'add-property', 'switch-sheet', 'convert-model']);
+const emit = defineEmits(['open-recent', 'property-change', 'add-property', 'switch-sheet', 'convert-model', 'get-more-properties']);
 
 const showEmptyState = computed(() => {
   return !props.previewImage && 
@@ -340,6 +371,50 @@ const showEmptyState = computed(() => {
 const hasFileProperties = computed(() => {
   return props.fileProperties && Object.keys(props.fileProperties).length > 0;
 });
+
+// 基本属性（总是显示）
+const basicFileProperties = computed(() => {
+  if (!props.fileProperties) return {};
+  
+  // 只显示基本属性
+  const basicProps = {
+    '文件名': props.fileProperties['文件名'],
+    '文件类型': props.fileProperties['文件类型'],
+    '路径': props.fileProperties['路径']
+  };
+  
+  // 过滤掉值为 undefined 或 null 的属性
+  return Object.fromEntries(
+    Object.entries(basicProps).filter(([_, value]) => value !== undefined && value !== null)
+  );
+});
+
+// 详细属性（需要手动获取）
+const detailedFileProperties = computed(() => {
+  if (!props.fileProperties || !detailedPropertiesLoaded.value) return {};
+  
+  // 只显示详细属性（质量、材料等）
+  const detailedProps = {
+    '材料': props.fileProperties['材料'],
+    '质量': props.fileProperties['质量'],
+    '体积': props.fileProperties['体积'],
+    '表面积': props.fileProperties['表面积'],
+    '修改日期': props.fileProperties['修改日期'],
+    '作者': props.fileProperties['作者']
+  };
+  
+  // 过滤掉值为 undefined 或 null 的属性
+  return Object.fromEntries(
+    Object.entries(detailedProps).filter(([_, value]) => value !== undefined && value !== null)
+  );
+});
+
+// 检查是否为 SolidWorks 文件
+const isSolidWorksFile = (filePath) => {
+  if (!filePath) return false;
+  const ext = filePath.toLowerCase();
+  return ext.endsWith('.sldprt') || ext.endsWith('.sldasm') || ext.endsWith('.slddrw');
+};
 
 // 属性窗口最小高度（40px 只显示标题栏）
 const PROPERTIES_MIN_HEIGHT = 40
@@ -358,6 +433,8 @@ const customPropertiesLoading = ref(false);
 const propertySaving = ref(false);
 const selectedConfig = ref('');
 const configurations = ref([]);
+const detailedPropertiesLoaded = ref(false);
+const loadingDetailedProperties = ref(false);
 
 // 模板数据
 const propertyTemplates = ref({});
@@ -625,11 +702,7 @@ const executeBatchOperation = async () => {
   }
 };
 
-// 检查是否为 SolidWorks 文件
-const isSolidWorksFile = (path) => {
-  const ext = path.toLowerCase();
-  return ext.endsWith('.sldprt') || ext.endsWith('.sldasm') || ext.endsWith('.slddrw');
-};
+
 
 // 3D 预览逻辑
 const initThreeJS = () => {
@@ -1055,6 +1128,9 @@ const loadTemplates = async () => {
 
 // 监听选中文件变化
 watch(() => props.selectedFile, (newFile) => {
+  // 重置详细属性加载状态
+  detailedPropertiesLoaded.value = false;
+  
   if (newFile && isSolidWorksFile(newFile.key)) {
     // 加载属性模板
     loadTemplates();
@@ -1395,6 +1471,32 @@ const togglePropertiesCollapse = () => {
   color: #ccc;
   font-size: 12px;
   word-break: break-all;
+}
+
+/* 详细属性样式 */
+.detailed-properties {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #3e3e42;
+}
+
+.get-more-properties {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+  gap: 8px;
+}
+
+.hint-text {
+  font-size: 11px;
+  color: #666;
+  margin: 0;
+}
+
+.detailed-properties-list {
+  margin-top: 8px;
 }
 
 .property-type {

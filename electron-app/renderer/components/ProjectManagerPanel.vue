@@ -1,5 +1,10 @@
 <template>
-  <div class="project-manager-panel" @click="hideContextMenu">
+  <SidePanelTemplate 
+    :title="sharkProject ? sharkProject.projectName : '当前项目'"
+    custom-class="project-manager-panel"
+    @click="hideContextMenu"
+  >
+
     <!-- 虚拟树右键菜单 -->
     <div 
       v-show="contextMenuVisible" 
@@ -44,123 +49,100 @@
       </div>
     </div>
 
-    <!-- 项目列表区域 -->
-    <a-collapse v-model:activeKey="activeKeys" class="project-collapse">
-      <!-- 当前项目（包含虚拟文件树） -->
-      <a-collapse-panel key="current">
-        <template #header>
-          <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-            <span>{{ sharkProject ? sharkProject.projectName : '当前项目' }}</span>
-            <a-badge v-if="sharkProject" :count="getVirtualTreeFileCount()" :overflow-count="999" style="margin-left: auto;" />
-          </div>
-        </template>
-        <template #extra>
-          <div @click.stop style="display: flex; gap: 4px;">
-            <a-tooltip title="新建项目">
-              <a-button size="small" type="text" @click.stop="createProject">
-                <PlusOutlined />
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="刷新">
-              <a-button size="small" type="text" @click.stop="refreshProjects">
-                <ReloadOutlined />
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="sharkProject" title="关闭项目">
-              <a-button size="small" type="text" danger @click.stop="closeSharkProject">
-                <CloseOutlined />
-              </a-button>
-            </a-tooltip>
-          </div>
-        </template>
-        
-        <!-- 当前项目内容区 - 使用flex布局 -->
-        <div class="current-project-content">
-          <!-- 全局搜索替换（固定在顶部） -->
-          <GlobalSearchReplace 
-            v-if="sharkProject"
-            class="global-search-fixed"
-            :files="getAllFilesFromVirtualTree()"
-            @replace="handleGlobalReplace"
-            @select-file="handleSelectFile"
-          />
-        
-          <!-- 没有 .shark 工程时显示创建按钮 -->
-          <div v-if="!sharkProject" class="empty-shark-project">
-            <InboxOutlined style="font-size: 32px; color: #666; margin-bottom: 12px;" />
-            <p style="color: #888; margin-bottom: 12px;">尚未打开 SharkTools 工程</p>
-            <a-space direction="vertical" style="width: 100%;">
-              <a-button type="primary" size="small" @click="showCreateSharkModal">创建工程</a-button>
-              <a-button size="small" @click="openSharkProject">打开现有工程</a-button>
-            </a-space>
-          </div>
+    <!-- 头部操作按钮 -->
+    <template #actions>
+      <div @click.stop style="display: flex; gap: 4px;">
+        <a-tooltip title="新建项目">
+          <a-button size="small" type="text" @click.stop="createProject">
+            <PlusOutlined />
+          </a-button>
+        </a-tooltip>
+        <a-tooltip title="刷新">
+          <a-button size="small" type="text" @click.stop="refreshProjects">
+            <ReloadOutlined />
+          </a-button>
+        </a-tooltip>
+        <a-tooltip v-if="sharkProject" title="关闭项目">
+          <a-button size="small" type="text" danger @click.stop="closeSharkProject">
+            <CloseOutlined />
+          </a-button>
+        </a-tooltip>
+      </div>
+    </template>
 
-          <!-- 虚拟文件树 -->
-          <div v-else class="virtual-tree-container" @contextmenu="onVirtualTreeBlankRightClick" ref="virtualTreeContainerRef">
-            <a-directory-tree
-              v-if="virtualTreeData.length > 0"
-              v-model:expandedKeys="virtualExpandedKeys"
-              v-model:selectedKeys="virtualSelectedKeys"
-              :tree-data="virtualTreeData"
-              @select="onVirtualTreeSelect"
-              @rightClick="onVirtualTreeRightClick"
-              block-node
-              :show-icon="false"
-              :virtual="true"
-              :height="virtualTreeHeight"
-              multiple
-            >
-              <template #title="{ title, dataRef }">
-                <div class="tree-node-content">
-                  <div class="tree-node-row" :class="getVirtualNodeClass(dataRef)">
-                    <div class="node-name-container">
-                      <FileIcon v-if="dataRef.type === 'file'" :filename="title" />
-                      <FolderOutlined v-else :style="{ color: FOLDER_COLOR }" />
-                      <span class="node-name" :style="{ color: getVirtualNodeColor(dataRef) }">{{ title }}</span>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </a-directory-tree>
-          </div>
+    <!-- 项目内容区 - 直接显示，不使用折叠面板 -->
+    <div class="current-project-content">
+    
+      <!-- 没有 .shark 工程时显示创建按钮 -->
+      <div v-if="!sharkProject" class="empty-shark-project">
+        <InboxOutlined style="font-size: 32px; color: #666; margin-bottom: 12px;" />
+        <p style="color: #888; margin-bottom: 12px;">尚未打开 SharkTools 工程</p>
+        <a-space direction="vertical" style="width: 100%;">
+          <a-button type="primary" size="small" @click="showCreateSharkModal">创建工程</a-button>
+          <a-button size="small" @click="openSharkProject">打开现有工程</a-button>
+        </a-space>
+      </div>
+
+      <!-- 搜索结果显示区域 -->
+      <div v-else-if="searchResultsData.pattern && searchResultsData.results.length > 0" class="search-results-area">
+        <div class="search-results-header">
+          <span class="result-count">{{ searchResultsData.results.length }} 项匹配 "{{ searchResultsData.pattern }}"</span>
         </div>
-      </a-collapse-panel>
-
-      <!-- 最近项目 -->
-      <a-collapse-panel key="recent" header="最近项目" class="recent-panel">
-        <template #extra>
-          <a-badge :count="recentProjects.length" :overflow-count="99" />
-        </template>
-        <div class="recent-panel-content">
-          <a-list 
-            v-if="recentProjects.length > 0"
-            :data-source="recentProjects" 
-            size="small"
-            class="recent-project-list"
+        <div class="search-results-list">
+          <div 
+            v-for="(result, index) in searchResultsData.results" 
+            :key="index"
+            class="search-result-item"
+            @click="handleSelectFile(result)"
           >
-            <template #renderItem="{ item }">
-              <a-list-item @click="openProjectByPath(item.path)" class="recent-item">
-                <template #actions>
-                  <a-button type="text" size="small" danger @click.stop="removeRecentProject(item.path)">
-                    <DeleteOutlined />
-                  </a-button>
-                </template>
-                <a-list-item-meta>
-                  <template #avatar>
-                    <FolderOutlined />
-                  </template>
-                  <template #title>{{ item.name }}</template>
-                  <template #description>{{ item.path }}</template>
-                </a-list-item-meta>
-              </a-list-item>
-            </template>
-          </a-list>
-          <a-empty v-else description="暂无最近项目" />
+            <FileIcon :filename="result.name" />
+            <div class="result-info">
+              <span class="result-name">{{ result.name }}</span>
+              <span class="result-path">{{ getParentFolder(result.path) }}</span>
+            </div>
+          </div>
         </div>
-      </a-collapse-panel>
+      </div>
 
-      <!-- 批量操作面板已移至右键菜单 -->
-      <a-collapse-panel key="batch" header="批量操作" v-if="false">
+      <!-- 虚拟文件树 -->
+      <div v-else class="virtual-tree-container" @contextmenu="onVirtualTreeBlankRightClick" ref="virtualTreeContainerRef">
+        <a-directory-tree
+          v-if="virtualTreeData.length > 0"
+          v-model:expandedKeys="virtualExpandedKeys"
+          v-model:selectedKeys="virtualSelectedKeys"
+          :tree-data="virtualTreeData"
+          @select="onVirtualTreeSelect"
+          @rightClick="onVirtualTreeRightClick"
+          block-node
+          :show-icon="false"
+          :virtual="true"
+          :height="virtualTreeHeight"
+          multiple
+        >
+          <template #title="{ title, dataRef }">
+            <div class="custom-tree-node" :class="getVirtualNodeClass(dataRef)">
+              <div class="node-icon">
+                <FileIcon v-if="dataRef.type === 'file'" :filename="title" />
+                <FolderOutlined v-else :style="{ color: FOLDER_COLOR }" />
+              </div>
+              <div class="node-name-wrapper">
+                <span 
+                  class="node-name-text" 
+                  :style="{ color: getVirtualNodeColor(dataRef) }"
+                  :title="title"
+                >
+                  {{ title }}
+                </span>
+              </div>
+            </div>
+          </template>
+        </a-directory-tree>
+      </div>
+    </div>
+
+    <!-- 批量操作面板已移至右键菜单（隐藏） -->
+    <a-collapse v-model:activeKey="activeKeys" class="project-collapse" v-if="false">
+      <a-collapse-panel key="batch" header="批量操作">
         <div class="batch-operations">
           <!-- 批量重命名 -->
           <div class="batch-section">
@@ -557,11 +539,13 @@
         </a-form-item>
       </a-form>
     </a-modal>
-  </div>
+  </SidePanelTemplate>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, h } from 'vue'
+
+const emit = defineEmits(['select-file'])
 import { message, Modal } from 'ant-design-vue'
 import {
   PlusOutlined,
@@ -578,8 +562,8 @@ import {
   FolderOpenOutlined,
   FileOutlined
 } from '@ant-design/icons-vue'
+import SidePanelTemplate from './SidePanelTemplate.vue'
 import CreateProjectModal from './CreateProjectModal.vue'
-import GlobalSearchReplace from './GlobalSearchReplace.vue'
 import NamingTemplateBuilder from './NamingTemplateBuilder.vue'
 import FileIcon from './FileIcon.vue'
 import { getFileColor, FOLDER_COLOR } from '../utils/fileIcons'
@@ -604,6 +588,12 @@ const virtualTreeData = ref([])
 const virtualExpandedKeys = ref([])
 const virtualSelectedKeys = ref([])
 const createSharkModalVisible = ref(false)
+
+// 搜索结果数据
+const searchResultsData = ref({
+  pattern: '',
+  results: []
+})
 
 // 虚拟滚动相关
 const virtualTreeContainerRef = ref(null)
@@ -1301,6 +1291,27 @@ const getCurrentAuthor = async () => {
   }
 }
 
+// 处理搜索结果
+const handleSearchResults = (data) => {
+  searchResultsData.value = {
+    pattern: data.pattern,
+    results: data.results
+  }
+}
+
+// 获取上级文件夹路径
+const getParentFolder = (filePath) => {
+  if (!filePath) return ''
+  // 统一路径分隔符
+  const normalizedPath = filePath.replace(/\\/g, '/')
+  const parts = normalizedPath.split('/')
+  // 移除文件名，获取父文件夹
+  parts.pop()
+  // 只显示最后两级文件夹
+  const parentParts = parts.slice(-2)
+  return parentParts.join('/')
+}
+
 // 全局搜索替换处理
 const handleGlobalReplace = async (data) => {
   const { files, search, replace, useRegex, caseSensitive } = data
@@ -1914,8 +1925,12 @@ const getVirtualTreeFileCount = () => {
 // 虚拟树节点选择
 const onVirtualTreeSelect = (keys, { node }) => {
   if (node.type === 'file' && node.realPath) {
-    // 这里可以触发文件打开事件
-    console.log('选择文件:', node.realPath)
+    // 触发文件选择事件，格式与FileExplorer保持一致
+    emit('select-file', {
+      title: node.title,
+      key: node.realPath,
+      isLeaf: node.isLeaf
+    })
   }
 }
 
@@ -2235,7 +2250,7 @@ const handleVirtualTreeMenuAction = async () => {
 }
 
 // 创建根级虚拟文件夹
-const createRootVirtual文件夹 = async () => {
+const createRootVirtualFolder = async () => {
   const folderName = virtualTreeMenuInputValue.value.trim()
   
   if (!folderName) {
@@ -2855,6 +2870,213 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--vscode-sideBar-background, #252526);
+  overflow: hidden;
+}
+
+/* 项目标题栏优化 */
+.project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, #0e639c, #1177bb);
+  color: white;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid #3e3e42;
+}
+
+.project-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.project-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.project-file-count {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: normal;
+}
+
+/* 全局搜索框样式优化 */
+.global-search-fixed {
+  background: var(--vscode-sideBar-background, #252526);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, #3e3e42);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* 空状态样式优化 */
+.empty-shark-project {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0;
+}
+
+/* 虚拟树样式优化 */
+.virtual-tree-container {
+  background: transparent;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 树节点悬停效果优化 */
+:deep(.ant-tree-treenode):hover {
+  background: rgba(0, 122, 204, 0.08);
+}
+
+/* 树节点激活状态优化 */
+:deep(.ant-tree-node-selected) {
+  background: rgba(0, 122, 204, 0.15) !important;
+}
+
+/* 最近项目样式优化 */
+.recent-projects {
+  background: var(--vscode-sideBar-background, #252526);
+  border-top: 1px solid var(--vscode-panel-border, #3e3e42);
+  padding: 8px 0;
+}
+
+/* 最近项目徽章样式优化 */
+.recent-project-badge {
+  background: #ff4d4f !important;
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* 工具栏按钮样式优化 */
+.toolbar-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.toolbar-buttons :deep(.a-button) {
+  border-radius: 0 !important;
+}
+
+/* 搜索和替换按钮样式优化 */
+.search-replace-actions :deep(.a-button) {
+  border-radius: 0 !important;
+  margin-right: 4px;
+}
+
+/* 项目标题栏内容样式 */
+.project-header-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.project-title-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #cccccc;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 文件数量徽章样式 */
+.project-file-count-badge {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cccccc;
+  font-size: 11px;
+  padding: 0 6px;
+  border-radius: 10px;
+}
+
+/* 折叠面板标题样式优化 */
+:deep(.ant-collapse-header) {
+  padding: 8px 12px !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid var(--vscode-panel-border, #3e3e42) !important;
+  transition: all 0.2s ease;
+}
+
+:deep(.ant-collapse-header:hover) {
+  background: rgba(0, 122, 204, 0.1) !important;
+}
+
+:deep(.ant-collapse-header-collapsible-only) {
+  padding: 8px 12px !important;
+}
+
+/* 折叠图标样式 */
+:deep(.ant-collapse-arrow) {
+  color: #888888 !important;
+  font-size: 12px !important;
+}
+
+/* 折叠面板内容区域样式 */
+:deep(.ant-collapse-content) {
+  background: var(--vscode-sideBar-background, #252526) !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+:deep(.ant-collapse-content-box) {
+  padding: 0 !important;
+  background: var(--vscode-sideBar-background, #252526) !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* 工具栏按钮样式 */
+:deep(.ant-btn) {
+  border-radius: 0 !important;
+  font-size: 12px !important;
+}
+
+:deep(.ant-btn-sm) {
+  padding: 2px 8px !important;
+}
+
+/* 最近项目样式 */
+.recent-projects :deep(.ant-list-item) {
+  padding: 6px 12px !important;
+  border-radius: 0 !important;
+  transition: background 0.2s ease;
+}
+
+.recent-projects :deep(.ant-list-item:hover) {
+  background: rgba(0, 122, 204, 0.1) !important;
+}
+
+/* 最近项目徽章样式 */
+.recent-projects :deep(.ant-badge) {
+  background: #ff4d4f !important;
+  color: white !important;
+  font-size: 11px !important;
+  padding: 2px 6px !important;
+  border-radius: 10px !important;
+  min-width: 16px !important;
+  text-align: center !important;
 }
 
 /* 折叠面板样式 */
@@ -2933,6 +3155,76 @@ onUnmounted(() => {
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+}
+
+/* 项目搜索框 */
+.project-search-box {
+  flex-shrink: 0;
+  padding: 4px 8px;
+}
+
+/* 搜索结果区域 */
+.search-results-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search-results-area .search-results-header {
+  padding: 6px 12px;
+  background: var(--vscode-sideBarSectionHeader-background, #37373d);
+  font-size: 11px;
+  color: var(--vscode-sideBarSectionHeader-foreground, #bbbbbb);
+  border-bottom: 1px solid var(--vscode-panel-border, #3e3e42);
+}
+
+.search-results-area .result-count {
+  font-weight: 500;
+}
+
+.search-results-area .search-results-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.search-results-area .search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--vscode-foreground, #cccccc);
+}
+
+.search-results-area .search-result-item:hover {
+  background: var(--vscode-list-hoverBackground, #2a2d2e);
+}
+
+.search-results-area .result-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.search-results-area .result-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.search-results-area .result-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground, #888888);
 }
 
 /* 全局搜索固定在顶部 */
@@ -3137,30 +3429,49 @@ onUnmounted(() => {
   color: #cccccc;
 }
 
-/* 滚动条样式 */
+/* 滚动条样式 - 隐藏滚动条指示 */
 .file-list-container::-webkit-scrollbar,
 .recent-panel-content::-webkit-scrollbar,
 :deep(.ant-tree)::-webkit-scrollbar {
-  width: 8px;
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 
 .file-list-container::-webkit-scrollbar-track,
 .recent-panel-content::-webkit-scrollbar-track,
 :deep(.ant-tree)::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: transparent;
+  display: none !important;
 }
 
 .file-list-container::-webkit-scrollbar-thumb,
 .recent-panel-content::-webkit-scrollbar-thumb,
 :deep(.ant-tree)::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 0; /* 去除圆角 */
+  background: transparent;
+  display: none !important;
 }
 
 .file-list-container::-webkit-scrollbar-thumb:hover,
 .recent-panel-content::-webkit-scrollbar-thumb:hover,
 :deep(.ant-tree)::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: transparent;
+  display: none !important;
+}
+
+/* 隐藏滚动条的其他样式 */
+.file-list-container,
+.recent-panel-content,
+:deep(.ant-tree) {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+}
+
+/* 确保滚动功能正常 */
+.file-list-container,
+.recent-panel-content,
+:deep(.ant-tree) {
+  overflow: auto !important;
 }
 
 /* 空状态 */
@@ -3205,48 +3516,87 @@ onUnmounted(() => {
 }
 
 .virtual-tree-container {
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 .virtual-tree-container :deep(.ant-tree) {
   background: transparent;
   color: #cccccc;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  width: 100% !important;
+}
+
+.virtual-tree-container :deep(.ant-tree-list) {
+  width: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.virtual-tree-container :deep(.ant-tree-node) {
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+.virtual-tree-container :deep(.ant-tree-node-content) {
+  width: 100% !important;
+  overflow: hidden !important;
 }
 
 .virtual-tree-container :deep(.ant-tree-node-content-wrapper) {
-  width: 100%;
+  width: 100% !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
 
 .virtual-tree-container :deep(.ant-tree-title) {
-  width: 100%;
+  width: 100% !important;
+  overflow: hidden !important;
 }
 
-.virtual-tree-container .tree-node-content {
-  width: 100%;
+/* 确保折叠面板内容区域能够正常滚动 */
+:deep(.ant-collapse-content) {
+  overflow: hidden !important;
 }
 
-.virtual-tree-container .tree-node-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
+:deep(.ant-collapse-content-box) {
+  overflow: hidden !important;
 }
 
-.virtual-tree-container .node-name-container {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  overflow: hidden;
+.virtual-tree-container .custom-tree-node {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 22px !important;
+  padding: 0 4px !important;
+  box-sizing: border-box !important;
 }
 
-.virtual-tree-container .node-name {
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.virtual-tree-container .node-icon {
+  flex-shrink: 0 !important;
+  margin-right: 4px !important;
+}
+
+.virtual-tree-container .node-name-wrapper {
+  flex: 1 !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+.virtual-tree-container .node-name-text {
+  display: block !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-size: 12px !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  max-width: 100% !important;
+  padding-right: 0 !important;
 }
 
 /* 文件选择区域 */

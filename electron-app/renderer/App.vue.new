@@ -28,7 +28,17 @@
         <!-- 活动栏 (最左侧图标栏) -->
         <div class="activity-bar">
           <div class="activity-icons">
-
+            <!-- 折叠/展开按钮 -->
+            <a-tooltip placement="right" :title="sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'">
+              <div 
+                class="activity-icon toggle-sidebar" 
+                @click="toggleSidebar"
+              >
+                <MenuFoldOutlined v-if="!sidebarCollapsed" />
+                <MenuUnfoldOutlined v-else />
+              </div>
+            </a-tooltip>
+            <div class="activity-divider"></div>
             <a-tooltip placement="right" title="资源管理器">
               <div 
                 class="activity-icon" 
@@ -94,14 +104,14 @@
           :class="{ collapsed: sidebarCollapsed }"
           :style="{ width: sidebarCollapsed ? '0px' : sidePanelWidth + 'px' }"
         >
-          <!-- 项目管理视图 -->
-          <div v-show="currentView === 'project'" class="panel-content">
-            <ProjectManagerPanel @select-file="onFileSelect" />
-          </div>
-
           <!-- 资源管理器视图 -->
           <div v-show="currentView === 'explorer'" class="panel-content">
             <FileExplorer @select-file="onFileSelect" />
+          </div>
+
+          <!-- 项目管理视图 -->
+          <div v-show="currentView === 'project'" class="panel-content">
+            <ProjectManagerPanel />
           </div>
 
           <!-- Git 视图 -->
@@ -296,17 +306,11 @@ const connectionText = computed(() => {
 
 // 视图切换
 const setView = (view) => {
-  // VSCode风格交互：点击当前激活的图标时折叠侧边栏
-  if (currentView.value === view && !sidebarCollapsed.value) {
-    sidebarCollapsed.value = true
-  } 
-  // 点击非激活图标或已折叠时，切换视图并展开
-  else {
-    currentView.value = view
-    if (sidebarCollapsed.value) {
-      sidebarCollapsed.value = false
-    }
+  // 如果侧边栏已折叠，点击图标时自动展开
+  if (sidebarCollapsed.value) {
+    sidebarCollapsed.value = false
   }
+  currentView.value = view
 }
 
 // 切换侧边栏显示/隐藏
@@ -327,87 +331,33 @@ const close = () => window.electronAPI?.windowClose()
 let isResizingSidePanel = false
 let startX = 0
 let startWidth = 0
-let resizeRequestId = null
-const resizeElement = ref(null)
 
 const startResizeSidePanel = (e) => {
   isResizingSidePanel = true
   startX = e.clientX
   startWidth = sidePanelWidth.value
   
-  // 在拖动时禁用过渡动画，提高性能
-  const sidePanel = document.querySelector('.side-panel')
-  if (sidePanel) {
-    sidePanel.style.transition = 'none'
-  }
-  
   document.addEventListener('mousemove', doResizeSidePanel)
   document.addEventListener('mouseup', stopResizeSidePanel)
   document.body.style.cursor = 'ew-resize'
   document.body.style.userSelect = 'none'
-  // 只禁用侧边栏内部的指针事件，而不是整个文档
-  const sash = e.currentTarget
-  if (sash.parentElement) {
-    sash.parentElement.style.pointerEvents = 'none'
-  }
-  sash.style.pointerEvents = 'auto'
 }
 
 const doResizeSidePanel = (e) => {
   if (!isResizingSidePanel) return
-  
-  // 使用 requestAnimationFrame 优化拖动性能
-  if (!resizeRequestId) {
-    resizeRequestId = requestAnimationFrame(() => {
-      const deltaX = e.clientX - startX
-      let newWidth = startWidth + deltaX
-      // 限制范围 200 - 600px
-      newWidth = Math.max(200, Math.min(600, newWidth))
-      sidePanelWidth.value = newWidth
-      resizeRequestId = null
-    })
-  }
+  const deltaX = e.clientX - startX
+  let newWidth = startWidth + deltaX
+  // 限制范围 200 - 600px
+  newWidth = Math.max(200, Math.min(600, newWidth))
+  sidePanelWidth.value = newWidth
 }
 
 const stopResizeSidePanel = () => {
   isResizingSidePanel = false
-  
-  // 恢复过渡动画
-  const sidePanel = document.querySelector('.side-panel')
-  if (sidePanel) {
-    sidePanel.style.transition = 'width 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)'
-  }
-  
   document.removeEventListener('mousemove', doResizeSidePanel)
   document.removeEventListener('mouseup', stopResizeSidePanel)
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
-  // 恢复指针事件
-  const sash = document.querySelector('.sash-vertical')
-  if (sash && sash.parentElement) {
-    sash.parentElement.style.pointerEvents = 'auto'
-  }
-  
-  // 取消未执行的动画帧请求
-  if (resizeRequestId) {
-    cancelAnimationFrame(resizeRequestId)
-    resizeRequestId = null
-  }
-  
-  // 保存宽度到本地存储
-  if (window.electronAPI) {
-    window.electronAPI.storeSet('ui.sidePanelWidth', sidePanelWidth.value)
-  }
-}
-
-// 从本地存储恢复宽度
-const restoreSidePanelWidth = async () => {
-  if (window.electronAPI) {
-    const savedWidth = await window.electronAPI.storeGet('ui.sidePanelWidth')
-    if (savedWidth && !isNaN(savedWidth)) {
-      sidePanelWidth.value = parseInt(savedWidth)
-    }
-  }
 }
 
 // 文件选择
@@ -970,9 +920,6 @@ onMounted(() => {
         sidebarCollapsed.value = collapsed
       }
     })
-
-    // 恢复侧边栏宽度
-    restoreSidePanelWidth()
 
     // 启动连接状态检查
     startConnectionCheck()

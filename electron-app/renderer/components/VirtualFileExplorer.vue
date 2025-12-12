@@ -731,21 +731,36 @@ import { watch } from 'vue'
   width: 100%;
 }
 
-/* 滚动条样式 */
+/* 隐藏滚动条 - 保持滚动功能 */
 .tree-container::-webkit-scrollbar {
-  width: 8px;
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 
 .tree-container::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: transparent;
+  display: none !important;
 }
 
 .tree-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 0;
+  background: transparent;
+  display: none !important;
 }
 
 .tree-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: transparent;
+  display: none !important;
+}
+
+/* 隐藏滚动条的其他样式 */
+.tree-container {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+}
+
+/* 确保滚动功能正常 */
+.tree-container {
+  overflow: auto !important;
 }
 </style>
