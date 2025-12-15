@@ -135,7 +135,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     createSharkProject: (config) => ipcRenderer.invoke('create-shark-project', config),
     loadSharkProject: (filePath) => ipcRenderer.invoke('load-shark-project', filePath),
     saveSharkProject: (filePath, data) => ipcRenderer.invoke('save-shark-project', filePath, data),
-    scanSolidWorksFiles: (rootPath) => ipcRenderer.invoke('scan-solidworks-files', rootPath)
+    scanSolidWorksFiles: (rootPath) => ipcRenderer.invoke('scan-solidworks-files', rootPath),
+
+    // VSCode 插件管理 API
+    vscodeCheckInstalled: () => ipcRenderer.invoke('vscode-check-installed'),
+    vscodeListExtensions: () => ipcRenderer.invoke('vscode-list-extensions'),
+    vscodeInstallExtension: (vsixPath) => ipcRenderer.invoke('vscode-install-extension', vsixPath),
+    vscodeInstallFromMarketplace: (extensionId) => ipcRenderer.invoke('vscode-install-from-marketplace', extensionId),
+    vscodeUninstallExtension: (extensionId) => ipcRenderer.invoke('vscode-uninstall-extension', extensionId),
+    vscodePackageExtension: (extensionPath) => ipcRenderer.invoke('vscode-package-extension', extensionPath),
+    vscodeGetBuiltinExtensionPath: () => ipcRenderer.invoke('vscode-get-builtin-extension-path'),
+    vscodeCheckSharktoolsExtension: () => ipcRenderer.invoke('vscode-check-sharktools-extension'),
+    vscodeRefreshExtensions: () => ipcRenderer.invoke('vscode-refresh-extensions')
 });
 
 // 通知主进程预加载完成

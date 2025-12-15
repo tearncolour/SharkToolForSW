@@ -83,27 +83,6 @@
         </a-space>
       </div>
 
-      <!-- 搜索结果显示区域 -->
-      <div v-else-if="searchResultsData.pattern && searchResultsData.results.length > 0" class="search-results-area">
-        <div class="search-results-header">
-          <span class="result-count">{{ searchResultsData.results.length }} 项匹配 "{{ searchResultsData.pattern }}"</span>
-        </div>
-        <div class="search-results-list">
-          <div 
-            v-for="(result, index) in searchResultsData.results" 
-            :key="index"
-            class="search-result-item"
-            @click="handleSelectFile(result)"
-          >
-            <FileIcon :filename="result.name" />
-            <div class="result-info">
-              <span class="result-name">{{ result.name }}</span>
-              <span class="result-path">{{ getParentFolder(result.path) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- 虚拟文件树 -->
       <div v-else class="virtual-tree-container" @contextmenu="onVirtualTreeBlankRightClick" ref="virtualTreeContainerRef">
         <a-directory-tree
@@ -588,12 +567,6 @@ const virtualTreeData = ref([])
 const virtualExpandedKeys = ref([])
 const virtualSelectedKeys = ref([])
 const createSharkModalVisible = ref(false)
-
-// 搜索结果数据
-const searchResultsData = ref({
-  pattern: '',
-  results: []
-})
 
 // 虚拟滚动相关
 const virtualTreeContainerRef = ref(null)
@@ -1291,14 +1264,6 @@ const getCurrentAuthor = async () => {
   }
 }
 
-// 处理搜索结果
-const handleSearchResults = (data) => {
-  searchResultsData.value = {
-    pattern: data.pattern,
-    results: data.results
-  }
-}
-
 // 获取上级文件夹路径
 const getParentFolder = (filePath) => {
   if (!filePath) return ''
@@ -1310,54 +1275,6 @@ const getParentFolder = (filePath) => {
   // 只显示最后两级文件夹
   const parentParts = parts.slice(-2)
   return parentParts.join('/')
-}
-
-// 全局搜索替换处理
-const handleGlobalReplace = async (data) => {
-  const { files, search, replace, useRegex, caseSensitive } = data
-  
-  let successCount = 0
-  for (const file of files) {
-    try {
-      let newName = file.name
-      
-      if (useRegex) {
-        const flags = caseSensitive ? 'g' : 'gi'
-        const regex = new RegExp(search, flags)
-        newName = newName.replace(regex, replace)
-      } else {
-        if (caseSensitive) {
-          newName = newName.split(search).join(replace)
-        } else {
-          const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
-          newName = newName.replace(regex, replace)
-        }
-      }
-      
-      if (newName !== file.name) {
-        const dir = file.path.substring(0, file.path.lastIndexOf(/[/\\]/))
-        const newPath = `${dir}/${newName}`
-        
-        await window.electronAPI.renamePath(file.path, newPath)
-        updateFileNodeName(file.path, newName, newPath)
-        successCount++
-      }
-    } catch (err) {
-      console.error(`重命名失败: ${file.name}`, err)
-    }
-  }
-  
-  if (successCount > 0) {
-    await saveSharkProject()
-    await loadVirtualTree()
-    message.success(`成功重命名 ${successCount} 个文件`)
-  }
-}
-
-// 选择文件
-const handleSelectFile = (file) => {
-  // 可以实现选中文件并滚动到该文件
-  console.log('选中文件:', file)
 }
 
 // 根据命名规则生成预览名称
@@ -3161,75 +3078,6 @@ onUnmounted(() => {
 .project-search-box {
   flex-shrink: 0;
   padding: 4px 8px;
-}
-
-/* 搜索结果区域 */
-.search-results-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.search-results-area .search-results-header {
-  padding: 6px 12px;
-  background: var(--vscode-sideBarSectionHeader-background, #37373d);
-  font-size: 11px;
-  color: var(--vscode-sideBarSectionHeader-foreground, #bbbbbb);
-  border-bottom: 1px solid var(--vscode-panel-border, #3e3e42);
-}
-
-.search-results-area .result-count {
-  font-weight: 500;
-}
-
-.search-results-area .search-results-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px;
-}
-
-.search-results-area .search-result-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  cursor: pointer;
-  border-radius: 3px;
-  font-size: 12px;
-  color: var(--vscode-foreground, #cccccc);
-}
-
-.search-results-area .search-result-item:hover {
-  background: var(--vscode-list-hoverBackground, #2a2d2e);
-}
-
-.search-results-area .result-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.search-results-area .result-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.search-results-area .result-path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  color: var(--vscode-descriptionForeground, #888888);
-}
-
-/* 全局搜索固定在顶部 */
-.global-search-fixed {
-  flex-shrink: 0;
 }
 
 /* 虚拟树容器占据剩余空间 */

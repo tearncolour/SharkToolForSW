@@ -161,6 +161,8 @@ const props = defineProps({
 .custom-content {
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 滚动条样式 */

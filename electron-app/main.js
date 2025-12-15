@@ -2058,3 +2058,226 @@ if (!gotTheLock) {
         }
     });
 }
+
+// ==================== VSCode 插件管理 ====================
+
+// 检查 VSCode 是否已安装
+ipcMain.handle('vscode-check-installed', async () => {
+    return new Promise((resolve) => {
+        exec('code --version', (error, stdout) => {
+            if (error) {
+                resolve({ installed: false, version: null });
+            } else {
+                const version = stdout.trim().split('\n')[0];
+                resolve({ installed: true, version });
+            }
+        });
+    });
+});
+
+// 获取已安装的 VSCode 插件列表
+ipcMain.handle('vscode-list-extensions', async () => {
+    return new Promise((resolve) => {
+        exec('code --list-extensions --show-versions', (error, stdout) => {
+            if (error) {
+                log(`获取 VSCode 插件列表失败: ${error.message}`, 'ERROR');
+                resolve({ success: false, extensions: [], error: error.message });
+            } else {
+                const extensions = stdout.trim().split('\n')
+                    .filter(line => line.length > 0)
+                    .map(line => {
+                        const [id, version] = line.split('@');
+                        return { id, version: version || 'unknown' };
+                    });
+                resolve({ success: true, extensions });
+            }
+        });
+    });
+});
+
+// 安装 VSCode 插件 (从 VSIX 文件)
+ipcMain.handle('vscode-install-extension', async (event, vsixPath) => {
+    return new Promise((resolve) => {
+        // 验证文件存在
+        if (!fs.existsSync(vsixPath)) {
+            resolve({ success: false, error: '插件文件不存在' });
+            return;
+        }
+
+        log(`正在安装 VSCode 插件: ${vsixPath}`);
+        exec(`code --install-extension "${vsixPath}" --force`, (error, stdout, stderr) => {
+            if (error) {
+                log(`安装 VSCode 插件失败: ${error.message}`, 'ERROR');
+                resolve({ success: false, error: error.message || stderr });
+            } else {
+                log(`VSCode 插件安装成功: ${vsixPath}`);
+                resolve({ success: true, message: stdout.trim() });
+            }
+        });
+    });
+});
+
+// 从 Marketplace 安装 VSCode 插件
+ipcMain.handle('vscode-install-from-marketplace', async (event, extensionId) => {
+    return new Promise((resolve) => {
+        log(`正在从 Marketplace 安装插件: ${extensionId}`);
+        exec(`code --install-extension "${extensionId}" --force`, (error, stdout, stderr) => {
+            if (error) {
+                log(`从 Marketplace 安装插件失败: ${error.message}`, 'ERROR');
+                resolve({ success: false, error: error.message || stderr });
+            } else {
+                log(`插件安装成功: ${extensionId}`);
+                resolve({ success: true, message: stdout.trim() });
+            }
+        });
+    });
+});
+
+// 卸载 VSCode 插件
+ipcMain.handle('vscode-uninstall-extension', async (event, extensionId) => {
+    return new Promise((resolve) => {
+        log(`正在卸载 VSCode 插件: ${extensionId}`);
+        exec(`code --uninstall-extension "${extensionId}"`, (error, stdout, stderr) => {
+            if (error) {
+                log(`卸载 VSCode 插件失败: ${error.message}`, 'ERROR');
+                resolve({ success: false, error: error.message || stderr });
+            } else {
+                log(`VSCode 插件卸载成功: ${extensionId}`);
+                
+                // 尝试刷新 VSCode 扩展视图
+                exec('code --list-extensions', (refreshError) => {
+                    if (refreshError) {
+                        log(`刷新扩展列表失败: ${refreshError.message}`, 'WARN');
+                    } else {
+                        log('扩展列表已刷新');
+                    }
+                });
+                
+                resolve({ success: true, message: stdout.trim() });
+            }
+        });
+    });
+});
+
+// 刷新 VSCode 扩展视图
+ipcMain.handle('vscode-refresh-extensions', async () => {
+    return new Promise((resolve) => {
+        log('正在刷新 VSCode 扩展视图...');
+        
+        // 使用多个命令确保刷新
+        const commands = [
+            'code --list-extensions',
+            'code --force' // 强制刷新VSCode窗口
+        ];
+        
+        let completed = 0;
+        let hasError = false;
+        
+        commands.forEach(cmd => {
+            exec(cmd, (error) => {
+                completed++;
+                if (error) {
+                    hasError = true;
+                    log(`执行命令失败 (${cmd}): ${error.message}`, 'WARN');
+                }
+                
+                if (completed === commands.length) {
+                    if (hasError) {
+                        resolve({ success: false, error: '部分刷新命令执行失败' });
+                    } else {
+                        log('VSCode 扩展视图刷新成功');
+                        resolve({ success: true });
+                    }
+                }
+            });
+        });
+    });
+});
+
+// 打包本地 VSCode 插件
+ipcMain.handle('vscode-package-extension', async (event, extensionPath) => {
+    return new Promise((resolve) => {
+        // 检查 vsce 是否已安装
+        exec('npx vsce --version', (error) => {
+            if (error) {
+                // 尝试使用 npx 直接运行
+                const cmd = `cd "${extensionPath}" && npx @vscode/vsce package --no-dependencies`;
+                exec(cmd, { maxBuffer: 1024 * 1024 * 10 }, (err, stdout, stderr) => {
+                    if (err) {
+                        log(`打包插件失败: ${err.message}`, 'ERROR');
+                        resolve({ success: false, error: err.message || stderr });
+                    } else {
+                        // 查找生成的 vsix 文件
+                        const files = fs.readdirSync(extensionPath);
+                        const vsixFile = files.find(f => f.endsWith('.vsix'));
+                        if (vsixFile) {
+                            resolve({ 
+                                success: true, 
+                                vsixPath: path.join(extensionPath, vsixFile),
+                                message: stdout.trim() 
+                            });
+                        } else {
+                            resolve({ success: false, error: '未找到生成的 .vsix 文件' });
+                        }
+                    }
+                });
+            } else {
+                const cmd = `cd "${extensionPath}" && vsce package --no-dependencies`;
+                exec(cmd, { maxBuffer: 1024 * 1024 * 10 }, (err, stdout, stderr) => {
+                    if (err) {
+                        log(`打包插件失败: ${err.message}`, 'ERROR');
+                        resolve({ success: false, error: err.message || stderr });
+                    } else {
+                        const files = fs.readdirSync(extensionPath);
+                        const vsixFile = files.find(f => f.endsWith('.vsix'));
+                        if (vsixFile) {
+                            resolve({ 
+                                success: true, 
+                                vsixPath: path.join(extensionPath, vsixFile),
+                                message: stdout.trim() 
+                            });
+                        } else {
+                            resolve({ success: false, error: '未找到生成的 .vsix 文件' });
+                        }
+                    }
+                });
+            }
+        });
+    });
+});
+
+// 获取内置 SharkTools 插件路径
+ipcMain.handle('vscode-get-builtin-extension-path', async () => {
+    // 查找内置的 VSCode 插件目录
+    const possiblePaths = [
+        path.join(__dirname, '..', 'VscodeExtension'),
+        path.join(__dirname, 'VscodeExtension'),
+        path.join(app.getAppPath(), '..', 'VscodeExtension'),
+        path.join(process.resourcesPath || '', 'VscodeExtension')
+    ];
+
+    for (const p of possiblePaths) {
+        if (fs.existsSync(p) && fs.existsSync(path.join(p, 'package.json'))) {
+            return { success: true, path: p };
+        }
+    }
+
+    return { success: false, error: '未找到内置插件目录' };
+});
+
+// 检查 SharkTools 插件是否已安装
+ipcMain.handle('vscode-check-sharktools-extension', async () => {
+    return new Promise((resolve) => {
+        exec('code --list-extensions', (error, stdout) => {
+            if (error) {
+                resolve({ installed: false, error: error.message });
+            } else {
+                const extensions = stdout.trim().toLowerCase().split('\n');
+                const isInstalled = extensions.some(ext => 
+                    ext.includes('sharktools') || ext.includes('shark-tools')
+                );
+                resolve({ installed: isInstalled });
+            }
+        });
+    });
+});

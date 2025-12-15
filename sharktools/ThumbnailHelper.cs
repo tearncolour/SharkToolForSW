@@ -11,37 +11,43 @@ namespace SharkTools
     {
         public static string GetThumbnailBase64(ISldWorks swApp, string filePath)
         {
-            // 1. Try SolidWorks API
-            try
+            // Fast path: 如果文件已打开，直接从活动文档获取预览
+            var activeDoc = swApp.ActiveDoc as ModelDoc2;
+            if (activeDoc != null && activeDoc.GetPathName().Equals(filePath, StringComparison.OrdinalIgnoreCase))
             {
-                object hBitmapObj = swApp.GetPreviewBitmap(filePath, "");
-                if (hBitmapObj != null)
+                try
                 {
-                    long hBitmapVal = 0;
-                    try { hBitmapVal = Convert.ToInt64(hBitmapObj); } catch { }
-
-                    if (hBitmapVal != 0)
+                    object hBitmapObj = swApp.GetPreviewBitmap(filePath, "");
+                    if (hBitmapObj != null)
                     {
-                        IntPtr hBitmapPtr = new IntPtr(hBitmapVal);
-                        try
+                        long hBitmapVal = 0;
+                        try { hBitmapVal = Convert.ToInt64(hBitmapObj); } catch { }
+
+                        if (hBitmapVal != 0)
                         {
-                            using (Bitmap bmp = Image.FromHbitmap(hBitmapPtr))
+                            IntPtr hBitmapPtr = new IntPtr(hBitmapVal);
+                            try
                             {
-                                return BitmapToBase64(bmp);
+                                using (Bitmap bmp = Image.FromHbitmap(hBitmapPtr))
+                                {
+                                    return BitmapToBase64(bmp);
+                                }
                             }
-                        }
-                        finally
-                        {
-                            DeleteObject(hBitmapPtr);
+                            finally
+                            {
+                                DeleteObject(hBitmapPtr);
+                            }
                         }
                     }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Active doc thumbnail failed: " + ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                // Log error if needed
-                Console.WriteLine("SW API Thumbnail failed: " + ex.Message);
-            }
+            
+            // 对于未打开的文件，跳过 GetPreviewBitmap（会阻塞UI线程加载模型）
+            // 直接尝试 Windows Shell API
 
             // 2. Try Windows Shell API (Fallback)
             try
