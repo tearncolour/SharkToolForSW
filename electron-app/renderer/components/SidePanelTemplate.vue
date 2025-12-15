@@ -131,7 +131,7 @@ const props = defineProps({
 .panel-content {
   flex: 1;
   overflow: hidden;
-  padding: 8px;
+  padding: 0;
 }
 
 .loading-state {
@@ -159,7 +159,9 @@ const props = defineProps({
 }
 
 .custom-content {
-  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 

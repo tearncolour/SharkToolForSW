@@ -13,7 +13,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
-using SolidWorks.Interop.fworks;
 using WebSocketSharp;
 
 namespace SharkTools
@@ -65,7 +64,8 @@ namespace SharkTools
                     }
                     catch (Exception ex)
                     {
-                        Log($"消息处理错误: {ex.Message}");
+                        // 使用统一的错误处理器记录错误
+                        ErrorHandler.LogError("ElectronServer", "消息处理错误", ex);
                     }
                 }
             }, _messageProcessorCts.Token);
@@ -347,6 +347,18 @@ namespace SharkTools
                     }
                 }
 
+                // ============ 不需要UI线程的命令，直接处理 ============
+                // ping命令不访问SolidWorks API，无需在UI线程执行
+                if (command == "ping")
+                {
+                    return JsonConvert.SerializeObject(new 
+                    { 
+                        id = messageId,
+                        success = true, 
+                        data = new { pong = true, timestamp = DateTime.Now } 
+                    });
+                }
+
                 object result = null;
 
                 // 在 UI 线程执行 SolidWorks 操作
@@ -354,11 +366,6 @@ namespace SharkTools
                 {
                     switch (command)
                     {
-                        case "ping":
-                            // 心跳检查
-                            result = new { pong = true, timestamp = DateTime.Now };
-                            break;
-
                         case "open":
                             string path = payload?["path"]?.ToString();
                             if (!string.IsNullOrEmpty(path))

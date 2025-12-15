@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, defineAsyncComponent } from 'vue'
 import { theme, message } from 'ant-design-vue'
 import {
   HistoryOutlined,
@@ -202,14 +202,19 @@ message.config({
   rtl: false,
 })
 
-// 组件导入
+// 组件懒加载 - 优化首屏加载性能
+// 资源管理器（核心功能，直接加载）
 import FileExplorer from './components/FileExplorer.vue'
-import GitPanel from './components/GitPanel.vue'
-import PreviewPanel from './components/PreviewPanel.vue'
-import HistoryPanel from './components/HistoryPanel.vue'
-import SettingsPanel from './components/SettingsPanel.vue'
+// 项目管理器（核心功能，直接加载）
 import ProjectManagerPanel from './components/ProjectManagerPanel.vue'
-import ComparePanel from './components/ComparePanel.vue'
+// 预览面板（核心功能，直接加载）
+import PreviewPanel from './components/PreviewPanel.vue'
+
+// 以下面板使用懒加载，减少首屏加载时间
+const GitPanel = defineAsyncComponent(() => import('./components/GitPanel.vue'))
+const HistoryPanel = defineAsyncComponent(() => import('./components/HistoryPanel.vue'))
+const SettingsPanel = defineAsyncComponent(() => import('./components/SettingsPanel.vue'))
+const ComparePanel = defineAsyncComponent(() => import('./components/ComparePanel.vue'))
 
 // 启动 SolidWorks
 const launchSolidWorks = async () => {
@@ -884,49 +889,71 @@ const handleSWMessage = (data) => {
   }
 }
 
-// 定时检查连接状态（每5秒）
+// 定时检查连接状态（智能调节频率）
 let connectionCheckInterval = null
+let consecutiveSuccesses = 0 // 连续成功次数
+const BASE_CHECK_INTERVAL = 5000 // 基础检查间隔5秒
+const MAX_CHECK_INTERVAL = 30000 // 最大检查间隔30秒
+
+const getCheckInterval = () => {
+  // 连续成功3次后，逐步增加检查间隔
+  if (consecutiveSuccesses >= 6) return MAX_CHECK_INTERVAL
+  if (consecutiveSuccesses >= 3) return 15000
+  return BASE_CHECK_INTERVAL
+}
 
 const startConnectionCheck = () => {
   if (connectionCheckInterval) {
     clearInterval(connectionCheckInterval)
   }
   
-  connectionCheckInterval = setInterval(async () => {
-    try {
-      // 发送心跳消息
-      const response = await Promise.race([
-        window.electronAPI?.sendToSW({ type: 'ping' }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
-      ])
-      
-      if (response && response.success) {
-        // 连接正常
-        if (connectionStatus.value !== 'success') {
-          connectionStatus.value = 'success'
-          console.log('SW 连接已恢复')
+  const scheduleNextCheck = () => {
+    const interval = getCheckInterval()
+    connectionCheckInterval = setTimeout(async () => {
+      try {
+        // 发送心跳消息
+        const response = await Promise.race([
+          window.electronAPI?.sendToSW({ type: 'ping' }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ])
+        
+        if (response && response.success) {
+          // 连接正常
+          consecutiveSuccesses++
+          if (connectionStatus.value !== 'success') {
+            connectionStatus.value = 'success'
+            console.log('SW 连接已恢复')
+          }
+        } else {
+          // 连接失败
+          consecutiveSuccesses = 0
+          if (connectionStatus.value === 'success') {
+            connectionStatus.value = 'default'
+            console.log('SW 连接已断开')
+          }
         }
-      } else {
-        // 连接失败
+      } catch (error) {
+        // 超时或错误
+        consecutiveSuccesses = 0
         if (connectionStatus.value === 'success') {
           connectionStatus.value = 'default'
-          console.log('SW 连接已断开')
+          console.log('SW 连接检查失败:', error.message)
         }
       }
-    } catch (error) {
-      // 超时或错误
-      if (connectionStatus.value === 'success') {
-        connectionStatus.value = 'default'
-        console.log('SW 连接检查失败:', error.message)
-      }
-    }
-  }, 5000) // 每5秒检查一次
+      
+      // 调度下一次检查
+      scheduleNextCheck()
+    }, interval)
+  }
+  
+  scheduleNextCheck()
 }
 
 const stopConnectionCheck = () => {
   if (connectionCheckInterval) {
-    clearInterval(connectionCheckInterval)
+    clearTimeout(connectionCheckInterval)
     connectionCheckInterval = null
+    consecutiveSuccesses = 0
   }
 }
 

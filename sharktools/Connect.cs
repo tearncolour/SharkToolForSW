@@ -21,17 +21,32 @@ namespace SharkTools
 
         public bool ConnectToSW(object ThisSW, int Cookie)
         {
+            // 最早期日志，确认插件被调用
+            try {
+                System.IO.File.AppendAllText(
+                    @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                    $"{DateTime.Now}: ========== ConnectToSW 开始 ==========\r\n"
+                );
+            } catch {}
+            
             try
             {
                 _swApp = (ISldWorks)ThisSW;
                 AddinCookie = Cookie;
+                
+                try {
+                    System.IO.File.AppendAllText(
+                        @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                        $"{DateTime.Now}: _swApp 获取成功, Cookie={Cookie}\r\n"
+                    );
+                } catch {}
                 
                 // CRITICAL FIX: Use SetAddinCallbackInfo2 for better compatibility
                 bool callbackRes = _swApp.SetAddinCallbackInfo2(0, this, AddinCookie);
                 try {
                      System.IO.File.AppendAllText(
                         @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
-                        $"{DateTime.Now}: SetAddinCallbackInfo2 result: {callbackRes} (Version: 2025-12-11-Patch2)\r\n"
+                        $"{DateTime.Now}: SetAddinCallbackInfo2 result: {callbackRes} (Version: 2025-12-15)\r\n"
                     );
                 } catch {}
 

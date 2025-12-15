@@ -597,7 +597,18 @@ const searchResultsData = ref({
 
 // 虚拟滚动相关
 const virtualTreeContainerRef = ref(null)
-const virtualTreeHeight = ref(300)
+const virtualTreeHeight = ref(800)
+
+// 计算树高度的函数
+const updateVirtualTreeHeight = () => {
+  if (virtualTreeContainerRef.value) {
+    const rect = virtualTreeContainerRef.value.getBoundingClientRect()
+    const newHeight = Math.max(400, rect.height)
+    if (newHeight > virtualTreeHeight.value) {
+      virtualTreeHeight.value = newHeight
+    }
+  }
+}
 
 // 右键菜单状态
 const contextMenuVisible = ref(false)
@@ -2721,14 +2732,6 @@ const setupResizableCollapse = () => {
   }, 100)
 }
 
-// 计算虚拟树高度
-const updateVirtualTreeHeight = () => {
-  if (virtualTreeContainerRef.value) {
-    const rect = virtualTreeContainerRef.value.getBoundingClientRect()
-    virtualTreeHeight.value = Math.max(150, rect.height - 10)
-  }
-}
-
 // ResizeObserver 用于监测容器大小变化
 let virtualTreeResizeObserver = null
 
@@ -2755,12 +2758,13 @@ onMounted(async () => {
     }
   }
   
-  // 设置 ResizeObserver 监测虚拟树容器大小变化
+  // 设置ResizeObserver，仅在窗口resize时触发
+  let resizeTimeout
   virtualTreeResizeObserver = new ResizeObserver(() => {
-    updateVirtualTreeHeight()
+    clearTimeout(resizeTimeout)
+    resizeTimeout = setTimeout(() => updateVirtualTreeHeight(), 300)
   })
   
-  // 延迟获取容器，等待 DOM 渲染
   setTimeout(() => {
     if (virtualTreeContainerRef.value) {
       virtualTreeResizeObserver.observe(virtualTreeContainerRef.value)
@@ -3154,6 +3158,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -3517,39 +3522,37 @@ onUnmounted(() => {
 
 .virtual-tree-container {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  overflow: auto;
+  width: 100%;
+  min-height: 0;
 }
 
 .virtual-tree-container :deep(.ant-tree) {
   background: transparent;
   color: #cccccc;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  width: 100% !important;
 }
 
-.virtual-tree-container :deep(.ant-tree-list) {
-  width: 100% !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-}
-
-.virtual-tree-container :deep(.ant-tree-node) {
-  width: 100% !important;
-  overflow: hidden !important;
-}
-
-.virtual-tree-container :deep(.ant-tree-node-content) {
+/* 关键修复：确保树节点能够正确截断文件名 */
+.virtual-tree-container :deep(.ant-tree-treenode) {
   width: 100% !important;
   overflow: hidden !important;
 }
 
 .virtual-tree-container :deep(.ant-tree-node-content-wrapper) {
   width: 100% !important;
-  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  padding: 0 4px !important;
+  min-height: 22px !important;
+}
+
+/* 确保树节点内容作为flex容器 */
+.virtual-tree-container :deep(.ant-tree-node-content-wrapper > span) {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
   overflow: hidden !important;
 }
 

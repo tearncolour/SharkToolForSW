@@ -24,10 +24,23 @@ namespace SharkTools
     [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
     public class SharkWebView2TaskPane : UserControl
     {
+        // 添加 DLL 搜索路径的 Win32 API
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool SetDllDirectory(string lpPathName);
+        
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr AddDllDirectory(string NewDirectory);
+        
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetDefaultDllDirectories(uint DirectoryFlags);
+        
+        private const uint LOAD_LIBRARY_SEARCH_DEFAULT_DIRS = 0x00001000;
+        
         private WebView2 _webView;
         private static ISldWorksProvider _swProvider;
         private bool _isInitialized = false;
         private string _uiFolder;  // UI 文件夹路径
+        private static bool _dllPathSet = false;
 
         /// <summary>
         /// C# 与 JavaScript 交互接口
@@ -44,15 +57,82 @@ namespace SharkTools
             _swProvider = provider;
         }
 
+        /// <summary>
+        /// 设置 DLL 搜索路径，确保能找到 WebView2Loader.dll
+        /// </summary>
+        private static void EnsureDllSearchPath()
+        {
+            if (_dllPathSet) return;
+            
+            try
+            {
+                string assemblyDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                Log($"程序集目录: {assemblyDir}");
+                
+                // 方法1: 设置 DLL 搜索目录为程序集所在目录
+                bool result = SetDllDirectory(assemblyDir);
+                Log($"SetDllDirectory 结果: {result}");
+                
+                // 方法2: 也添加 runtimes 子目录
+                string runtimesDir = Path.Combine(assemblyDir, "runtimes", "win-x64", "native");
+                if (Directory.Exists(runtimesDir))
+                {
+                    // 使用 AddDllDirectory 添加额外的搜索路径
+                    try
+                    {
+                        SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+                        AddDllDirectory(runtimesDir);
+                        Log($"已添加 DLL 搜索路径: {runtimesDir}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"AddDllDirectory 失败: {ex.Message}");
+                    }
+                }
+                
+                // 方法3: 修改 PATH 环境变量
+                string currentPath = System.Environment.GetEnvironmentVariable("PATH") ?? "";
+                if (!currentPath.Contains(assemblyDir))
+                {
+                    System.Environment.SetEnvironmentVariable("PATH", assemblyDir + ";" + currentPath);
+                    Log("已将程序集目录添加到 PATH");
+                }
+                
+                _dllPathSet = true;
+            }
+            catch (Exception ex)
+            {
+                Log($"设置 DLL 搜索路径失败: {ex.Message}");
+            }
+        }
+
         public SharkWebView2TaskPane()
         {
-            InitializeComponent();
-            InitializeWebView2Async();
+            try
+            {
+                Log("构造函数开始执行...");
+                
+                // 在初始化前设置 DLL 搜索路径
+                EnsureDllSearchPath();
+                
+                InitializeComponent();
+                Log("InitializeComponent 完成");
+                InitializeWebView2Async();
+                Log("构造函数执行完毕");
+            }
+            catch (Exception ex)
+            {
+                Log($"构造函数异常: {ex.Message}\n{ex.StackTrace}");
+                throw;
+            }
         }
 
         private void InitializeComponent()
         {
-            this.SuspendLayout();
+            try
+            {
+                Log("InitializeComponent 开始...");
+                this.SuspendLayout();
 
             // 创建 WebView2 控件
             _webView = new WebView2
@@ -64,6 +144,13 @@ namespace SharkTools
             this.Size = new System.Drawing.Size(300, 600);
             this.BackColor = System.Drawing.Color.FromArgb(102, 126, 234);
             this.ResumeLayout(false);
+            Log("InitializeComponent 完成（控件已添加）");
+            }
+            catch (Exception ex)
+            {
+                Log($"InitializeComponent 异常: {ex.Message}\n{ex.StackTrace}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -75,8 +162,35 @@ namespace SharkTools
             {
                 Log("开始初始化 WebView2...");
 
-                // 设置 WebView2 运行时环境
-                var env = await CoreWebView2Environment.CreateAsync(null, GetUserDataFolder(), null);
+                // 尝试多种方式初始化 WebView2
+                CoreWebView2Environment env = null;
+                
+                // 方法1: 使用固定版本运行时（如果存在）
+                string assemblyDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                string fixedRuntimePath = System.IO.Path.Combine(assemblyDir, "WebView2Runtime");
+                
+                if (System.IO.Directory.Exists(fixedRuntimePath))
+                {
+                    Log($"尝试使用固定版本运行时: {fixedRuntimePath}");
+                    try
+                    {
+                        env = await CoreWebView2Environment.CreateAsync(fixedRuntimePath, GetUserDataFolder(), null);
+                        Log("✓ 使用固定版本运行时成功");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"固定版本运行时失败: {ex.Message}");
+                    }
+                }
+                
+                // 方法2: 使用系统安装的 Edge WebView2 运行时
+                if (env == null)
+                {
+                    Log("尝试使用系统 WebView2 运行时...");
+                    env = await CoreWebView2Environment.CreateAsync(null, GetUserDataFolder(), null);
+                    Log("✓ 使用系统运行时成功");
+                }
+                
                 await _webView.EnsureCoreWebView2Async(env);
 
                 Log("WebView2 核心初始化完成");
@@ -168,7 +282,26 @@ namespace SharkTools
         /// </summary>
         private void ShowErrorPage(string error)
         {
-            string errorHtml = $@"
+            try
+            {
+                Log($"ShowErrorPage 被调用: {error}");
+                
+                // 检查 _webView 和 CoreWebView2 是否已初始化
+                if (_webView == null)
+                {
+                    Log("ShowErrorPage: _webView 为 null，只能记录错误");
+                    return;
+                }
+                
+                if (_webView.CoreWebView2 == null)
+                {
+                    Log("ShowErrorPage: CoreWebView2 未初始化，只能记录错误");
+                    // 设置背景颜色显示错误状态
+                    this.BackColor = System.Drawing.Color.FromArgb(220, 53, 69); // 红色
+                    return;
+                }
+                
+                string errorHtml = $@"
 <!DOCTYPE html>
 <html lang='zh-CN'>
 <head>
@@ -214,7 +347,12 @@ namespace SharkTools
 </body>
 </html>";
 
-            _webView.CoreWebView2.NavigateToString(errorHtml);
+                _webView.CoreWebView2.NavigateToString(errorHtml);
+            }
+            catch (Exception ex)
+            {
+                Log($"ShowErrorPage 异常: {ex.Message}");
+            }
         }
 
         /// <summary>
