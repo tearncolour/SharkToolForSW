@@ -1039,6 +1039,16 @@ const handleSWMessage = (data) => {
       historyRecords.value = data.records || []
       console.log('历史记录已更新:', historyRecords.value.length, '条')
       break
+    case 'open-and-cache-complete':
+      if (data.payload && data.payload.success) {
+        message.success({ content: `缓存生成成功: ${data.payload.path}`, key: 'open-cache' })
+        if (cacheManager.value && data.payload.cacheResult) {
+            cacheManager.value.setAssemblyStructure(data.payload.path, data.payload.cacheResult)
+        }
+      } else {
+        message.error({ content: `缓存生成失败: ${data.payload?.message || '未知错误'}`, key: 'open-cache' })
+      }
+      break
     case 'show':
       break
     case 'pong':
@@ -1054,6 +1064,13 @@ const handleSWMessage = (data) => {
       // 错误消息显示 Toast
       if (data.level === 'error') {
         message.error(data.message)
+      }
+      break
+    case 'open-and-cache-complete':
+      if (data.payload.success) {
+          message.success(`文件 ${data.payload.path} 打开并缓存完成`)
+      } else {
+          message.error(`缓存生成失败: ${data.payload.message}`)
       }
       break
   }

@@ -434,22 +434,64 @@ namespace SharkTools
 
                         case "open-and-cache":
                             {
+                                Log("Received open-and-cache command");
                                 string openCachePath = payload?["path"]?.ToString();
                                 if (!string.IsNullOrEmpty(openCachePath))
                                 {
-                                    // 1. 打开文件
-                                    var openRes = OpenDocument(openCachePath, null);
+                                    Log($"Starting background task for: {openCachePath}");
                                     
-                                    // 2. 生成缓存 (GetAssemblyComponentsAsync 会自动处理缓存)
-                                    // 注意：这里我们强制刷新缓存，或者确保它被读取
-                                    var cacheRes = await GetAssemblyComponentsAsync(openCachePath);
+                                    // 异步执行，立即返回
+                                    // 注意：这里使用 Task.Run 确保完全脱离当前的 await 上下文
+                                    Task.Run(async () => {
+                                        try 
+                                        {
+                                            await RunOnUIThread(async () => {
+                                                Log("Background task started on UI thread");
+                                                try 
+                                                {
+                                                    // 1. 打开文件
+                                                    var openRes = OpenDocument(openCachePath, null);
+                                                    
+                                                    // 2. 生成缓存
+                                                    var cacheRes = await GetAssemblyComponentsAsync(openCachePath);
+                                                    
+                                                    // 发送完成通知
+                                                    Send("open-and-cache-complete", new { 
+                                                        success = true, 
+                                                        path = openCachePath,
+                                                        openResult = openRes,
+                                                        cacheResult = cacheRes
+                                                    });
+                                                    Log("Background task completed");
+                                                } 
+                                                catch (Exception ex) 
+                                                {
+                                                    Log($"Background task error: {ex.Message}");
+                                                    Send("open-and-cache-complete", new { 
+                                                        success = false, 
+                                                        path = openCachePath,
+                                                        message = ex.Message
+                                                    });
+                                                }
+                                            });
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Log($"Failed to schedule background task: {ex.Message}");
+                                            Send("open-and-cache-complete", new { 
+                                                success = false, 
+                                                path = openCachePath,
+                                                message = "Failed to schedule task: " + ex.Message
+                                            });
+                                        }
+                                    });
                                     
+                                    Log("Returning immediate response");
                                     result = new 
                                     { 
                                         success = true, 
-                                        message = "已打开文件并更新缓存",
-                                        openResult = openRes,
-                                        cacheResult = cacheRes
+                                        status = "started",
+                                        message = "任务已在后台启动"
                                     };
                                 }
                                 else
@@ -821,6 +863,7 @@ namespace SharkTools
             }
             catch (Exception ex)
             {
+                Log($"HandleCommandAsync Error: {ex.Message}\n{ex.StackTrace}");
                 return JsonConvert.SerializeObject(new 
                 { 
                     id = messageId,
@@ -1406,22 +1449,10 @@ namespace SharkTools
                     {
                         // Ignore errors during iteration
                     }
-                    // Note: We do NOT release doc here because we might be returning it, 
-                    // or we are just iterating. If we release it, we might affect the SW session 
-                    // if we are not careful. However, GetDocuments returns references. 
-                    // If we don't return it, we should release our local reference.
-                    
-                    // But wait, if we release the COM object, does it close the document? 
-                    // No, it just releases the RCW.
-                    // However, if we return 'doc', we must NOT release it.
                     
                     if (doc != null)
                     {
                         // If we are NOT returning this doc, we should release our reference to it
-                        // But since we are iterating, we need to be careful.
-                        // The safe pattern for Find is:
-                        // If match, return it (caller handles it).
-                        // If not match, release it.
                         System.Runtime.InteropServices.Marshal.ReleaseComObject(doc);
                     }
                 }

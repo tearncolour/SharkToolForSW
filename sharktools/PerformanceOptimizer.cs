@@ -1433,10 +1433,19 @@ namespace SharkTools
         {
             try
             {
-                File.AppendAllText(
-                    @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt",
-                    $"{DateTime.Now}: [PerformanceOptimizer] {message}\r\n"
-                );
+                // 使用 ErrorHandler 统一记录日志，这样可以转发到前端
+                if (message.Contains("错误") || message.Contains("失败") || message.Contains("异常") || message.Contains("Error") || message.Contains("Exception"))
+                {
+                    ErrorHandler.LogError($"[PerformanceOptimizer] {message}");
+                }
+                else if (message.Contains("警告") || message.Contains("Warning"))
+                {
+                    ErrorHandler.LogWarning($"[PerformanceOptimizer] {message}");
+                }
+                else
+                {
+                    ErrorHandler.LogInfo($"[PerformanceOptimizer] {message}");
+                }
             }
             catch { }
         }

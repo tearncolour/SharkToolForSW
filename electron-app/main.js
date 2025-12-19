@@ -360,8 +360,8 @@ ipcMain.handle('send-to-sw', async (event, data) => {
         // 根据命令类型设置不同的超时时间
         // 打开文件、转换文件等操作可能需要较长时间
         let timeoutDuration = 10000; // 默认 10 秒
-        if (['open', 'convert-and-recognize', 'execute-rename', 'create-project'].includes(data.type)) {
-            timeoutDuration = 300000; // 5 分钟
+        if (['open', 'convert-and-recognize', 'execute-rename', 'create-project', 'open-and-cache', 'get-assembly-components'].includes(data.type)) {
+            timeoutDuration = 1800000; // 30 分钟
         }
 
         // 创建一个超时处理

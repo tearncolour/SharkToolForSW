@@ -295,6 +295,34 @@
       @created="onSharkProjectCreated"
     />
 
+    <!-- 文件加载配置弹窗 -->
+    <a-modal
+      v-model:open="fileLoadConfigModalVisible"
+      title="文件加载配置"
+      @ok="saveFileLoadConfig"
+      okText="保存配置"
+      cancelText="取消"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="加载方式" help="选择装配体的打开模式">
+          <a-select v-model:value="fileLoadConfig.loadMethod">
+            <a-select-option value="default">默认 (Default)</a-select-option>
+            <a-select-option value="lightweight">轻量化 (Lightweight)</a-select-option>
+            <a-select-option value="largeDesignReview">大型设计审阅 (Large Design Review)</a-select-option>
+            <a-select-option value="resolved">还原 (Resolved)</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="指定配置 (可选)" help="输入要加载的配置名称，留空则加载上次保存的配置">
+          <a-input v-model:value="fileLoadConfig.configuration" placeholder="输入配置名称" />
+        </a-form-item>
+        <a-form-item>
+            <a-checkbox v-model:checked="fileLoadConfig.suppressComponents">
+                打开时压缩所有零部件 (仅还原模式有效)
+            </a-checkbox>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
     <!-- 虚拟树右键菜单对话框 -->
     <a-modal
       v-model:open="virtualTreeMenuModalVisible"
@@ -2100,7 +2128,8 @@ const onVirtualTreeRightClick = ({ event, node }) => {
     if (node.title.toLowerCase().endsWith('.sldasm')) {
         items.push(
           { key: 'view-components', label: '查看组件结构', icon: BranchesOutlined },
-          { key: 'open-write-cache', label: '打开并写入本地缓存', icon: ThunderboltOutlined }
+          { key: 'open-write-cache', label: '打开并写入本地缓存', icon: ThunderboltOutlined },
+          { key: 'load-config', label: '设置加载方式', icon: SettingOutlined }
         )
     }
 
@@ -2366,6 +2395,52 @@ const viewAssemblyComponents = async (filePath) => {
   }
 }
 
+// 文件加载配置相关
+const fileLoadConfigModalVisible = ref(false)
+const fileLoadConfig = ref({
+  loadMethod: 'default',
+  configuration: '',
+  suppressComponents: false
+})
+const currentConfiguringFile = ref(null)
+
+const openFileLoadConfigModal = () => {
+  if (!virtualTreeContextNode.value?.realPath) return
+  
+  currentConfiguringFile.value = virtualTreeContextNode.value.realPath
+  
+  // Load existing config if any
+  const existingConfig = sharkProject.value?.fileSettings?.[currentConfiguringFile.value]
+  
+  if (existingConfig) {
+    fileLoadConfig.value = { ...existingConfig }
+  } else {
+    // Default values
+    fileLoadConfig.value = {
+      loadMethod: 'default',
+      configuration: '',
+      suppressComponents: false
+    }
+  }
+  
+  fileLoadConfigModalVisible.value = true
+}
+
+const saveFileLoadConfig = async () => {
+  if (!sharkProject.value) return
+  if (!currentConfiguringFile.value) return
+  
+  if (!sharkProject.value.fileSettings) {
+    sharkProject.value.fileSettings = {}
+  }
+  
+  sharkProject.value.fileSettings[currentConfiguringFile.value] = { ...fileLoadConfig.value }
+  
+  await saveSharkProject()
+  fileLoadConfigModalVisible.value = false
+  message.success('文件加载配置已保存')
+}
+
 // 处理菜单操作
 const handleMenuAction = async (action) => {
   hideContextMenu()
@@ -2395,20 +2470,40 @@ const handleMenuAction = async (action) => {
   } else if (action === 'open') {
     // 打开文件
     if (virtualTreeContextNode.value?.realPath) {
-      // Check project settings
-      const loadingMethod = sharkProject.value?.settings?.loadingMethod || 'default'
+      const filePath = virtualTreeContextNode.value.realPath
       
-      if (loadingMethod === 'default') {
+      // 1. Check file-specific settings first
+      const fileSettings = sharkProject.value?.fileSettings?.[filePath]
+      
+      // 2. Check project settings
+      const projectLoadingMethod = sharkProject.value?.settings?.loadingMethod || 'default'
+      
+      // Determine final options
+      let loadMethod = projectLoadingMethod
+      let configuration = ''
+      let suppressComponents = false
+      
+      if (fileSettings) {
+          if (fileSettings.loadMethod) loadMethod = fileSettings.loadMethod
+          if (fileSettings.configuration) configuration = fileSettings.configuration
+          if (fileSettings.suppressComponents) suppressComponents = fileSettings.suppressComponents
+      }
+      
+      if (loadMethod === 'default' && !configuration && !suppressComponents) {
          message.loading({ content: '正在调用系统打开文件...', key: 'open-file', duration: 2 })
-         window.electronAPI.shellOpenPath(virtualTreeContextNode.value.realPath)
+         window.electronAPI.shellOpenPath(filePath)
       } else {
          // Use SW command
          message.loading({ content: '正在 SolidWorks 中打开文件，请稍候...', key: 'open-file', duration: 0 })
          try {
             const result = await window.electronAPI.sendToSW({
                 type: 'open',
-                path: virtualTreeContextNode.value.realPath,
-                options: { loadMethod: loadingMethod }
+                path: filePath,
+                options: { 
+                    loadMethod,
+                    configuration,
+                    suppressComponents
+                }
             })
             
             if (result && result.success) {
@@ -2422,6 +2517,8 @@ const handleMenuAction = async (action) => {
          }
       }
     }
+  } else if (action === 'load-config') {
+    openFileLoadConfigModal()
   } else if (action === 'batch-rename') {
     // 批量重命名功能已合并到命名规则设置
     openNamingRuleModal()
@@ -2442,25 +2539,30 @@ const handleMenuAction = async (action) => {
 
 // 打开并写入缓存
 const openAndWriteCache = async (filePath) => {
-  message.loading({ content: '正在打开并生成缓存，这可能需要一些时间...', key: 'open-cache', duration: 0 })
+  const hideLoading = message.loading({ content: '正在后台打开并生成缓存...', key: 'open-cache', duration: 0 })
   try {
     const result = await window.electronAPI.sendToSW({
         type: 'open-and-cache',
         path: filePath
     })
     
-    if (result && result.success) {
+    if (result && result.success && result.status === 'started') {
+        // 任务已启动，关闭加载提示，等待异步通知
+        hideLoading()
+        message.info({ content: '任务已在后台启动，完成后会通知您', key: 'open-cache', duration: 3 })
+    } else if (result && result.success) {
+        // 兼容旧的同步返回方式
         message.success({ content: `缓存生成成功: ${result.message || '完成'}`, key: 'open-cache' })
         // 更新本地缓存管理器
         if (window.cacheManager && result.data) {
             await window.cacheManager.setAssemblyStructure(filePath, result.data)
         }
     } else {
-        message.error({ content: `操作失败: ${result?.message || '未知错误'}`, key: 'open-cache' })
+        message.error({ content: `启动失败: ${result?.message || '未知错误'}`, key: 'open-cache' })
     }
   } catch (error) {
     console.error('打开并缓存出错:', error)
-    message.error({ content: '请求超时或失败', key: 'open-cache' })
+    message.error({ content: '请求失败: ' + error.message, key: 'open-cache' })
   }
 }
 
