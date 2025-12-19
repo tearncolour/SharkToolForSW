@@ -54,6 +54,49 @@
       </div>
 
       <div class="settings-section">
+        <h4 class="section-title">缓存管理</h4>
+        
+        <div class="setting-item">
+          <div class="setting-label">
+            <span class="label-text">最大缓存大小 (MB)</span>
+            <span class="label-desc">限制本地缓存占用的最大磁盘空间</span>
+          </div>
+          <a-input-number 
+            :value="localSettings.maxCacheSize || 50"
+            @change="v => updateSetting('maxCacheSize', v)"
+            :min="10" 
+            :max="1000" 
+            size="small"
+          />
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <span class="label-text">最大缓存条目数</span>
+            <span class="label-desc">限制缓存的文件数量</span>
+          </div>
+          <a-input-number 
+            :value="localSettings.maxCacheItems || 1000"
+            @change="v => updateSetting('maxCacheItems', v)"
+            :min="100" 
+            :max="10000" 
+            size="small"
+          />
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <span class="label-text">清理缓存</span>
+            <span class="label-desc">清除所有本地缓存数据</span>
+          </div>
+          <a-space>
+            <a-button size="small" @click="$emit('view-cache-details')">查看详情</a-button>
+            <a-button size="small" danger @click="$emit('clear-cache')">清除缓存</a-button>
+          </a-space>
+        </div>
+      </div>
+
+      <div class="settings-section">
         <h4 class="section-title">外观</h4>
         
         <div class="setting-item">

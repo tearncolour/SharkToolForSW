@@ -352,6 +352,7 @@ namespace SharkTools
                         {
                             _swApp.CloseDoc(modelDoc.GetTitle());
                         }
+                        if (modelDoc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(modelDoc);
                     }
                 });
             }
@@ -384,22 +385,29 @@ namespace SharkTools
                                 (int)swOpenDocOptions_e.swOpenDocOptions_Silent,
                                 "", ref openErrors, ref openWarnings) as IModelDoc2;
 
-                            if (swModel != null)
+                            try
                             {
-                                int saveErrors = 0;
-                                int saveWarnings = 0;
-                                success = swModel.Extension.SaveAs(newPath,
-                                    (int)swSaveAsVersion_e.swSaveAsCurrentVersion,
-                                    (int)swSaveAsOptions_e.swSaveAsOptions_Silent,
-                                    null, ref saveErrors, ref saveWarnings);
-
-                                _swApp.CloseDoc(swModel.GetTitle());
-
-                                // 如果成功保存到新位置，删除旧文件
-                                if (success && File.Exists(oldPath) && oldPath != newPath)
+                                if (swModel != null)
                                 {
-                                    File.Delete(oldPath);
+                                    int saveErrors = 0;
+                                    int saveWarnings = 0;
+                                    success = swModel.Extension.SaveAs(newPath,
+                                        (int)swSaveAsVersion_e.swSaveAsCurrentVersion,
+                                        (int)swSaveAsOptions_e.swSaveAsOptions_Silent,
+                                        null, ref saveErrors, ref saveWarnings);
+
+                                    _swApp.CloseDoc(swModel.GetTitle());
+
+                                    // 如果成功保存到新位置，删除旧文件
+                                    if (success && File.Exists(oldPath) && oldPath != newPath)
+                                    {
+                                        File.Delete(oldPath);
+                                    }
                                 }
+                            }
+                            finally
+                            {
+                                if (swModel != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(swModel);
                             }
                         }
                         catch { }

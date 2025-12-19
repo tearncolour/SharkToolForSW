@@ -14,6 +14,7 @@ using Newtonsoft.Json.Linq;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using WebSocketSharp;
+using SharkTools.Cache;
 
 namespace SharkTools
 {
@@ -26,6 +27,7 @@ namespace SharkTools
         private readonly ISldWorks _swApp;
         private readonly SharkCommandManager _cmdMgr;
         private readonly SynchronizationContext _uiContext;
+        private readonly AssemblyCacheManager _cacheManager;
         private WebSocket _wsClient;
         private const string WS_URL = "ws://127.0.0.1:52789";
         private bool _isRunning = false;
@@ -43,6 +45,10 @@ namespace SharkTools
             _cmdMgr = cmdMgr;
             _uiContext = uiContext;
             
+            // 初始化缓存管理器
+            string cachePath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), "SharkTools", "Cache");
+            _cacheManager = new AssemblyCacheManager(cachePath);
+
             // 启动消息处理器
             StartMessageProcessor();
         }
@@ -362,15 +368,16 @@ namespace SharkTools
                 object result = null;
 
                 // 在 UI 线程执行 SolidWorks 操作
-                await RunOnUIThread(() =>
+                await RunOnUIThread(async () =>
                 {
                     switch (command)
                     {
                         case "open":
                             string path = payload?["path"]?.ToString();
+                            var options = payload?["options"] as JObject;
                             if (!string.IsNullOrEmpty(path))
                             {
-                                result = OpenDocument(path);
+                                result = OpenDocument(path, options);
                             }
                             break;
                         
@@ -413,6 +420,20 @@ namespace SharkTools
                             if (!string.IsNullOrEmpty(propPath))
                             {
                                 result = GetDocumentProperties(propPath);
+                            }
+                            break;
+
+                        case "get-assembly-components":
+                            {
+                                string asmPath = payload?["path"]?.ToString();
+                                if (!string.IsNullOrEmpty(asmPath))
+                                {
+                                    result = await GetAssemblyComponentsAsync(asmPath);
+                                }
+                                else
+                                {
+                                    result = new { success = false, message = "Path is required" };
+                                }
                             }
                             break;
 
@@ -733,6 +754,33 @@ namespace SharkTools
 
         // Removed ConvertAndRecognize as it is now in ModelConverter.cs
 
+        private Task RunOnUIThread(Func<Task> action)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+
+            if (_uiContext != null)
+            {
+                _uiContext.Post(async state =>
+                {
+                    try
+                    {
+                        await action();
+                        tcs.SetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetException(ex);
+                    }
+                }, null);
+            }
+            else
+            {
+                tcs.SetException(new Exception("UI Context is null"));
+            }
+
+            return tcs.Task;
+        }
+
         private Task RunOnUIThread(Action action)
         {
             var tcs = new TaskCompletionSource<bool>();
@@ -885,7 +933,7 @@ namespace SharkTools
             }
         }
 
-        private object OpenDocument(string path)
+        private object OpenDocument(string path, JObject options = null)
         {
             if (!File.Exists(path))
             {
@@ -901,8 +949,28 @@ namespace SharkTools
             if (ext == ".sldasm") docType = (int)swDocumentTypes_e.swDocASSEMBLY;
             else if (ext == ".slddrw") docType = (int)swDocumentTypes_e.swDocDRAWING;
 
+            int openOptions = (int)swOpenDocOptions_e.swOpenDocOptions_Silent;
+            
+            // Handle loading options
+            if (options != null)
+            {
+                string loadMethod = options["loadMethod"]?.ToString();
+                if (loadMethod == "lightweight")
+                {
+                    openOptions |= (int)swOpenDocOptions_e.swOpenDocOptions_LoadLightweight;
+                }
+                else if (loadMethod == "viewonly")
+                {
+                    openOptions |= (int)swOpenDocOptions_e.swOpenDocOptions_ViewOnly;
+                }
+                else if (loadMethod == "rapidreview")
+                {
+                    openOptions |= (int)swOpenDocOptions_e.swOpenDocOptions_RapidDraft;
+                }
+            }
+
             var model = _swApp.OpenDoc6(path, docType, 
-                (int)swOpenDocOptions_e.swOpenDocOptions_Silent, "", ref errors, ref warnings);
+                openOptions, "", ref errors, ref warnings);
 
             if (model != null)
             {
@@ -1135,22 +1203,148 @@ namespace SharkTools
             }
         }
 
+        private async Task<object> GetAssemblyComponentsAsync(string filePath)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    return new { success = false, message = "File not found" };
+                }
+
+                string ext = Path.GetExtension(filePath).ToLower();
+                if (ext != ".sldasm")
+                {
+                    return new { success = false, message = "Not an assembly file" };
+                }
+
+                // 1. 尝试读取缓存
+                var fileInfo = new FileInfo(filePath);
+                var cachedData = await _cacheManager.GetAssemblyDataAsync(filePath, fileInfo.LastWriteTime);
+                
+                if (cachedData != null)
+                {
+                    // 缓存命中
+                    return new { success = true, components = cachedData.Components, fromCache = true };
+                }
+
+                // 2. 缓存未命中，读取 SolidWorks
+                bool needClose = false;
+                IModelDoc2 doc = FindOpenDocument(filePath);
+
+                if (doc == null)
+                {
+                    int errors = 0;
+                    int warnings = 0;
+                    // Open in lightweight mode for speed
+                    doc = _swApp.OpenDoc6(filePath, (int)swDocumentTypes_e.swDocASSEMBLY, 
+                        (int)swOpenDocOptions_e.swOpenDocOptions_Silent | (int)swOpenDocOptions_e.swOpenDocOptions_LoadLightweight, 
+                        "", ref errors, ref warnings);
+                    needClose = true;
+                }
+
+                if (doc == null)
+                {
+                    return new { success = false, message = "Failed to open document" };
+                }
+
+                var components = new List<ComponentCacheInfo>();
+                var asm = doc as AssemblyDoc;
+                
+                if (asm != null)
+                {
+                    object[] comps = asm.GetComponents(true) as object[]; // Top level only
+                    if (comps != null)
+                    {
+                        for (int i = 0; i < comps.Length; i++)
+                        {
+                            object compObj = comps[i];
+                            Component2 comp = compObj as Component2;
+                            try
+                            {
+                                if (comp != null)
+                                {
+                                    components.Add(new ComponentCacheInfo
+                                    { 
+                                        Name = comp.Name2, 
+                                        Path = comp.GetPathName(),
+                                        Suppressed = comp.IsSuppressed(),
+                                        Hidden = comp.IsHidden(false),
+                                        ConfigName = comp.ReferencedConfiguration
+                                    });
+                                }
+                            }
+                            finally
+                            {
+                                if (comp != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(comp);
+                            }
+                        }
+                    }
+                }
+
+                if (needClose)
+                {
+                    _swApp.CloseDoc(doc.GetTitle());
+                }
+
+                // 3. 写入缓存
+                var newCacheData = new AssemblyCacheData
+                {
+                    Components = components
+                };
+                await _cacheManager.SetAssemblyDataAsync(filePath, fileInfo.LastWriteTime, newCacheData);
+
+                return new { success = true, components = components, fromCache = false };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, message = ex.Message };
+            }
+        }
+
         private IModelDoc2 FindOpenDocument(string filePath)
         {
             object[] docs = _swApp.GetDocuments() as object[];
             if (docs != null)
             {
-                foreach (object docObj in docs)
+                for (int i = 0; i < docs.Length; i++)
                 {
+                    object docObj = docs[i];
                     IModelDoc2 doc = docObj as IModelDoc2;
+                    try
+                    {
+                        if (doc != null)
+                        {
+                            string docPath = doc.GetPathName();
+                            if (!string.IsNullOrEmpty(docPath) && 
+                                docPath.Equals(filePath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                // Return the document, do NOT release it here as we are returning it
+                                return doc;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore errors during iteration
+                    }
+                    // Note: We do NOT release doc here because we might be returning it, 
+                    // or we are just iterating. If we release it, we might affect the SW session 
+                    // if we are not careful. However, GetDocuments returns references. 
+                    // If we don't return it, we should release our local reference.
+                    
+                    // But wait, if we release the COM object, does it close the document? 
+                    // No, it just releases the RCW.
+                    // However, if we return 'doc', we must NOT release it.
+                    
                     if (doc != null)
                     {
-                        string docPath = doc.GetPathName();
-                        if (!string.IsNullOrEmpty(docPath) && 
-                            docPath.Equals(filePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            return doc;
-                        }
+                        // If we are NOT returning this doc, we should release our reference to it
+                        // But since we are iterating, we need to be careful.
+                        // The safe pattern for Find is:
+                        // If match, return it (caller handles it).
+                        // If not match, release it.
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(doc);
                     }
                 }
             }

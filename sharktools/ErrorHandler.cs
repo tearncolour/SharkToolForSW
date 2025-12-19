@@ -23,6 +23,32 @@ namespace SharkTools
         private static string _lastErrorMessage = "";
         private static DateTime _lastErrorTime = DateTime.MinValue;
         
+        // 用户消息事件委托
+        public delegate void UserMessageHandler(string message, MessageType type);
+        public static event UserMessageHandler OnUserMessage;
+
+        public enum MessageType
+        {
+            Info,
+            Warning,
+            Error
+        }
+
+        /// <summary>
+        /// 触发用户消息（用于UI显示）
+        /// </summary>
+        public static void ShowUserMessage(string message, MessageType type = MessageType.Info)
+        {
+            try
+            {
+                OnUserMessage?.Invoke(message, type);
+            }
+            catch
+            {
+                // 忽略事件处理中的错误
+            }
+        }
+
         /// <summary>
         /// 记录普通日志
         /// </summary>

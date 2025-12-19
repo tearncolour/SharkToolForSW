@@ -476,17 +476,30 @@ namespace SharkTools
                         while (dispDim != null)
                         {
                             IDimension dim = dispDim.GetDimension() as IDimension;
-                            if (dim != null)
+                            try
                             {
-                                info.Parameters[dim.Name] = dim.Value;
+                                if (dim != null)
+                                {
+                                    info.Parameters[dim.Name] = dim.Value;
+                                }
                             }
-                            dispDim = feat.GetNextDisplayDimension(dispDim) as IDisplayDimension;
+                            finally
+                            {
+                                if (dim != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(dim);
+                            }
+                            
+                            IDisplayDimension nextDispDim = feat.GetNextDisplayDimension(dispDim) as IDisplayDimension;
+                            System.Runtime.InteropServices.Marshal.ReleaseComObject(dispDim);
+                            dispDim = nextDispDim;
                         }
                     }
                     catch { }
 
                     features.Add(info);
-                    feat = (IFeature)feat.GetNextFeature();
+                    
+                    IFeature nextFeat = (IFeature)feat.GetNextFeature();
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(feat);
+                    feat = nextFeat;
                 }
             }
             catch { }

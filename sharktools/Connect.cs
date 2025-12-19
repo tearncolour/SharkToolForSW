@@ -6,6 +6,7 @@ using Microsoft.Win32;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using SolidWorks.Interop.swpublished;
+using SharkTools.Cache;
 
 namespace SharkTools
 {
@@ -17,6 +18,7 @@ namespace SharkTools
         private ISldWorks _swApp;
         private SharkCommandManager _sharkCmdMgr;
         private ElectronServer _electronServer;
+        private AssemblyCacheManager _cacheManager;
         public int AddinCookie { get; set; }
 
         public bool ConnectToSW(object ThisSW, int Cookie)
@@ -106,6 +108,33 @@ namespace SharkTools
                     );
                 }
 
+                // 初始化缓存管理器
+                try
+                {
+                    string cachePath = System.IO.Path.Combine(
+                        System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData),
+                        "SharkTools",
+                        "Cache"
+                    );
+                    _cacheManager = new AssemblyCacheManager(cachePath);
+                    
+                    // 订阅文件打开事件
+                    if (_swApp is SldWorks swAppConcrete)
+                    {
+                        swAppConcrete.FileOpenPostNotify += OnFileOpenPostNotify;
+                        swAppConcrete.FileOpenPreNotify += OnFileOpenPreNotify;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    try {
+                        System.IO.File.AppendAllText(
+                            @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                            $"{DateTime.Now}: Cache Manager init error: {ex.Message}\r\n"
+                        );
+                    } catch {}
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -124,6 +153,13 @@ namespace SharkTools
         {
             try
             {
+                // 取消订阅事件
+                if (_swApp is SldWorks swAppConcrete)
+                {
+                    swAppConcrete.FileOpenPostNotify -= OnFileOpenPostNotify;
+                    swAppConcrete.FileOpenPreNotify -= OnFileOpenPreNotify;
+                }
+
                 if (_electronServer != null)
                 {
                     _electronServer.Stop();
@@ -792,8 +828,9 @@ namespace SharkTools
                 var props = new System.Collections.Generic.Dictionary<string, string>();
                 if (propNames != null)
                 {
-                    foreach (string name in propNames)
+                    for (int i = 0; i < propNames.Length; i++)
                     {
+                        string name = propNames[i];
                         string val = "";
                         string resolvedVal = "";
                         swPropMgr.Get4(name, false, out val, out resolvedVal);
@@ -835,6 +872,74 @@ namespace SharkTools
             {
                 return 1;
             }
+            return 0;
+        }
+
+        public int OnFileOpenPostNotify(string FileName)
+        {
+            try
+            {
+                if (FileName.EndsWith(".SLDASM", StringComparison.OrdinalIgnoreCase))
+                {
+                    // 异步更新缓存
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var fileInfo = new System.IO.FileInfo(FileName);
+                            // 创建缓存数据 (实际项目中应遍历装配体结构)
+                            var data = new AssemblyCacheData();
+                            
+                            // 简单记录一下，表示缓存已创建
+                            data.FilePath = FileName;
+                            
+                            await _cacheManager.SetAssemblyDataAsync(FileName, fileInfo.LastWriteTime, data);
+                            
+                            try {
+                                System.IO.File.AppendAllText(
+                                    @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                                    $"{DateTime.Now}: Cache updated for {System.IO.Path.GetFileName(FileName)}\r\n"
+                                );
+                            } catch {}
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Cache update error: {ex.Message}");
+                        }
+                    });
+                }
+            }
+            catch {}
+            return 0;
+        }
+
+        public int OnFileOpenPreNotify(string FileName)
+        {
+            try
+            {
+                if (FileName.EndsWith(".SLDASM", StringComparison.OrdinalIgnoreCase))
+                {
+                    var fileInfo = new System.IO.FileInfo(FileName);
+                    // 检查缓存是否存在
+                    var task = _cacheManager.GetAssemblyDataAsync(FileName, fileInfo.LastWriteTime);
+                    task.Wait(200); // 最多等待200ms，避免阻塞
+                    
+                    if (task.IsCompleted && task.Result != null)
+                    {
+                        // 缓存命中
+                        try {
+                            System.IO.File.AppendAllText(
+                                @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
+                                $"{DateTime.Now}: Cache HIT for {System.IO.Path.GetFileName(FileName)}\r\n"
+                            );
+                        } catch {}
+                        
+                        // 可以在这里通知用户
+                        // _swApp.SendMsgToUser2("已启用缓存加速加载", (int)swMessageBoxIcon_e.swMbInformation, (int)swMessageBoxBtn_e.swMbOk);
+                    }
+                }
+            }
+            catch {}
             return 0;
         }
 

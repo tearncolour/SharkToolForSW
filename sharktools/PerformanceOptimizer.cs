@@ -615,7 +615,9 @@ namespace SharkTools
                             docsToClose.Add(docPath);
                         }
                         
-                        modelDoc = modelDoc.GetNext() as IModelDoc2;
+                        IModelDoc2 nextDoc = modelDoc.GetNext() as IModelDoc2;
+                        System.Runtime.InteropServices.Marshal.ReleaseComObject(modelDoc);
+                        modelDoc = nextDoc;
                     }
                     
                     // 关闭标记的文档

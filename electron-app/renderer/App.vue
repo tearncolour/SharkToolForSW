@@ -125,6 +125,8 @@
             <SettingsPanel 
               :settings="settings"
               @save="saveSettings"
+              @clear-cache="clearCache"
+              @view-cache-details="viewCacheDetails"
             />
           </div>
 
@@ -166,6 +168,7 @@
             :image-url="imageUrl"
             :pdf-url="pdfUrl"
             :is-three-d="is3DModel"
+            :assembly-structure="assemblyStructure"
             :spreadsheet-data="spreadsheetData"
             @open-recent="openRecent"
             @property-change="onPropertyChange"
@@ -173,16 +176,37 @@
             @switch-sheet="switchSheet"
             @convert-model="convertModel"
             @get-more-properties="getMoreProperties"
+            @load-assembly-structure="loadAssemblyStructure"
           />
         </div>
       </div>
     </div>
+
+    <!-- 缓存详情对话框 -->
+    <a-modal
+      v-model:open="cacheDetailsModalVisible"
+      title="缓存详情"
+      width="800px"
+      :footer="null"
+    >
+      <a-table 
+        :dataSource="cacheDetailsData" 
+        :columns="[
+          { title: '文件路径', dataIndex: 'path', key: 'path', ellipsis: true },
+          { title: '缓存时间', dataIndex: 'timestamp', key: 'timestamp', customRender: ({text}) => new Date(text).toLocaleString() },
+          { title: '大小 (字节)', dataIndex: 'size', key: 'size' }
+        ]"
+        size="small"
+        :pagination="{ pageSize: 10 }"
+      />
+    </a-modal>
   </a-config-provider>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, defineAsyncComponent } from 'vue'
 import { theme, message } from 'ant-design-vue'
+import { createCacheManager } from './utils/cacheManager'
 import {
   HistoryOutlined,
   BranchesOutlined,
@@ -257,6 +281,7 @@ const textContent = ref('')
 const imageUrl = ref('')
 const pdfUrl = ref('')
 const is3DModel = ref(false)
+const assemblyStructure = ref(null) // 装配体结构缓存
 const spreadsheetData = ref(null)
 const recentFiles = ref([])
 const fileProperties = ref(null)
@@ -264,6 +289,10 @@ const customProperties = ref([])
 
 // 缓存管理器
 const cacheManager = ref(null) // 缓存管理器实例
+// Expose to window for other components to access
+watch(cacheManager, (val) => {
+    window.cacheManager = val
+})
 
 // 计算当前文档目录
 const currentDocumentDir = computed(() => {
@@ -285,7 +314,9 @@ const historyRecords = ref([])
 const settings = ref({
   autoSaveInterval: 30,
   maxHistoryRecords: 200,
-  autoBackup: true
+  autoBackup: true,
+  maxCacheSize: 50,
+  maxCacheItems: 1000
 })
 
 // 连接状态文本
@@ -415,6 +446,8 @@ const restoreSidePanelWidth = async () => {
   }
 }
 
+let fileSelectDebounceTimer = null;
+
 // 文件选择
 const onFileSelect = async (node) => {
   selectedFile.value = { title: node.title, key: node.key, isLeaf: node.isLeaf }
@@ -423,6 +456,7 @@ const onFileSelect = async (node) => {
   imageUrl.value = ''
   pdfUrl.value = ''
   is3DModel.value = false
+  assemblyStructure.value = null
   spreadsheetData.value = null
   fileProperties.value = null
   customProperties.value = []
@@ -434,25 +468,41 @@ const onFileSelect = async (node) => {
     if (['sldprt', 'sldasm', 'slddrw'].includes(ext)) {
       addToRecent({ title: node.title, key: node.key })
       
-      // 获取缩略图
-      try {
-        console.log('Requesting thumbnail for:', node.key);
-        const res = await window.electronAPI.sendToSW({
-          type: 'get-thumbnail',
-          path: node.key
-        })
-        
-        if (res && res.success && res.data && res.data.image) {
-          previewImage.value = res.data.image
-        } else {
-          console.warn('Thumbnail failed:', res?.data?.message || 'Unknown error')
+      // 如果是装配体，尝试获取缓存的结构
+      if (ext === 'sldasm' && cacheManager.value) {
+        const cached = cacheManager.value.getAssemblyStructure(node.key)
+        if (cached && cached.structure) {
+            assemblyStructure.value = cached.structure
         }
-      } catch (e) {
-        console.error('Failed to get thumbnail:', e)
       }
 
-      // 获取文件属性
-      await loadFileProperties(node.key)
+      // 防抖处理 SW 请求
+      if (fileSelectDebounceTimer) clearTimeout(fileSelectDebounceTimer);
+      
+      fileSelectDebounceTimer = setTimeout(async () => {
+        // 再次检查当前选中的文件是否仍然是这个文件
+        if (selectedFile.value.key !== node.key) return;
+
+        // 获取缩略图
+        try {
+          console.log('Requesting thumbnail for:', node.key);
+          const res = await window.electronAPI.sendToSW({
+            type: 'get-thumbnail',
+            path: node.key
+          })
+          
+          if (res && res.success && res.data && res.data.image) {
+            previewImage.value = res.data.image
+          } else {
+            console.warn('Thumbnail failed:', res?.data?.message || 'Unknown error')
+          }
+        } catch (e) {
+          console.error('Failed to get thumbnail:', e)
+        }
+
+        // 获取文件属性
+        await loadFileProperties(node.key)
+      }, 300);
     }
     // 3D 模型文件 (STEP, IGES, STL)
     else if (['step', 'stp', 'iges', 'igs', 'stl'].includes(ext)) {
@@ -854,6 +904,53 @@ const saveSettings = (newSettings) => {
   message.success('设置已保存')
 }
 
+const clearCache = async () => {
+  if (cacheManager.value) {
+    await cacheManager.value.clearAllCache()
+    message.success('缓存已清除')
+  } else {
+    message.warning('没有活动的缓存管理器')
+  }
+}
+
+const cacheDetailsModalVisible = ref(false)
+const cacheDetailsData = ref([])
+
+const viewCacheDetails = () => {
+  if (cacheManager.value) {
+    const props = cacheManager.value.cacheData.fileProperties
+    cacheDetailsData.value = Object.entries(props).map(([path, data]) => ({
+      path,
+      timestamp: data.timestamp,
+      size: JSON.stringify(data).length // Approximate
+    }))
+    cacheDetailsModalVisible.value = true
+  } else {
+    message.warning('没有活动的缓存管理器')
+  }
+}
+
+// Watch workspace folders to init cache manager
+watch(workspaceFolders, (newFolders) => {
+  if (newFolders.length > 0) {
+    cacheManager.value = createCacheManager(newFolders[0], {
+      maxItems: settings.value.maxCacheItems,
+      maxSize: settings.value.maxCacheSize
+    })
+  } else {
+    cacheManager.value = null
+  }
+})
+
+// Watch settings to update cache limits
+watch(settings, (newSettings) => {
+  if (cacheManager.value) {
+    cacheManager.value.maxItems = newSettings.maxCacheItems
+    cacheManager.value.maxSize = newSettings.maxCacheSize
+    cacheManager.value.enforceLimits()
+  }
+}, { deep: true })
+
 // 接收 SolidWorks 消息
 const handleSWMessage = (data) => {
   console.log('收到 SW 消息:', data)
@@ -969,6 +1066,43 @@ watch(currentView, async (newView) => {
 const getMoreProperties = () => {
   console.log('获取更多属性')
   // TODO: 实现获取更多属性的逻辑
+}
+
+const loadAssemblyStructure = async (filePath) => {
+  if (!filePath) return
+  
+  // Check cache first
+  if (cacheManager.value) {
+      const cached = cacheManager.value.getAssemblyStructure(filePath)
+      if (cached && cached.structure) {
+          console.log('Using cached assembly structure')
+          assemblyStructure.value = cached.structure
+          return
+      }
+  }
+  
+  // Manual trigger only - show loading
+  const hide = message.loading('正在获取组件结构...', 0)
+  try {
+    const res = await window.electronAPI.sendToSW({
+      type: 'get-assembly-components',
+      path: filePath
+    })
+    hide()
+    
+    if (res && res.success) {
+      assemblyStructure.value = res.components
+      // Save to cache
+      if (cacheManager.value) {
+          await cacheManager.value.setAssemblyStructure(filePath, res.components)
+      }
+    } else {
+      message.error('获取组件结构失败: ' + (res?.message || '未知错误'))
+    }
+  } catch (e) {
+    hide()
+    message.error('获取组件结构失败: ' + e.message)
+  }
 }
 
 // 初始化

@@ -70,6 +70,7 @@ namespace SharkTools
             {
                 // 保存当前用户设置
                 bool originalUserControlBackground = false;
+                bool originalInputDimValOnCreate = false;
                 bool wasVisible = true;
                 HashSet<string> existingDocs = new HashSet<string>();
                 
@@ -82,13 +83,21 @@ namespace SharkTools
                     object docNames = _swApp.GetDocuments();
                     if (docNames != null && docNames is object[] docs)
                     {
-                        foreach (var d in docs)
+                        for (int i = 0; i < docs.Length; i++)
                         {
+                            object d = docs[i];
                             ModelDoc2 existingDoc = d as ModelDoc2;
-                            if (existingDoc != null)
+                            try
                             {
-                                existingDocs.Add(existingDoc.GetTitle());
-                                Log($"Existing doc: {existingDoc.GetTitle()}");
+                                if (existingDoc != null)
+                                {
+                                    existingDocs.Add(existingDoc.GetTitle());
+                                    Log($"Existing doc: {existingDoc.GetTitle()}");
+                                }
+                            }
+                            finally
+                            {
+                                if (existingDoc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(existingDoc);
                             }
                         }
                     }
@@ -96,6 +105,7 @@ namespace SharkTools
 
                     // 设置静默模式 - 禁止显示对话框和消息
                     originalUserControlBackground = _swApp.UserControlBackground;
+                    originalInputDimValOnCreate = _swApp.GetUserPreferenceToggle((int)swUserPreferenceToggle_e.swInputDimValOnCreate);
                     wasVisible = _swApp.Visible;
                     
                     // 设置用户控制后台模式，防止弹出对话框
@@ -169,17 +179,25 @@ namespace SharkTools
                             List<string> docsToClose = new List<string>();
                             
                             // 找出所有需要关闭的文档（转换前不存在的）
-                            foreach (var d in allDocs)
+                            for (int i = 0; i < allDocs.Length; i++)
                             {
+                                object d = allDocs[i];
                                 ModelDoc2 doc = d as ModelDoc2;
-                                if (doc != null)
+                                try
                                 {
-                                    string title = doc.GetTitle();
-                                    if (!existingDocs.Contains(title))
+                                    if (doc != null)
                                     {
-                                        docsToClose.Add(title);
-                                        Log($"Will close: {title}");
+                                        string title = doc.GetTitle();
+                                        if (!existingDocs.Contains(title))
+                                        {
+                                            docsToClose.Add(title);
+                                            Log($"Will close: {title}");
+                                        }
                                     }
+                                }
+                                finally
+                                {
+                                    if (doc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(doc);
                                 }
                             }
                             
@@ -218,6 +236,7 @@ namespace SharkTools
                     try
                     {
                         _swApp.UserControlBackground = originalUserControlBackground;
+                        _swApp.SetUserPreferenceToggle((int)swUserPreferenceToggle_e.swInputDimValOnCreate, originalInputDimValOnCreate);
                     }
                     catch { }
                 }

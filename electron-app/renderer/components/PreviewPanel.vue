@@ -25,7 +25,34 @@
       
       <!-- SolidWorks 预览 -->
       <div v-else-if="previewImage" class="sw-preview">
-        <img :src="previewImage" alt="Preview" class="preview-image" />
+        <div class="preview-toolbar" v-if="isAssembly">
+            <a-radio-group v-model:value="previewMode" size="small" button-style="solid">
+                <a-radio-button value="image">缩略图</a-radio-button>
+                <a-radio-button value="structure">组件结构</a-radio-button>
+            </a-radio-group>
+        </div>
+        
+        <div v-if="previewMode === 'image'" class="image-container">
+            <img :src="previewImage" alt="Preview" class="preview-image" />
+        </div>
+        
+        <div v-else-if="previewMode === 'structure'" class="structure-container">
+            <div v-if="assemblyStructure" class="structure-list">
+                <div v-for="(comp, idx) in assemblyStructure" :key="idx" class="structure-item">
+                    <span class="comp-icon">📦</span>
+                    <span class="comp-name" :title="comp.path">{{ comp.name }}</span>
+                    <span class="comp-status" v-if="comp.suppressed">(压缩)</span>
+                    <span class="comp-status" v-if="comp.hidden">(隐藏)</span>
+                </div>
+            </div>
+            <div v-else class="structure-loading">
+                <a-empty description="暂无结构数据">
+                    <a-button type="primary" size="small" @click="$emit('load-assembly-structure', selectedFile.key)">
+                        加载结构
+                    </a-button>
+                </a-empty>
+            </div>
+        </div>
       </div>
 
       <!-- 文本编辑器 -->
@@ -353,10 +380,18 @@ const props = defineProps({
   imageUrl: { type: String, default: '' },
   pdfUrl: { type: String, default: '' },
   spreadsheetData: { type: Object, default: null },
-  isThreeD: { type: Boolean, default: false }
+  isThreeD: { type: Boolean, default: false },
+  assemblyStructure: { type: Array, default: null }
 });
 
-const emit = defineEmits(['open-recent', 'property-change', 'add-property', 'switch-sheet', 'convert-model', 'get-more-properties']);
+const emit = defineEmits(['open-recent', 'property-change', 'add-property', 'switch-sheet', 'convert-model', 'get-more-properties', 'load-assembly-structure']);
+
+const previewMode = ref('image');
+
+const isAssembly = computed(() => {
+    const file = props.selectedFile || (props.selectedFiles && props.selectedFiles[0]);
+    return file && file.key && typeof file.key === 'string' && file.key.toLowerCase().endsWith('.sldasm');
+});
 
 const showEmptyState = computed(() => {
   return !props.previewImage && 
@@ -1107,6 +1142,9 @@ const formatCell = (value) => {
 
 // 加载属性模板
 const loadTemplates = async () => {
+  // 如果已经加载过，就不再加载
+  if (Object.keys(propertyTemplates.value).length > 0) return;
+
   try {
     const response = await window.electronAPI.sendToSW({
       type: 'get-property-templates'
@@ -1126,16 +1164,28 @@ const loadTemplates = async () => {
   }
 };
 
+// 组件挂载时加载模板
+onMounted(() => {
+  // 禁用自动加载模板，避免阻塞 SW
+  // loadTemplates();
+});
+
+let debounceTimer = null;
+
 // 监听选中文件变化
 watch(() => props.selectedFile, (newFile) => {
   // 重置详细属性加载状态
   detailedPropertiesLoaded.value = false;
   
   if (newFile && isSolidWorksFile(newFile.key)) {
-    // 加载属性模板
-    loadTemplates();
-    // 加载自定义属性
-    loadCustomProperties(newFile.key);
+    // 禁用自动加载模板
+    // loadTemplates();
+    
+    // 防抖加载自定义属性，避免频繁请求阻塞 SW
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      loadCustomProperties(newFile.key);
+    }, 300);
   } else {
     // 清空配置
     configurations.value = [];

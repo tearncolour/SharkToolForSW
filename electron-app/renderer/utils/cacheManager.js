@@ -3,11 +3,14 @@
  * 使用 Electron 预加载脚本提供的文件系统 API
  */
 export class CacheManager {
-  constructor(projectPath) {
+  constructor(projectPath, options = {}) {
     this.projectPath = projectPath;
     this.cacheFilePath = `${projectPath}/.sharkdata`;
+    this.maxItems = options.maxItems || 1000; // Default limit
+    this.maxSize = options.maxSize || 50; // Default limit in MB
     this.cacheData = {
       fileProperties: {},
+      assemblyStructures: {},
       lastUpdated: Date.now()
     };
     this.loadCache();
@@ -33,6 +36,7 @@ export class CacheManager {
       // 初始化空缓存
       this.cacheData = {
         fileProperties: {},
+        assemblyStructures: {},
         lastUpdated: Date.now()
       };
     }
@@ -73,7 +77,92 @@ export class CacheManager {
       properties,
       timestamp: Date.now()
     };
+    this.enforceLimits();
     await this.saveCache();
+  }
+
+  /**
+   * 获取装配体结构缓存
+   * @param {string} filePath - 文件路径
+   * @returns {Object|null} 装配体结构缓存
+   */
+  getAssemblyStructure(filePath) {
+    return this.cacheData.assemblyStructures?.[filePath] || null;
+  }
+
+  /**
+   * 设置装配体结构缓存
+   * @param {string} filePath - 文件路径
+   * @param {Object} structure - 装配体结构
+   */
+  async setAssemblyStructure(filePath, structure) {
+    if (!this.cacheData.assemblyStructures) {
+      this.cacheData.assemblyStructures = {};
+    }
+    this.cacheData.assemblyStructures[filePath] = {
+      structure,
+      timestamp: Date.now()
+    };
+    this.enforceLimits();
+    await this.saveCache();
+  }
+
+  /**
+   * 强制执行缓存限制 (LRU)
+   */
+  enforceLimits() {
+    // Clean file properties
+    const propKeys = Object.keys(this.cacheData.fileProperties);
+    if (propKeys.length > this.maxItems) {
+      const sortedKeys = propKeys.sort((a, b) => {
+        return this.cacheData.fileProperties[a].timestamp - this.cacheData.fileProperties[b].timestamp;
+      });
+      const itemsToRemove = sortedKeys.slice(0, propKeys.length - this.maxItems);
+      itemsToRemove.forEach(key => delete this.cacheData.fileProperties[key]);
+    }
+
+    // Clean assembly structures (limit to 20% of max items or fixed number)
+    if (this.cacheData.assemblyStructures) {
+        const asmKeys = Object.keys(this.cacheData.assemblyStructures);
+        const maxAsmItems = Math.max(10, Math.floor(this.maxItems * 0.2));
+        if (asmKeys.length > maxAsmItems) {
+            const sortedKeys = asmKeys.sort((a, b) => {
+                return this.cacheData.assemblyStructures[a].timestamp - this.cacheData.assemblyStructures[b].timestamp;
+            });
+            const itemsToRemove = sortedKeys.slice(0, asmKeys.length - maxAsmItems);
+            itemsToRemove.forEach(key => delete this.cacheData.assemblyStructures[key]);
+        }
+    }
+    
+    // Check size limit (approximate)
+    const jsonString = JSON.stringify(this.cacheData);
+    const sizeInMB = jsonString.length / (1024 * 1024);
+    
+    if (sizeInMB > this.maxSize) {
+       // If still too big, remove more items (e.g. 10% of oldest properties)
+       const currentKeys = Object.keys(this.cacheData.fileProperties);
+       const sortedKeys = currentKeys.sort((a, b) => {
+        return this.cacheData.fileProperties[a].timestamp - this.cacheData.fileProperties[b].timestamp;
+      });
+       const removeCount = Math.ceil(currentKeys.length * 0.1);
+       const itemsToRemove = sortedKeys.slice(0, removeCount);
+       itemsToRemove.forEach(key => {
+        delete this.cacheData.fileProperties[key];
+      });
+    }
+  }
+
+  /**
+   * 获取缓存统计信息
+   */
+  getCacheStats() {
+      const keys = Object.keys(this.cacheData.fileProperties);
+      const jsonString = JSON.stringify(this.cacheData);
+      const sizeInMB = (jsonString.length / (1024 * 1024)).toFixed(2);
+      return {
+          itemCount: keys.length,
+          sizeMB: sizeInMB
+      };
   }
 
   /**
@@ -91,6 +180,7 @@ export class CacheManager {
   async clearAllCache() {
     this.cacheData = {
       fileProperties: {},
+      assemblyStructures: {},
       lastUpdated: Date.now()
     };
     await this.saveCache();
@@ -116,6 +206,6 @@ export class CacheManager {
  * @param {string} projectPath - 工程路径
  * @returns {CacheManager} 缓存管理器实例
  */
-export function createCacheManager(projectPath) {
-  return new CacheManager(projectPath);
+export function createCacheManager(projectPath, options) {
+  return new CacheManager(projectPath, options);
 }

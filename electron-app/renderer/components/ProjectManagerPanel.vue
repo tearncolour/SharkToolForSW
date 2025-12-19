@@ -62,6 +62,11 @@
             <ReloadOutlined />
           </a-button>
         </a-tooltip>
+        <a-tooltip v-if="sharkProject" title="项目设置">
+          <a-button size="small" type="text" @click.stop="showProjectSettings">
+            <SettingOutlined />
+          </a-button>
+        </a-tooltip>
         <a-tooltip v-if="sharkProject" title="关闭项目">
           <a-button size="small" type="text" danger @click.stop="closeSharkProject">
             <CloseOutlined />
@@ -446,6 +451,36 @@
       </div>
     </a-modal>
 
+    <!-- 项目设置对话框 -->
+    <a-modal
+      v-model:open="projectSettingsModalVisible"
+      title="项目设置"
+      width="500px"
+      centered
+      @ok="saveProjectSettings"
+    >
+      <a-form :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }">
+        <a-form-item label="SW 加载方式">
+          <a-select v-model:value="projectSettings.loadingMethod">
+            <a-select-option value="default">默认 (完全加载)</a-select-option>
+            <a-select-option value="lightweight">轻化模式 (Lightweight)</a-select-option>
+            <a-select-option value="viewonly">仅查看 (View Only)</a-select-option>
+            <a-select-option value="rapidreview">大型设计审阅 (Large Design Review)</a-select-option>
+          </a-select>
+          <div style="color: #888; font-size: 12px; margin-top: 4px;">
+            控制 SolidWorks 打开文件时的方式，轻化模式可显著提升大型装配体的打开速度。
+          </div>
+        </a-form-item>
+
+        <a-form-item label="装配体缓存">
+          <a-switch v-model:checked="projectSettings.enableAssemblyCache" />
+          <div style="color: #888; font-size: 12px; margin-top: 4px;">
+            启用后，SharkTools 会缓存装配体的组件结构，下次查看时无需启动 SolidWorks 即可快速预览结构。
+          </div>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
     <!-- 命名规则设置对话框 -->
     <a-modal
       v-model:open="namingRuleModalVisible"
@@ -539,6 +574,26 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 项目设置对话框 -->
+    <a-modal
+      v-model:open="projectSettingsModalVisible"
+      title="项目设置"
+      @ok="saveProjectSettings"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="默认加载模式">
+          <a-select v-model:value="projectSettings.loadingMethod">
+            <a-select-option value="default">默认 (用户设置)</a-select-option>
+            <a-select-option value="resolved">完全加载 (Resolved)</a-select-option>
+            <a-select-option value="lightweight">轻化 (Lightweight)</a-select-option>
+            <a-select-option value="viewonly">仅查看 (View Only)</a-select-option>
+            <a-select-option value="rapidreview">快速审阅 (Large Design Review)</a-select-option>
+          </a-select>
+          <div style="font-size: 12px; color: #888; margin-top: 4px;">设置打开 SolidWorks 文件时的默认加载模式</div>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </SidePanelTemplate>
 </template>
 
@@ -560,7 +615,8 @@ import {
   SwapOutlined,
   CloseOutlined,
   FolderOpenOutlined,
-  FileOutlined
+  FileOutlined,
+  SettingOutlined
 } from '@ant-design/icons-vue'
 import SidePanelTemplate from './SidePanelTemplate.vue'
 import CreateProjectModal from './CreateProjectModal.vue'
@@ -1809,7 +1865,11 @@ const detectFileDifferences = async () => {
     collectVirtualFiles(sharkProject.value.virtualTree)
     
     // 3. 找出实际存在但虚拟树中不存在的文件
-    const missingFiles = actualFiles.filter(file => !virtualFiles.includes(file.path))
+    // 规范化路径进行比较 (忽略大小写和分隔符差异)
+    const normalizePath = (p) => p ? p.toLowerCase().replace(/\\/g, '/') : ''
+    const virtualPathsSet = new Set(virtualFiles.map(normalizePath))
+    
+    const missingFiles = actualFiles.filter(file => !virtualPathsSet.has(normalizePath(file.path)))
     
     return missingFiles
   } catch (error) {
@@ -1820,14 +1880,14 @@ const detectFileDifferences = async () => {
 
 // 将缺失的文件添加到虚拟树中
 const addMissingFilesToVirtualTree = async () => {
-  if (!sharkProject.value?.virtualTree || !sharkProjectFile.value) return
+  if (!sharkProject.value?.virtualTree || !sharkProjectFile.value) return false
   
   // 1. 确保默认文件夹存在
   ensureDefaultFolders()
   
   // 2. 检测缺失的文件
   const missingFiles = await detectFileDifferences()
-  if (missingFiles.length === 0) return
+  if (missingFiles.length === 0) return false
   
   // 3. 获取默认文件夹节点
   const assembliesFolder = sharkProject.value.virtualTree.children.find(node => node.name === '装配体' && node.type === 'virtual-folder')
@@ -1854,7 +1914,7 @@ const addMissingFilesToVirtualTree = async () => {
     }
     
     if (targetFolder) {
-      // 检查文件是否已存在于目标文件夹中
+      // 检查文件是否已存在于目标文件夹中 (再次检查以防万一)
       const fileExists = targetFolder.children.some(child => child.realPath === file.path)
       if (!fileExists) {
         const newFileNode = {
@@ -1872,10 +1932,8 @@ const addMissingFilesToVirtualTree = async () => {
   // 5. 保存项目文件
   await saveSharkProject()
   
-  // 6. 刷新虚拟树
-  loadVirtualTree()
-  
   message.success(`已自动添加 ${missingFiles.length} 个缺失的 SolidWorks 文件到虚拟树中`)
+  return true
 }
 
 // 加载虚拟文件树
@@ -1887,6 +1945,10 @@ const loadVirtualTree = async () => {
 
   // 确保默认文件夹存在
   ensureDefaultFolders()
+
+  // 检测文件差异并自动添加缺失的文件
+  // 在生成树数据之前执行，避免递归调用和重复渲染
+  await addMissingFilesToVirtualTree()
 
   // 转换虚拟树为 Ant Design Tree 格式
   const convertNode = (node, parentKey = '') => {
@@ -1910,9 +1972,6 @@ const loadVirtualTree = async () => {
   }
 
   virtualTreeData.value = sharkProject.value.virtualTree.children.map(node => convertNode(node))
-  
-  // 检测文件差异并自动添加缺失的文件
-  await addMissingFilesToVirtualTree()
 }
 
 // 获取虚拟树文件数量
@@ -2031,7 +2090,15 @@ const onVirtualTreeRightClick = ({ event, node }) => {
     )
   } else if (node.type === 'file') {
     items.push(
-      { key: 'open', label: '打开文件', icon: FolderOutlined },
+      { key: 'open', label: '打开文件', icon: FolderOutlined }
+    )
+
+    // 如果是装配体，添加"查看组件结构"
+    if (node.title.toLowerCase().endsWith('.sldasm')) {
+        items.push({ key: 'view-components', label: '查看组件结构', icon: BranchesOutlined })
+    }
+
+    items.push(
       { key: 'rename-file', label: selectedCount > 1 ? `重命名 (${selectedCount}个文件)` : '重命名', icon: EditOutlined },
       { divider: true }
     )
@@ -2201,6 +2268,98 @@ const removeNodeFromTree = (tree, key) => {
   return null
 }
 
+// 项目设置相关
+const projectSettingsModalVisible = ref(false)
+const projectSettings = ref({
+  loadingMethod: 'default',
+  enableAssemblyCache: true
+})
+
+const showProjectSettings = () => {
+  if (sharkProject.value?.settings) {
+    projectSettings.value = { 
+        loadingMethod: 'default',
+        enableAssemblyCache: true,
+        ...sharkProject.value.settings 
+    }
+  } else {
+    projectSettings.value = { loadingMethod: 'default', enableAssemblyCache: true }
+  }
+  projectSettingsModalVisible.value = true
+}
+
+const saveProjectSettings = async () => {
+  if (!sharkProject.value) return
+  
+  if (!sharkProject.value.settings) {
+    sharkProject.value.settings = {}
+  }
+  
+  sharkProject.value.settings = { ...sharkProject.value.settings, ...projectSettings.value }
+  
+  await saveSharkProject()
+  projectSettingsModalVisible.value = false
+  message.success('项目设置已保存')
+}
+
+// 查看组件结构
+const viewAssemblyComponents = async (filePath) => {
+  if (!filePath) return
+  
+  // 1. Check cache if enabled
+  const enableCache = sharkProject.value?.settings?.enableAssemblyCache !== false // Default true
+  let components = null
+  
+  if (enableCache && window.cacheManager) {
+    const cached = window.cacheManager.getAssemblyStructure(filePath)
+    if (cached && cached.structure) {
+      console.log('Using cached assembly structure')
+      components = cached.structure
+    }
+  }
+  
+  // 2. If not cached, fetch from SW
+  if (!components) {
+    const hide = message.loading('正在获取组件结构...', 0)
+    try {
+      const res = await window.electronAPI.sendToSW({
+        type: 'get-assembly-components',
+        path: filePath
+      })
+      hide()
+      
+      if (res && res.success) {
+        components = res.components
+        // Save to cache
+        if (enableCache && window.cacheManager) {
+            await window.cacheManager.setAssemblyStructure(filePath, components)
+        }
+      } else {
+        message.error('获取组件结构失败: ' + (res?.message || '未知错误'))
+        return
+      }
+    } catch (e) {
+      hide()
+      message.error('获取组件结构失败: ' + e.message)
+      return
+    }
+  }
+  
+  // 3. Show components (Simple modal for now)
+  if (components) {
+    Modal.info({
+        title: '组件结构',
+        width: 600,
+        content: h('div', { style: 'max-height: 400px; overflow-y: auto;' }, [
+            h('ul', {}, components.map(c => h('li', {}, [
+                h('span', { style: 'font-weight: bold;' }, c.name),
+                h('span', { style: 'color: #888; margin-left: 8px; font-size: 12px;' }, c.path)
+            ])))
+        ])
+    })
+  }
+}
+
 // 处理菜单操作
 const handleMenuAction = (action) => {
   hideContextMenu()
@@ -2230,11 +2389,27 @@ const handleMenuAction = (action) => {
   } else if (action === 'open') {
     // 打开文件
     if (virtualTreeContextNode.value?.realPath) {
-      window.electronAPI.shellOpenPath(virtualTreeContextNode.value.realPath)
+      // Check project settings
+      const loadingMethod = sharkProject.value?.settings?.loadingMethod || 'default'
+      
+      if (loadingMethod === 'default') {
+         window.electronAPI.shellOpenPath(virtualTreeContextNode.value.realPath)
+      } else {
+         // Use SW command
+         window.electronAPI.sendToSW({
+            type: 'open',
+            path: virtualTreeContextNode.value.realPath,
+            options: { loadMethod: loadingMethod }
+         })
+      }
     }
   } else if (action === 'batch-rename') {
     // 批量重命名功能已合并到命名规则设置
     openNamingRuleModal()
+  } else if (action === 'view-components') {
+    if (virtualTreeContextNode.value?.realPath) {
+        viewAssemblyComponents(virtualTreeContextNode.value.realPath)
+    }
   } else if (action === 'batch-property') {
     batchOperationType.value = 'property'
     batchOperationFolder.value = virtualTreeContextNode.value

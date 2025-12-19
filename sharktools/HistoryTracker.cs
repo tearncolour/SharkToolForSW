@@ -159,59 +159,7 @@ namespace SharkTools
             try
             {
                 if (!_isTracking || _activeDoc == null) return;
-
-                int currentCount = GetCurrentFeatureCount();
-                
-                if (currentCount > _lastFeatureCount)
-                {
-                    // 有新特征添加
-                    LogInfo($"检测到新特征：从 {_lastFeatureCount} 增加到 {currentCount}");
-                    
-                    // 从数据库加载现有记录
-                    var existingRecords = HistoryDatabase.GetRecords(_currentDocPath);
-                    
-                    // 遍历所有特征，检查哪些是新的
-                    IFeature feature = (IFeature)_activeDoc.FirstFeature();
-                    int index = 0;
-                    
-                    while (feature != null)
-                    {
-                        string featureType = feature.GetTypeName2();
-                        string featureName = feature.Name;
-                        
-                        if (IsSignificantFeature(featureType))
-                        {
-                            // 检查该特征是否已在历史记录中
-                            bool alreadyExists = existingRecords.Exists(r => 
-                                r.FeatureName == featureName && r.FeatureIndex == index);
-                            
-                            if (!alreadyExists)
-                            {
-                                var record = new HistoryRecord
-                                {
-                                    Type = DetermineOperationType(featureType, featureName),
-                                    Name = featureName,
-                                    FeatureName = featureName,
-                                    FeatureType = featureType,
-                                    FeatureIndex = index,
-                                    Description = $"类型: {featureType}",
-                                    Timestamp = DateTime.Now
-                                };
-                                
-                                // 使用数据库添加记录
-                                HistoryDatabase.AddRecord(_currentDocPath, record);
-                                OnHistoryRecordAdded?.Invoke(record);
-                                
-                                LogInfo($"自动记录新特征: {featureName}");
-                            }
-                        }
-                        
-                        feature = (IFeature)feature.GetNextFeature();
-                        index++;
-                    }
-                    
-                    _lastFeatureCount = currentCount;
-                }
+                ScanForNewFeatures();
             }
             catch (Exception ex)
             {
@@ -227,15 +175,7 @@ namespace SharkTools
             try
             {
                 if (_activeDoc == null) return 0;
-
-                int count = 0;
-                IFeature feature = (IFeature)_activeDoc.FirstFeature();
-                while (feature != null)
-                {
-                    count++;
-                    feature = (IFeature)feature.GetNextFeature();
-                }
-                return count;
+                return _activeDoc.GetFeatureCount();
             }
             catch
             {
@@ -291,7 +231,9 @@ namespace SharkTools
                         }
                     }
 
-                    feature = (IFeature)feature.GetNextFeature();
+                    IFeature nextFeature = (IFeature)feature.GetNextFeature();
+                    Marshal.ReleaseComObject(feature);
+                    feature = nextFeature;
                     index++;
                 }
 
@@ -419,20 +361,150 @@ namespace SharkTools
 
         private void DetachModelDocEvents(IModelDoc2 modelDoc)
         {
-            // 事件会在文档关闭时自动释放
-            LogInfo("已分离事件监听器");
+            if (modelDoc == null) return;
+            
+            try
+            {
+                int docType = modelDoc.GetType();
+                switch (docType)
+                {
+                    case (int)swDocumentTypes_e.swDocPART:
+                        ((PartDoc)modelDoc).AddItemNotify -= OnAddItem;
+                        break;
+                    case (int)swDocumentTypes_e.swDocASSEMBLY:
+                        ((AssemblyDoc)modelDoc).AddItemNotify -= OnAddItem;
+                        break;
+                }
+                LogInfo("已分离事件监听器");
+            }
+            catch (Exception ex)
+            {
+                LogError($"分离事件失败: {ex.Message}");
+            }
         }
 
         private void AttachPartDocEvents(PartDoc partDoc)
         {
-            // SOLIDWORKS 的事件系统在 C# 中比较复杂
-            // 这里使用简化方式：定期检测特征变化
-            // 完整实现需要使用 COM 事件接口
+            partDoc.AddItemNotify += OnAddItem;
         }
 
         private void AttachAssemblyDocEvents(AssemblyDoc asmDoc)
         {
-            // 装配体事件处理
+            asmDoc.AddItemNotify += OnAddItem;
+        }
+
+        private int OnAddItem(int entityType, string itemName)
+        {
+            try
+            {
+                // 2 = swNotifyFeatureAdded
+                if (entityType == 2 && _activeDoc != null)
+                {
+                    // 避免在事件回调中进行复杂的 COM 遍历和释放操作
+                    // 这可能导致 SolidWorks 内部状态异常或 UI 显示错误（如特征变灰）
+                    // 改为标记需要扫描，由定时器在安全上下文中处理
+                    
+                    // 立即触发一次定时器检查（如果定时器未运行，则手动调用逻辑）
+                    if (_monitorTimer != null && _monitorTimer.Enabled)
+                    {
+                        // 稍微延迟一下，确保 SW 完成添加操作
+                        System.Threading.Tasks.Task.Delay(200).ContinueWith(t => 
+                        {
+                            try 
+                            {
+                                // 在 UI 线程执行扫描
+                                if (_activeDoc != null)
+                                {
+                                    // 强制执行一次扫描逻辑
+                                    ScanForNewFeatures();
+                                }
+                            }
+                            catch { }
+                        }, System.Threading.Tasks.TaskScheduler.Default);
+                    }
+                    else
+                    {
+                        // 如果没有定时器，则尝试直接扫描（但在单独的任务中）
+                        System.Threading.Tasks.Task.Run(() => 
+                        {
+                            System.Threading.Thread.Sleep(200);
+                            ScanForNewFeatures();
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"OnAddItem error: {ex.Message}");
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// 扫描新特征的核心逻辑（从 MonitorTimer_Tick 提取）
+        /// </summary>
+        private void ScanForNewFeatures()
+        {
+            try
+            {
+                if (_activeDoc == null) return;
+
+                int currentCount = GetCurrentFeatureCount();
+                
+                // 即使数量没变，也可能需要检查（比如重命名或插入）
+                // 但为了性能，我们主要关注数量增加
+                if (currentCount > _lastFeatureCount)
+                {
+                    LogInfo($"检测到新特征：从 {_lastFeatureCount} 增加到 {currentCount}");
+                    
+                    var existingRecords = HistoryDatabase.GetRecords(_currentDocPath);
+                    
+                    IFeature feature = (IFeature)_activeDoc.FirstFeature();
+                    int index = 0;
+                    
+                    while (feature != null)
+                    {
+                        string featureType = feature.GetTypeName2();
+                        string featureName = feature.Name;
+                        
+                        if (IsSignificantFeature(featureType))
+                        {
+                            bool alreadyExists = existingRecords.Exists(r => 
+                                r.FeatureName == featureName && r.FeatureIndex == index);
+                            
+                            if (!alreadyExists)
+                            {
+                                var record = new HistoryRecord
+                                {
+                                    Type = DetermineOperationType(featureType, featureName),
+                                    Name = featureName,
+                                    FeatureName = featureName,
+                                    FeatureType = featureType,
+                                    FeatureIndex = index,
+                                    Description = $"类型: {featureType}",
+                                    Timestamp = DateTime.Now
+                                };
+                                
+                                HistoryDatabase.AddRecord(_currentDocPath, record);
+                                OnHistoryRecordAdded?.Invoke(record);
+                                
+                                LogInfo($"自动记录新特征: {featureName}");
+                            }
+                        }
+                        
+                        IFeature nextFeature = (IFeature)feature.GetNextFeature();
+                        Marshal.ReleaseComObject(feature);
+                        feature = nextFeature;
+                        index++;
+                    }
+                    
+                    _lastFeatureCount = currentCount;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"扫描特征失败: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -530,34 +602,70 @@ namespace SharkTools
             {
                 if (_activeDoc == null) return false;
 
+                // 第一步：收集需要操作的特征，避免在遍历时修改
+                var featuresToSuppress = new System.Collections.Generic.List<IFeature>();
+                var featuresToUnsuppress = new System.Collections.Generic.List<IFeature>();
+
                 IFeature feature = (IFeature)_activeDoc.FirstFeature();
                 int currentIndex = 0;
-                int suppressCount = 0;
 
                 while (feature != null)
                 {
                     if (currentIndex > targetIndex)
                     {
-                        // 抑制特征
-                        feature.SetSuppression2(
+                        featuresToSuppress.Add(feature);
+                    }
+                    else if (currentIndex <= targetIndex)
+                    {
+                        featuresToUnsuppress.Add(feature);
+                    }
+
+                    // 这里不释放 feature，因为我们将其添加到了列表中
+                    // 我们将在操作完成后释放列表中的对象
+                    // 注意：GetNextFeature 会增加引用计数，所以我们需要小心处理
+                    
+                    IFeature nextFeature = (IFeature)feature.GetNextFeature();
+                    // 这里不能释放 feature，因为列表里存着引用
+                    // 如果释放了，列表里的引用就无效了（RCW断开）
+                    feature = nextFeature;
+                    currentIndex++;
+                }
+
+                int suppressCount = 0;
+
+                // 第二步：执行抑制操作
+                foreach (var feat in featuresToSuppress)
+                {
+                    try
+                    {
+                        feat.SetSuppression2(
                             (int)swFeatureSuppressionAction_e.swSuppressFeature,
                             (int)swInConfigurationOpts_e.swThisConfiguration,
                             null
                         );
                         suppressCount++;
                     }
-                    else if (currentIndex <= targetIndex)
+                    finally
                     {
-                        // 取消抑制特征
-                        feature.SetSuppression2(
+                        Marshal.ReleaseComObject(feat);
+                    }
+                }
+
+                // 第三步：执行解压操作
+                foreach (var feat in featuresToUnsuppress)
+                {
+                    try
+                    {
+                        feat.SetSuppression2(
                             (int)swFeatureSuppressionAction_e.swUnSuppressFeature,
                             (int)swInConfigurationOpts_e.swThisConfiguration,
                             null
                         );
                     }
-
-                    feature = (IFeature)feature.GetNextFeature();
-                    currentIndex++;
+                    finally
+                    {
+                        Marshal.ReleaseComObject(feat);
+                    }
                 }
 
                 LogInfo($"已抑制 {suppressCount} 个特征");
@@ -579,18 +687,34 @@ namespace SharkTools
             {
                 if (_activeDoc == null) return false;
 
+                // 收集所有特征
+                var features = new System.Collections.Generic.List<IFeature>();
                 IFeature feature = (IFeature)_activeDoc.FirstFeature();
-                int restoreCount = 0;
-
+                
                 while (feature != null)
                 {
-                    feature.SetSuppression2(
-                        (int)swFeatureSuppressionAction_e.swUnSuppressFeature,
-                        (int)swInConfigurationOpts_e.swThisConfiguration,
-                        null
-                    );
-                    restoreCount++;
+                    features.Add(feature);
                     feature = (IFeature)feature.GetNextFeature();
+                }
+
+                int restoreCount = 0;
+
+                // 批量恢复
+                foreach (var feat in features)
+                {
+                    try
+                    {
+                        feat.SetSuppression2(
+                            (int)swFeatureSuppressionAction_e.swUnSuppressFeature,
+                            (int)swInConfigurationOpts_e.swThisConfiguration,
+                            null
+                        );
+                        restoreCount++;
+                    }
+                    finally
+                    {
+                        Marshal.ReleaseComObject(feat);
+                    }
                 }
 
                 _activeDoc.GraphicsRedraw2();
@@ -629,7 +753,9 @@ namespace SharkTools
                             return ExtractSketchDetails(sketch, sketchName);
                         }
                     }
-                    feature = (IFeature)feature.GetNextFeature();
+                    IFeature nextFeature = (IFeature)feature.GetNextFeature();
+                    Marshal.ReleaseComObject(feature);
+                    feature = nextFeature;
                 }
                 return null;
             }
@@ -662,15 +788,23 @@ namespace SharkTools
                 if (segments != null)
                 {
                     details.SegmentCount = segments.Length;
-                    foreach (object segObj in segments)
+                    for (int i = 0; i < segments.Length; i++)
                     {
+                        object segObj = segments[i];
                         ISketchSegment seg = (ISketchSegment)segObj;
-                        details.Segments.Add(new SketchSegmentInfo
+                        try
                         {
-                            Type = GetSketchSegmentTypeName(seg.GetType()),
-                            Length = seg.GetLength(),
-                            IsConstruction = seg.ConstructionGeometry
-                        });
+                            details.Segments.Add(new SketchSegmentInfo
+                            {
+                                Type = GetSketchSegmentTypeName(seg.GetType()),
+                                Length = seg.GetLength(),
+                                IsConstruction = seg.ConstructionGeometry
+                            });
+                        }
+                        finally
+                        {
+                            if (seg != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(seg);
+                        }
                     }
                 }
 
@@ -679,6 +813,11 @@ namespace SharkTools
                 if (points != null)
                 {
                     details.PointCount = points.Length;
+                    // Release points
+                    for (int i = 0; i < points.Length; i++)
+                    {
+                        if (points[i] != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(points[i]);
+                    }
                 }
 
                 // 获取约束数量 - 简化实现
@@ -701,11 +840,19 @@ namespace SharkTools
                     if (segments != null)
                     {
                         int dimCount = 0;
-                        foreach (object segObj in segments)
+                        for (int i = 0; i < segments.Length; i++)
                         {
+                            object segObj = segments[i];
                             ISketchSegment seg = (ISketchSegment)segObj;
-                            // 检查是否有尺寸（简化实现）
-                            if (seg != null) dimCount++;
+                            try
+                            {
+                                // 检查是否有尺寸（简化实现）
+                                if (seg != null) dimCount++;
+                            }
+                            finally
+                            {
+                                if (seg != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(seg);
+                            }
                         }
                         details.DimensionCount = Math.Max(0, dimCount / 2); // 估算值
                     }
@@ -809,11 +956,15 @@ namespace SharkTools
                                     }
                                 }
                             }
-                            subFeature = (IFeature)subFeature.GetNextSubFeature();
+                            IFeature nextSub = (IFeature)subFeature.GetNextSubFeature();
+                            Marshal.ReleaseComObject(subFeature);
+                            subFeature = nextSub;
                         }
                     }
 
-                    feature = (IFeature)feature.GetNextFeature();
+                    IFeature nextFeature = (IFeature)feature.GetNextFeature();
+                    Marshal.ReleaseComObject(feature);
+                    feature = nextFeature;
                 }
             }
             catch (Exception ex)

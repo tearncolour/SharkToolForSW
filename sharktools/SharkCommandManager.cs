@@ -14,6 +14,7 @@ namespace SharkTools
         private int _cookie;
         private TaskpaneView _taskPaneView;
         private SharkTaskPaneControl _taskPaneControl;
+        private ThreadMonitor _threadMonitor;
         private HistoryTracker _historyTracker;
         private EnhancedHistoryTracker _enhancedHistoryTracker;
         private string _currentDocPath; // 当前追踪的文档路径
@@ -59,6 +60,13 @@ namespace SharkTools
                 Log("准备创建 TaskPane");
                 CreateTaskPane();
                 Log("TaskPane 创建完成");
+
+                // 启动线程监控
+                if (_taskPaneControl != null)
+                {
+                    _threadMonitor = new ThreadMonitor(_taskPaneControl);
+                    _threadMonitor.Start();
+                }
             }
             catch (Exception ex)
             {
@@ -97,6 +105,7 @@ namespace SharkTools
                         {
                             bool removed = _cmdMgr.RemoveCommandTab(existingTab);
                             Log($"【预清理】删除标签页 docType {docType}: {removed}");
+                            Marshal.ReleaseComObject(existingTab);
                         }
                     }
                 }
@@ -516,6 +525,13 @@ namespace SharkTools
             {
                 Log("Teardown started");
                 
+                // 停止线程监控
+                if (_threadMonitor != null)
+                {
+                    _threadMonitor.Dispose();
+                    _threadMonitor = null;
+                }
+
                 // 停止历史追踪
                 if (_historyTracker != null)
                 {
