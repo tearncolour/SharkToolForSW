@@ -141,7 +141,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['save']);
+const emit = defineEmits(['save', 'clear-cache', 'view-cache-details']);
 
 // 本地设置副本
 const localSettings = ref({ ...props.settings });

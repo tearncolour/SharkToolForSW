@@ -29,15 +29,6 @@
         <div class="activity-bar">
           <div class="activity-icons">
 
-            <a-tooltip placement="right" title="资源管理器">
-              <div 
-                class="activity-icon" 
-                :class="{ active: currentView === 'explorer' }"
-                @click="setView('explorer')"
-              >
-                <FolderOpenOutlined />
-              </div>
-            </a-tooltip>
             <a-tooltip placement="right" title="项目管理">
               <div 
                 class="activity-icon" 
@@ -45,6 +36,15 @@
                 @click="setView('project')"
               >
                 <ProjectOutlined />
+              </div>
+            </a-tooltip>
+            <a-tooltip placement="right" title="资源管理器">
+              <div 
+                class="activity-icon" 
+                :class="{ active: currentView === 'explorer' }"
+                @click="setView('explorer')"
+              >
+                <FolderOpenOutlined />
               </div>
             </a-tooltip>
             <a-tooltip placement="right" title="Git 版本控制">
@@ -72,6 +72,15 @@
                 @click="setView('history')"
               >
                 <HistoryOutlined />
+              </div>
+            </a-tooltip>
+            <a-tooltip placement="right" title="日志">
+              <div 
+                class="activity-icon" 
+                :class="{ active: currentView === 'logs' }"
+                @click="setView('logs')"
+              >
+                <FileTextOutlined />
               </div>
             </a-tooltip>
           </div>
@@ -117,6 +126,15 @@
               @rollback="rollbackTo"
               @delete="deleteRecord"
               @restore-all="restoreAll"
+            />
+          </div>
+
+          <!-- 日志视图 -->
+          <div v-show="currentView === 'logs'" class="panel-content">
+            <LogPanel 
+              :logs="logs"
+              @clear="logs = []"
+              @save="saveLogsToFile"
             />
           </div>
 
@@ -215,7 +233,8 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   ProjectOutlined,
-  DiffOutlined
+  DiffOutlined,
+  FileTextOutlined
 } from '@ant-design/icons-vue'
 
 // 配置 message 显示在右下角
@@ -239,6 +258,7 @@ const GitPanel = defineAsyncComponent(() => import('./components/GitPanel.vue'))
 const HistoryPanel = defineAsyncComponent(() => import('./components/HistoryPanel.vue'))
 const SettingsPanel = defineAsyncComponent(() => import('./components/SettingsPanel.vue'))
 const ComparePanel = defineAsyncComponent(() => import('./components/ComparePanel.vue'))
+const LogPanel = defineAsyncComponent(() => import('./components/LogPanel.vue'))
 
 // 启动 SolidWorks
 const launchSolidWorks = async () => {
@@ -309,6 +329,7 @@ const currentDocumentDir = computed(() => {
 
 // 历史记录
 const historyRecords = ref([])
+const logs = ref([])
 
 // 设置
 const settings = ref({
@@ -951,19 +972,60 @@ watch(settings, (newSettings) => {
   }
 }, { deep: true })
 
+// 保存日志
+const saveLogsToFile = async (logsToSave) => {
+  try {
+    const content = logsToSave.map(l => `[${l.timestamp}] [${l.level.toUpperCase()}] ${l.message}`).join('\n')
+    // 使用 electronAPI 保存文件，这里假设有一个 saveFile 方法，如果没有则需要实现或使用 ipcRenderer
+    // 由于 electronAPI 可能没有直接的 saveFile，我们构造一个下载链接或者请求主进程保存
+    if (window.electronAPI && window.electronAPI.saveLogFile) {
+        const result = await window.electronAPI.saveLogFile(content);
+        if (result.success) {
+            message.success('日志已保存');
+        } else {
+            message.error('保存失败');
+        }
+    } else {
+        // Fallback: create a blob and download
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sharktools_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        message.success('日志已导出');
+    }
+  } catch (e) {
+    console.error(e);
+    message.error('保存失败');
+  }
+}
+
 // 接收 SolidWorks 消息
+let lastConnectionMsgTime = 0
+const CONNECTION_MSG_DEBOUNCE = 2000 // 2秒内不重复显示连接消息
+
 const handleSWMessage = (data) => {
   console.log('收到 SW 消息:', data)
   
+  const now = Date.now()
+  
   switch (data.type) {
     case 'connected':
-      connectionStatus.value = 'success'
-      message.success('已连接到 SolidWorks')
-      loadHistory()
+      if (connectionStatus.value !== 'success' || (now - lastConnectionMsgTime > CONNECTION_MSG_DEBOUNCE)) {
+        connectionStatus.value = 'success'
+        message.success('已连接到 SolidWorks')
+        lastConnectionMsgTime = now
+        loadHistory()
+      }
       break
     case 'disconnected':
-      connectionStatus.value = 'default'
-      message.warning('SolidWorks 已断开连接')
+      if (connectionStatus.value !== 'default' || (now - lastConnectionMsgTime > CONNECTION_MSG_DEBOUNCE)) {
+        connectionStatus.value = 'default'
+        message.warning('SolidWorks 已断开连接')
+        lastConnectionMsgTime = now
+      }
       break
     case 'document-opened':
       connectionStatus.value = 'success'
@@ -982,6 +1044,17 @@ const handleSWMessage = (data) => {
     case 'pong':
       // 心跳响应
       connectionStatus.value = 'success'
+      break
+    case 'log':
+      logs.value.push({
+        level: data.level,
+        message: data.message,
+        timestamp: data.timestamp
+      })
+      // 错误消息显示 Toast
+      if (data.level === 'error') {
+        message.error(data.message)
+      }
       break
   }
 }

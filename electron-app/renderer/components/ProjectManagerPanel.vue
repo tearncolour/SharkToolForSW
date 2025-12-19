@@ -616,7 +616,10 @@ import {
   CloseOutlined,
   FolderOpenOutlined,
   FileOutlined,
-  SettingOutlined
+  SettingOutlined,
+  BranchesOutlined,
+  EyeOutlined,
+  ThunderboltOutlined
 } from '@ant-design/icons-vue'
 import SidePanelTemplate from './SidePanelTemplate.vue'
 import CreateProjectModal from './CreateProjectModal.vue'
@@ -2095,7 +2098,10 @@ const onVirtualTreeRightClick = ({ event, node }) => {
 
     // 如果是装配体，添加"查看组件结构"
     if (node.title.toLowerCase().endsWith('.sldasm')) {
-        items.push({ key: 'view-components', label: '查看组件结构', icon: BranchesOutlined })
+        items.push(
+          { key: 'view-components', label: '查看组件结构', icon: BranchesOutlined },
+          { key: 'open-write-cache', label: '打开并写入本地缓存', icon: ThunderboltOutlined }
+        )
     }
 
     items.push(
@@ -2361,7 +2367,7 @@ const viewAssemblyComponents = async (filePath) => {
 }
 
 // 处理菜单操作
-const handleMenuAction = (action) => {
+const handleMenuAction = async (action) => {
   hideContextMenu()
   
   if (action === 'add-file') {
@@ -2393,14 +2399,27 @@ const handleMenuAction = (action) => {
       const loadingMethod = sharkProject.value?.settings?.loadingMethod || 'default'
       
       if (loadingMethod === 'default') {
+         message.loading({ content: '正在调用系统打开文件...', key: 'open-file', duration: 2 })
          window.electronAPI.shellOpenPath(virtualTreeContextNode.value.realPath)
       } else {
          // Use SW command
-         window.electronAPI.sendToSW({
-            type: 'open',
-            path: virtualTreeContextNode.value.realPath,
-            options: { loadMethod: loadingMethod }
-         })
+         message.loading({ content: '正在 SolidWorks 中打开文件，请稍候...', key: 'open-file', duration: 0 })
+         try {
+            const result = await window.electronAPI.sendToSW({
+                type: 'open',
+                path: virtualTreeContextNode.value.realPath,
+                options: { loadMethod: loadingMethod }
+            })
+            
+            if (result && result.success) {
+                message.success({ content: `文件已打开: ${result.title || '成功'}`, key: 'open-file' })
+            } else {
+                message.error({ content: `打开失败: ${result?.message || '未知错误'}`, key: 'open-file' })
+            }
+         } catch (error) {
+            console.error('打开文件出错:', error)
+            message.error({ content: '打开文件请求超时或失败', key: 'open-file' })
+         }
       }
     }
   } else if (action === 'batch-rename') {
@@ -2414,6 +2433,34 @@ const handleMenuAction = (action) => {
     batchOperationType.value = 'property'
     batchOperationFolder.value = virtualTreeContextNode.value
     batchOperationModalVisible.value = true
+  } else if (action === 'open-write-cache') {
+    if (virtualTreeContextNode.value?.realPath) {
+        openAndWriteCache(virtualTreeContextNode.value.realPath)
+    }
+  }
+}
+
+// 打开并写入缓存
+const openAndWriteCache = async (filePath) => {
+  message.loading({ content: '正在打开并生成缓存，这可能需要一些时间...', key: 'open-cache', duration: 0 })
+  try {
+    const result = await window.electronAPI.sendToSW({
+        type: 'open-and-cache',
+        path: filePath
+    })
+    
+    if (result && result.success) {
+        message.success({ content: `缓存生成成功: ${result.message || '完成'}`, key: 'open-cache' })
+        // 更新本地缓存管理器
+        if (window.cacheManager && result.data) {
+            await window.cacheManager.setAssemblyStructure(filePath, result.data)
+        }
+    } else {
+        message.error({ content: `操作失败: ${result?.message || '未知错误'}`, key: 'open-cache' })
+    }
+  } catch (error) {
+    console.error('打开并缓存出错:', error)
+    message.error({ content: '请求超时或失败', key: 'open-cache' })
   }
 }
 

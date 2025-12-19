@@ -38,6 +38,9 @@ namespace SharkTools
         private readonly BlockingCollection<string> _messageQueue = new BlockingCollection<string>();
         private Task _messageProcessorTask;
         private CancellationTokenSource _messageProcessorCts;
+        
+        // 待发送消息队列
+        private readonly ConcurrentQueue<string> _outgoingQueue = new ConcurrentQueue<string>();
 
         public ElectronServer(ISldWorks swApp, SharkCommandManager cmdMgr, SynchronizationContext uiContext)
         {
@@ -121,6 +124,12 @@ namespace SharkTools
                     if (_isRunning)
                     {
                         _wsClient = client;
+                        
+                        // 再次检查队列，防止在连接过程中有新消息进入
+                        while (_outgoingQueue.TryDequeue(out string message))
+                        {
+                            _wsClient.Send(message);
+                        }
                     }
                     else
                     {
@@ -179,11 +188,42 @@ namespace SharkTools
             catch { }
         }
 
+        /// <summary>
+        /// 发送日志到前端
+        /// </summary>
+        public void SendLog(string message, string level)
+        {
+            try
+            {
+                var logData = new
+                {
+                    type = "log",
+                    level = level.ToLower(), // info, warning, error
+                    message = message,
+                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                };
+                
+                Send(JsonConvert.SerializeObject(logData));
+            }
+            catch
+            {
+                // 发送日志失败时不记录日志，避免死循环
+            }
+        }
+
         private void OnOpen(object sender, EventArgs e)
         {
+            var ws = (WebSocket)sender;
             Log("已连接到 Electron 应用");
+            
             // 发送身份标识
-            Send(JsonConvert.SerializeObject(new { type = "identify", client = "solidworks" }));
+            ws.Send(JsonConvert.SerializeObject(new { type = "identify", client = "solidworks" }));
+            
+            // 发送队列中的消息
+            while (_outgoingQueue.TryDequeue(out string message))
+            {
+                ws.Send(message);
+            }
         }
 
         private void OnMessage(object sender, MessageEventArgs e)
@@ -218,6 +258,17 @@ namespace SharkTools
             if (_wsClient != null && _wsClient.IsAlive)
             {
                 _wsClient.Send(data);
+            }
+            else
+            {
+                // 如果未连接，加入队列
+                _outgoingQueue.Enqueue(data);
+                
+                // 限制队列大小，防止内存溢出
+                while (_outgoingQueue.Count > 1000)
+                {
+                    _outgoingQueue.TryDequeue(out _);
+                }
             }
         }
         
@@ -378,6 +429,33 @@ namespace SharkTools
                             if (!string.IsNullOrEmpty(path))
                             {
                                 result = OpenDocument(path, options);
+                            }
+                            break;
+
+                        case "open-and-cache":
+                            {
+                                string openCachePath = payload?["path"]?.ToString();
+                                if (!string.IsNullOrEmpty(openCachePath))
+                                {
+                                    // 1. 打开文件
+                                    var openRes = OpenDocument(openCachePath, null);
+                                    
+                                    // 2. 生成缓存 (GetAssemblyComponentsAsync 会自动处理缓存)
+                                    // 注意：这里我们强制刷新缓存，或者确保它被读取
+                                    var cacheRes = await GetAssemblyComponentsAsync(openCachePath);
+                                    
+                                    result = new 
+                                    { 
+                                        success = true, 
+                                        message = "已打开文件并更新缓存",
+                                        openResult = openRes,
+                                        cacheResult = cacheRes
+                                    };
+                                }
+                                else
+                                {
+                                    result = new { success = false, message = "Path is required" };
+                                }
                             }
                             break;
                         

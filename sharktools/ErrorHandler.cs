@@ -26,6 +26,10 @@ namespace SharkTools
         // 用户消息事件委托
         public delegate void UserMessageHandler(string message, MessageType type);
         public static event UserMessageHandler OnUserMessage;
+        
+        // 日志消息事件委托
+        public delegate void LogMessageHandler(string message, MessageType type);
+        public static event LogMessageHandler OnLogMessage;
 
         public enum MessageType
         {
@@ -42,6 +46,8 @@ namespace SharkTools
             try
             {
                 OnUserMessage?.Invoke(message, type);
+                // 用户消息也同时记录到日志
+                Log(message, type);
             }
             catch
             {
@@ -50,23 +56,71 @@ namespace SharkTools
         }
 
         /// <summary>
-        /// 记录普通日志
+        /// 记录日志并触发事件
         /// </summary>
-        public static void Log(string source, string message)
+        private static void Log(string message, MessageType type)
         {
-            WriteLog("INFO", source, message);
+            try
+            {
+                // 写入文件
+                WriteLogToFile(message, type);
+                
+                // 触发日志事件
+                OnLogMessage?.Invoke(message, type);
+            }
+            catch
+            {
+                // 忽略日志记录错误
+            }
         }
-        
+
+        /// <summary>
+        /// 记录信息日志
+        /// </summary>
+        public static void LogInfo(string message)
+        {
+            Log(message, MessageType.Info);
+        }
+
         /// <summary>
         /// 记录警告日志
         /// </summary>
-        public static void LogWarning(string source, string message)
+        public static void LogWarning(string message)
         {
-            WriteLog("WARN", source, message);
+            Log(message, MessageType.Warning);
+        }
+
+        /// <summary>
+        /// 记录错误日志
+        /// </summary>
+        public static void LogError(string message, Exception ex = null)
+        {
+            string fullMessage = message;
+            if (ex != null)
+            {
+                fullMessage += $"\r\nException: {ex.Message}\r\nStack Trace: {ex.StackTrace}";
+            }
+            Log(fullMessage, MessageType.Error);
+        }
+
+        /// <summary>
+        /// 记录普通日志 (兼容旧API)
+        /// </summary>
+        public static void Log(string source, string message)
+        {
+            Log($"[{source}] {message}", MessageType.Info);
         }
         
         /// <summary>
-        /// 记录错误日志
+        /// 记录警告日志 (兼容旧API)
+        /// </summary>
+        public static void LogWarning(string source, string message)
+        {
+            Log($"[{source}] {message}", MessageType.Warning);
+        }
+        
+        /// <summary>
+        /// 记录错误日志 (兼容旧API)
         /// </summary>
         public static void LogError(string source, string message, Exception ex = null)
         {
@@ -77,7 +131,7 @@ namespace SharkTools
             }
             
             var sb = new StringBuilder();
-            sb.Append(message);
+            sb.Append($"[{source}] {message}");
             
             if (ex != null)
             {
@@ -99,16 +153,12 @@ namespace SharkTools
                 #endif
             }
             
-            WriteLog("ERROR", source, sb.ToString());
+            Log(sb.ToString(), MessageType.Error);
         }
         
         /// <summary>
         /// 安全执行操作（带异常捕获和日志）
         /// </summary>
-        /// <param name="source">来源模块名</param>
-        /// <param name="action">要执行的操作</param>
-        /// <param name="errorMessage">发生错误时的消息</param>
-        /// <returns>是否执行成功</returns>
         public static bool SafeExecute(string source, Action action, string errorMessage = null)
         {
             try
@@ -126,12 +176,6 @@ namespace SharkTools
         /// <summary>
         /// 安全执行操作并返回结果
         /// </summary>
-        /// <typeparam name="T">返回值类型</typeparam>
-        /// <param name="source">来源模块名</param>
-        /// <param name="func">要执行的函数</param>
-        /// <param name="defaultValue">发生错误时的默认值</param>
-        /// <param name="errorMessage">发生错误时的消息</param>
-        /// <returns>函数返回值或默认值</returns>
         public static T SafeExecute<T>(string source, Func<T> func, T defaultValue = default(T), string errorMessage = null)
         {
             try
@@ -148,12 +192,6 @@ namespace SharkTools
         /// <summary>
         /// 带重试的安全执行
         /// </summary>
-        /// <param name="source">来源模块名</param>
-        /// <param name="action">要执行的操作</param>
-        /// <param name="maxRetries">最大重试次数</param>
-        /// <param name="retryDelayMs">重试间隔（毫秒）</param>
-        /// <param name="errorMessage">发生错误时的消息</param>
-        /// <returns>是否执行成功</returns>
         public static bool SafeExecuteWithRetry(string source, Action action, int maxRetries = 3, int retryDelayMs = 500, string errorMessage = null)
         {
             Exception lastException = null;
@@ -217,24 +255,22 @@ namespace SharkTools
         }
         
         /// <summary>
-        /// 写入日志
+        /// 写入日志文件
         /// </summary>
-        private static void WriteLog(string level, string source, string message)
+        private static void WriteLogToFile(string message, MessageType type)
         {
-            try
+            lock (_logLock)
             {
-                lock (_logLock)
+                try
                 {
                     // 检查日志文件大小，必要时轮转
                     RotateLogFileIfNeeded();
                     
-                    string logEntry = $"{DateTime.Now:yyyy/MM/dd HH:mm:ss} [{level}] {source}: {message}\r\n";
+                    string prefix = type == MessageType.Error ? "ERROR" : (type == MessageType.Warning ? "WARN" : "INFO");
+                    string logEntry = $"{DateTime.Now:yyyy/MM/dd HH:mm:ss} [{prefix}] {message}\r\n";
                     File.AppendAllText(LogFilePath, logEntry, Encoding.UTF8);
                 }
-            }
-            catch
-            {
-                // 日志写入失败时静默处理，避免影响主流程
+                catch { }
             }
         }
         

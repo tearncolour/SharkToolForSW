@@ -24,33 +24,18 @@ namespace SharkTools
         public bool ConnectToSW(object ThisSW, int Cookie)
         {
             // 最早期日志，确认插件被调用
-            try {
-                System.IO.File.AppendAllText(
-                    @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
-                    $"{DateTime.Now}: ========== ConnectToSW 开始 ==========\r\n"
-                );
-            } catch {}
+            ErrorHandler.LogInfo("========== ConnectToSW 开始 ==========");
             
             try
             {
                 _swApp = (ISldWorks)ThisSW;
                 AddinCookie = Cookie;
                 
-                try {
-                    System.IO.File.AppendAllText(
-                        @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
-                        $"{DateTime.Now}: _swApp 获取成功, Cookie={Cookie}\r\n"
-                    );
-                } catch {}
+                ErrorHandler.LogInfo($"_swApp 获取成功, Cookie={Cookie}");
                 
                 // CRITICAL FIX: Use SetAddinCallbackInfo2 for better compatibility
                 bool callbackRes = _swApp.SetAddinCallbackInfo2(0, this, AddinCookie);
-                try {
-                     System.IO.File.AppendAllText(
-                        @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
-                        $"{DateTime.Now}: SetAddinCallbackInfo2 result: {callbackRes} (Version: 2025-12-15)\r\n"
-                    );
-                } catch {}
+                ErrorHandler.LogInfo($"SetAddinCallbackInfo2 result: {callbackRes} (Version: 2025-12-15)");
 
                 // 初始化数据库
                 HistoryDatabase.Initialize();
@@ -68,16 +53,22 @@ namespace SharkTools
                 try
                 {
                     _electronServer = new ElectronServer(_swApp, _sharkCmdMgr, uiContext);
+                    
+                    // 订阅日志事件，转发到前端
+                    ErrorHandler.OnLogMessage += (msg, type) => {
+                        if (_electronServer != null)
+                        {
+                            string level = type == ErrorHandler.MessageType.Error ? "error" : 
+                                          (type == ErrorHandler.MessageType.Warning ? "warning" : "info");
+                            _electronServer.SendLog(msg, level);
+                        }
+                    };
+
                     _electronServer.Start();
                 }
                 catch (Exception ex)
                 {
-                    try {
-                        System.IO.File.AppendAllText(
-                            @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
-                            $"{DateTime.Now}: ElectronServer init error: {ex.Message}\r\n"
-                        );
-                    } catch {}
+                    ErrorHandler.LogError("Connect", "ElectronServer init error", ex);
                 }
 
                 // Try to initialize UI immediately
@@ -95,17 +86,11 @@ namespace SharkTools
                     // 启动插件资源监控（更智能的通知，每2分钟检查一次）
                     optimizer.StartResourceMonitor(2);
                     
-                    System.IO.File.AppendAllText(
-                        @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
-                        $"{DateTime.Now}: 已启动弹窗拦截器和资源监控\r\n"
-                    );
+                    ErrorHandler.LogInfo("已启动弹窗拦截器和资源监控");
                 }
                 catch (Exception ex)
                 {
-                    System.IO.File.AppendAllText(
-                        @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
-                        $"{DateTime.Now}: 资源监控初始化失败: {ex.Message}\r\n"
-                    );
+                    ErrorHandler.LogError("Connect", "资源监控初始化失败", ex);
                 }
 
                 // 初始化缓存管理器
@@ -127,12 +112,7 @@ namespace SharkTools
                 }
                 catch (Exception ex)
                 {
-                    try {
-                        System.IO.File.AppendAllText(
-                            @"c:\Users\Administrator\Desktop\SharkToolForSW\debug_log.txt", 
-                            $"{DateTime.Now}: Cache Manager init error: {ex.Message}\r\n"
-                        );
-                    } catch {}
+                    ErrorHandler.LogError("Connect", "Cache Manager init error", ex);
                 }
 
                 return true;

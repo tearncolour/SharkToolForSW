@@ -357,10 +357,17 @@ ipcMain.handle('send-to-sw', async (event, data) => {
             payload: data
         };
 
+        // 根据命令类型设置不同的超时时间
+        // 打开文件、转换文件等操作可能需要较长时间
+        let timeoutDuration = 10000; // 默认 10 秒
+        if (['open', 'convert-and-recognize', 'execute-rename', 'create-project'].includes(data.type)) {
+            timeoutDuration = 300000; // 5 分钟
+        }
+
         // 创建一个超时处理
         const timeout = setTimeout(() => {
             resolve({ success: false, message: '请求超时' });
-        }, 10000);
+        }, timeoutDuration);
 
         // 临时消息处理器（用于响应匹配）
         const messageHandler = (response) => {
