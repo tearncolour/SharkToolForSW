@@ -117,7 +117,7 @@ namespace SharkTools
                 _historyFilePath = Path.Combine(_historyFolder, $"{SanitizeFileName(docName)}.sharkhistory");
 
                 // 初始化特征缓存
-                InitializeFeatureCache();
+                // InitializeFeatureCache();
                 
                 // 记录初始特征数量
                 _lastFeatureCount = _featureCache.Count;
@@ -126,7 +126,7 @@ namespace SharkTools
                 LoadChangeRecords();
                 
                 // 加载已有的历史快照
-                LoadDocumentSnapshots();
+                // LoadDocumentSnapshots();
                 
                 // 如果没有快照，创建初始快照
                 if (_documentSnapshots.Count == 0)
